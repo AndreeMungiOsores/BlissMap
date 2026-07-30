@@ -32,10 +32,10 @@ export const LandingPage: React.FC = () => {
             src={logoImg} 
             alt="PlazaDerma Logo" 
             style={{ 
-              height: '110px', 
+              height: '220px', 
               maxWidth: '90vw', 
               objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.05))'
+              filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.06))'
             }} 
           />
         </div>
