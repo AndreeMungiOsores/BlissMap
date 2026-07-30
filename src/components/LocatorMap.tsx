@@ -1,6 +1,16 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker as LeafletMarker, Popup, useMap } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { getProbabilityInfo } from '../pages/PublicLocator';
+
+interface ProductItem {
+  name: string;
+  qty: number;
+  last_date?: string;
+}
 
 interface LocationItem {
   id: string;
@@ -15,6 +25,7 @@ interface LocationItem {
   tags: string[];
   custom_fields: Record<string, string>;
   description: string | null;
+  products?: ProductItem[];
 }
 
 interface LocatorMapProps {
@@ -26,6 +37,24 @@ interface LocatorMapProps {
   markerColor: string;
   markerImageUrl: string | null;
 }
+
+// Custom Cluster Icon generator with gradient colors and size scaling
+const createCustomClusterIcon = (cluster: any) => {
+  const count = cluster.getChildCount();
+  let sizeClass = 'cluster-small';
+  if (count >= 50) {
+    sizeClass = 'cluster-large';
+  } else if (count >= 10) {
+    sizeClass = 'cluster-medium';
+  }
+
+  return L.divIcon({
+    html: `<div class="cluster-inner"><span>${count}</span></div>`,
+    className: `custom-marker-cluster ${sizeClass}`,
+    iconSize: L.point(44, 44),
+    iconAnchor: L.point(22, 22)
+  });
+};
 
 // Leaflet center updater and bounds adjuster helper
 const FitMapBounds: React.FC<{ locations: LocationItem[]; selectedLocation: LocationItem | null }> = ({ locations, selectedLocation }) => {
@@ -69,7 +98,6 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
     }
 
     // Dynamic colored pin SVG
-    // Increases scale slightly if active
     const scale = isActive ? 1.25 : 1.0;
     const width = 34 * scale;
     const height = 34 * scale;
@@ -90,16 +118,12 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   const getTileUrl = () => {
     switch (mapStyle) {
       case 'light':
-        // CartoDB Positron (perfect grayscale light style)
         return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
       case 'dark':
-        // CartoDB Dark Matter (perfect grayscale dark style)
         return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
       case 'satellite':
-        // Google Hybrid Satellite tiles (satellite + labels)
         return 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
       default:
-        // Google Roadmap standard tiles (looks identical to Google Maps standard)
         return 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
     }
   };
@@ -126,24 +150,84 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
           url={getTileUrl()}
         />
 
-        {locations.map(loc => (
-          <LeafletMarker
-            key={loc.id}
-            position={[loc.lat, loc.lng]}
-            icon={getLeafletIcon(loc.id)}
-            eventHandlers={{
-              click: () => onSelectLocation(loc.id),
-            }}
-          >
-            <Popup>
-              <div style={{ color: '#0f172a', width: '200px', fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
-                <h4 style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px 0', color: '#1e293b' }}>{loc.name}</h4>
-                <p style={{ fontSize: '12px', color: '#475569', margin: '0 0 6px 0', lineHeight: 1.3 }}>{loc.address}</p>
-                {loc.phone && <div style={{ fontSize: '12px', fontWeight: 600, margin: '2px 0 0 0' }}>Tel: {loc.phone}</div>}
-              </div>
-            </Popup>
-          </LeafletMarker>
-        ))}
+        {/* Marker Cluster Group with custom styling */}
+        <MarkerClusterGroup
+          chunkedLoading
+          iconCreateFunction={createCustomClusterIcon}
+          maxClusterRadius={45}
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick={true}
+          disableClusteringAtZoom={17}
+        >
+          {locations.map(loc => {
+            const productCount = loc.products?.length || 0;
+
+            // Sort products by score descending (Alta -> Media -> Baja)
+            const sortedProducts = loc.products ? [...loc.products].sort((a, b) => {
+              return getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score;
+            }) : [];
+
+            return (
+              <LeafletMarker
+                key={loc.id}
+                position={[loc.lat, loc.lng]}
+                icon={getLeafletIcon(loc.id)}
+                eventHandlers={{
+                  click: () => onSelectLocation(loc.id),
+                }}
+              >
+                <Popup>
+                  <div style={{ color: '#0f172a', width: '230px', fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
+                    <h4 style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px 0', color: '#1e293b' }}>{loc.name}</h4>
+                    <p style={{ fontSize: '11px', color: '#475569', margin: '0 0 6px 0', lineHeight: 1.3 }}>{loc.address}</p>
+                    
+                    {loc.phone && <div style={{ fontSize: '11px', fontWeight: 600, margin: '2px 0 6px 0' }}>Tel: {loc.phone}</div>}
+
+                    {productCount > 0 && (
+                      <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#3b82f6', marginBottom: '4px' }}>
+                          📦 {productCount} productos registrados:
+                        </div>
+                        <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {sortedProducts.slice(0, 5).map((p, idx) => {
+                            const prob = getProbabilityInfo(p.last_date);
+
+                            return (
+                              <div key={idx} style={{ fontSize: '10px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#f8fafc', padding: '3px 6px', borderRadius: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                                  <span>{p.name}</span>
+                                  <span>x{p.qty}</span>
+                                </div>
+                                <span style={{
+                                  backgroundColor: prob.bgColor,
+                                  color: prob.textColor,
+                                  border: `1px solid ${prob.borderColor}`,
+                                  padding: '1px 6px',
+                                  borderRadius: '10px',
+                                  fontSize: '9px',
+                                  fontWeight: 700,
+                                  alignSelf: 'flex-start'
+                                }}>
+                                  {prob.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {productCount > 5 && (
+                            <div style={{ fontSize: '10px', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>
+                              + {productCount - 5} más...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Popup>
+              </LeafletMarker>
+            );
+          })}
+        </MarkerClusterGroup>
       </MapContainer>
     </div>
   );

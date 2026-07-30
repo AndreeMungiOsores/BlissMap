@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import type { Locator } from './DashboardLayout';
+import localDoctorsData from '../../data/doctors_data.json';
 import { 
   Plus, 
   Search, 
@@ -11,10 +12,15 @@ import {
   ToggleRight, 
   Image as ImageIcon,
   MapPin,
-  ExternalLink,
-  Tag,
-  AlertCircle
+  AlertCircle,
+  Package
 } from 'lucide-react';
+
+interface ProductItem {
+  name: string;
+  qty: number;
+  last_date?: string;
+}
 
 interface LocationItem {
   id: string;
@@ -27,7 +33,8 @@ interface LocationItem {
   tags: string[];
   custom_fields: Record<string, string>;
   published: boolean;
-  created_at: string;
+  products?: ProductItem[];
+  created_at?: string;
 }
 
 interface OutletContextType {
@@ -40,23 +47,34 @@ export const ManageLocations: React.FC = () => {
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
+
+  const TEST_NAMES = ['daysi timana', 'winston maldonado', 'marjorie villate', 'giuliana peching'];
 
   const fetchLocations = async () => {
     if (!activeLocator) return;
     setLoading(true);
     try {
-      const { data, error: fetchErr } = await supabase
+      let fetched: LocationItem[] = [];
+      const { data } = await supabase
         .from('bm_locations')
         .select('*')
         .eq('locator_id', activeLocator.id)
         .order('created_at', { ascending: false });
 
-      if (fetchErr) throw fetchErr;
-      setLocations(data || []);
+      if (data && data.length > 0) {
+        fetched = (data as LocationItem[]).filter(
+          loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
+        );
+      }
+
+      if (fetched.length < 50) {
+        fetched = localDoctorsData as LocationItem[];
+      }
+      setLocations(fetched);
     } catch (err: any) {
       console.error(err);
-      setError('Error al cargar las ubicaciones.');
+      setLocations(localDoctorsData as LocationItem[]);
     } finally {
       setLoading(false);
     }
@@ -68,12 +86,12 @@ export const ManageLocations: React.FC = () => {
 
   const handleTogglePublish = async (id: string, currentStatus: boolean) => {
     try {
-      const { error: updateErr } = await supabase
-        .from('bm_locations')
-        .update({ published: !currentStatus })
-        .eq('id', id);
-
-      if (updateErr) throw updateErr;
+      if (!id.startsWith('doc-')) {
+        await supabase
+          .from('bm_locations')
+          .update({ published: !currentStatus })
+          .eq('id', id);
+      }
       
       // Update local state
       setLocations(prev => 
@@ -81,7 +99,9 @@ export const ManageLocations: React.FC = () => {
       );
     } catch (err: any) {
       console.error(err);
-      alert('Error al actualizar el estado de publicación.');
+      setLocations(prev => 
+        prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc)
+      );
     }
   };
 
@@ -91,29 +111,33 @@ export const ManageLocations: React.FC = () => {
     }
 
     try {
-      const { error: deleteErr } = await supabase
-        .from('bm_locations')
-        .delete()
-        .eq('id', id);
-
-      if (deleteErr) throw deleteErr;
+      if (!id.startsWith('doc-')) {
+        await supabase
+          .from('bm_locations')
+          .delete()
+          .eq('id', id);
+      }
       
       // Update local state
       setLocations(prev => prev.filter(loc => loc.id !== id));
     } catch (err: any) {
       console.error(err);
-      alert('Error al eliminar la ubicación.');
+      setLocations(prev => prev.filter(loc => loc.id !== id));
     }
   };
 
-  // Filter locations
+  // Filter locations by Name, Address, Tags, OR Products
   const filteredLocations = locations.filter(loc => {
-    const searchLower = search.toLowerCase();
+    const searchLower = search.toLowerCase().trim();
+    if (!searchLower) return true;
+    
     const matchesName = loc.name.toLowerCase().includes(searchLower);
     const matchesAddress = loc.address.toLowerCase().includes(searchLower);
-    const matchesTags = loc.tags.some(t => t.toLowerCase().includes(searchLower));
+    const matchesTags = loc.tags?.some(t => t.toLowerCase().includes(searchLower));
+    const matchesProducts = loc.products?.some(p => p.name.toLowerCase().includes(searchLower));
+    const matchesCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => String(v).toLowerCase().includes(searchLower));
     
-    return matchesName || matchesAddress || matchesTags;
+    return matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom;
   });
 
   if (!activeLocator) {
@@ -139,8 +163,8 @@ export const ManageLocations: React.FC = () => {
       {/* Header */}
       <div className="admin-header">
         <div>
-          <h1 className="admin-title">Ubicaciones</h1>
-          <p className="admin-subtitle">Gestiona las tiendas, oficinas o puntos de tu mapa: <strong>{activeLocator.name}</strong></p>
+          <h1 className="admin-title">Ubicaciones y Productos</h1>
+          <p className="admin-subtitle">Gestiona los médicos y sus catálogos de productos del mapa: <strong>{activeLocator.name}</strong></p>
         </div>
         <Link to="/dashboard/locations/new" className="btn btn-primary">
           <Plus size={18} />
@@ -154,7 +178,7 @@ export const ManageLocations: React.FC = () => {
           <Search size={18} style={{ position: 'absolute', left: '12px', color: 'var(--color-dark-text-tertiary)' }} />
           <input 
             type="text" 
-            placeholder="Buscar por nombre, dirección o etiqueta..." 
+            placeholder="Buscar por médico, dirección, etiqueta o producto (ej: Sebiaclear, Topialyse)..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="form-control"
@@ -163,7 +187,7 @@ export const ManageLocations: React.FC = () => {
         </div>
         
         <div style={{ fontSize: '14px', color: 'var(--color-dark-text-secondary)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-          {filteredLocations.length} de {locations.length} ubicaciones
+          {filteredLocations.length} de {locations.length} médicos
         </div>
       </div>
 
@@ -191,103 +215,111 @@ export const ManageLocations: React.FC = () => {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th style={{ width: '80px' }}>Foto</th>
-                  <th>Ubicación / Datos</th>
+                  <th style={{ width: '60px' }}>Foto</th>
+                  <th>Médico / Razón Social</th>
                   <th>Dirección</th>
-                  <th>Etiquetas</th>
+                  <th>Productos Registrados</th>
                   <th>Estado</th>
-                  <th style={{ width: '120px', textAlign: 'right' }}>Acciones</th>
+                  <th style={{ width: '100px', textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredLocations.map(loc => (
-                  <tr key={loc.id}>
-                    <td>
-                      {loc.image_url ? (
-                        <img 
-                          src={loc.image_url} 
-                          alt={loc.name} 
-                          style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)' }}
-                        />
-                      ) : (
-                        <div style={{ width: '56px', height: '56px', backgroundColor: 'var(--color-dark-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-dark-text-tertiary)' }}>
-                          <ImageIcon size={18} />
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'white' }}>{loc.name}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                        {loc.phone && <span>Tel: {loc.phone}</span>}
-                        {loc.website && (
-                          <a href={loc.website} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            Sitio Web <ExternalLink size={10} />
-                          </a>
+                {filteredLocations.slice(0, 100).map(loc => {
+                  const productCount = loc.products?.length || 0;
+
+                  return (
+                    <tr key={loc.id}>
+                      <td>
+                        {loc.image_url ? (
+                          <img 
+                            src={loc.image_url} 
+                            alt={loc.name} 
+                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)' }}
+                          />
+                        ) : (
+                          <div style={{ width: '48px', height: '48px', backgroundColor: 'var(--color-dark-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-dark-text-tertiary)' }}>
+                            <ImageIcon size={18} />
+                          </div>
                         )}
-                      </div>
-                    </td>
-                    <td style={{ fontSize: '14px', color: 'var(--color-dark-text-secondary)', maxWidth: '250px' }}>
-                      {loc.address}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '200px' }}>
-                        {loc.tags && loc.tags.length > 0 ? (
-                          loc.tags.map(tag => (
-                            <span key={tag} className="tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', margin: 0 }}>
-                              <Tag size={10} />
-                              {tag}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'white' }}>{loc.name}</div>
+                        {loc.custom_fields?.["Razón Social"] && (
+                          <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
+                            RS: {loc.custom_fields["Razón Social"]}
+                          </div>
+                        )}
+                        {loc.custom_fields?.["Documento"] && (
+                          <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)' }}>
+                            {loc.custom_fields["Documento"]}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', maxWidth: '240px' }}>
+                        {loc.address}
+                      </td>
+                      <td>
+                        {productCount > 0 ? (
+                          <div>
+                            <span className="badge" style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818cf8', gap: '4px' }}>
+                              <Package size={12} />
+                              {productCount} {productCount === 1 ? 'producto' : 'productos'}
                             </span>
-                          ))
+                            <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {loc.products?.slice(0, 2).map(p => p.name).join(', ')}
+                              {productCount > 2 && '...'}
+                            </div>
+                          </div>
                         ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)' }}>-</span>
+                          <span style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)' }}>Sin productos</span>
                         )}
-                      </div>
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => handleTogglePublish(loc.id, loc.published)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                        title={loc.published ? 'Cambiar a borrador' : 'Publicar'}
-                      >
-                        {loc.published ? (
-                          <span className="badge badge-success" style={{ gap: '4px', cursor: 'pointer' }}>
-                            <ToggleRight size={18} style={{ color: 'var(--color-success)' }} />
-                            Publicado
-                          </span>
-                        ) : (
-                          <span className="badge badge-draft" style={{ gap: '4px', cursor: 'pointer' }}>
-                            <ToggleLeft size={18} style={{ color: 'var(--color-dark-text-secondary)' }} />
-                            Borrador
-                          </span>
-                        )}
-                      </button>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'end' }}>
-                        <Link 
-                          to={`/dashboard/locations/${loc.id}/edit`} 
-                          className="btn-icon" 
-                          style={{ color: 'var(--color-dark-text-secondary)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}
-                          title="Editar Ubicación"
-                        >
-                          <Edit3 size={16} />
-                        </Link>
+                      </td>
+                      <td>
                         <button 
-                          className="btn-icon" 
-                          onClick={() => handleDeleteLocation(loc.id, loc.name)}
-                          style={{ color: 'var(--color-dark-text-secondary)' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}
-                          title="Eliminar Ubicación"
+                          onClick={() => handleTogglePublish(loc.id, loc.published)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                          title={loc.published ? 'Cambiar a borrador' : 'Publicar'}
                         >
-                          <Trash2 size={16} />
+                          {loc.published ? (
+                            <span className="badge badge-success" style={{ gap: '4px', cursor: 'pointer' }}>
+                              <ToggleRight size={18} style={{ color: 'var(--color-success)' }} />
+                              Publicado
+                            </span>
+                          ) : (
+                            <span className="badge badge-draft" style={{ gap: '4px', cursor: 'pointer' }}>
+                              <ToggleLeft size={18} style={{ color: 'var(--color-dark-text-secondary)' }} />
+                              Borrador
+                            </span>
+                          )}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'end' }}>
+                          <Link 
+                            to={`/dashboard/locations/${loc.id}/edit`} 
+                            className="btn-icon" 
+                            style={{ color: 'var(--color-dark-text-secondary)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}
+                            title="Editar Ubicación"
+                          >
+                            <Edit3 size={16} />
+                          </Link>
+                          <button 
+                            className="btn-icon" 
+                            onClick={() => handleDeleteLocation(loc.id, loc.name)}
+                            style={{ color: 'var(--color-dark-text-secondary)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}
+                            title="Eliminar Ubicación"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

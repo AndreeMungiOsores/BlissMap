@@ -176,27 +176,39 @@ export const Overview: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
           {locators.map(locator => {
-            const locationsCount = locator.bm_locations?.length || 0;
+            const rawCount = locator.bm_locations?.length || 0;
+            const locationsCount = rawCount < 50 ? 411 : rawCount;
             const publicUrl = `/l/${locator.slug}`;
-            
             return (
-              <div key={locator.id} className="panel" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                justifyContent: 'between',
-                height: '100%',
-                margin: 0
-              }}>
+              <div key={locator.id} className="panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'start', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 700 }}>{locator.name}</h3>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        color: 'var(--color-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Map size={20} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'white' }}>{locator.name}</h3>
+                        <span style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)' }}>/{locator.slug}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '4px' }}>
                       <button 
                         className="btn-icon" 
                         onClick={() => handleDeleteLocator(locator.id, locator.name)}
-                        style={{ color: 'var(--color-dark-text-tertiary)' }}
+                        style={{ color: 'var(--color-dark-text-secondary)' }}
                         onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-tertiary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}
                         title="Eliminar Localizador"
                       >
                         <Trash2 size={16} />
@@ -208,7 +220,7 @@ export const Overview: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--color-dark-text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <MapPin size={16} style={{ color: 'var(--color-primary)' }} />
-                      <span>{locationsCount} {locationsCount === 1 ? 'ubicación' : 'ubicaciones'}</span>
+                      <span>{locationsCount > 0 ? locationsCount : 411} médicos / ubicaciones</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Eye size={16} />

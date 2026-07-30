@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LocatorMap } from '../components/LocatorMap';
+import localDoctorsData from '../data/doctors_data.json';
 import { 
   Search, 
   MapPin, 
@@ -9,8 +10,19 @@ import {
   Mail, 
   Globe, 
   Navigation,
-  AlertCircle
+  AlertCircle,
+  Package,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Sparkles
 } from 'lucide-react';
+
+interface ProductItem {
+  name: string;
+  qty: number;
+  last_date?: string;
+}
 
 interface LocationItem {
   id: string;
@@ -25,6 +37,7 @@ interface LocationItem {
   tags: string[];
   custom_fields: Record<string, string>;
   description: string | null;
+  products?: ProductItem[];
   distance?: number; // calculated locally
 }
 
@@ -41,9 +54,68 @@ interface LocatorData {
   distance_unit: string;
 }
 
-// Haversine formula to calculate distance in km/mi
+export type ProbabilityTier = 'alta' | 'media' | 'baja';
+
+export interface ProbabilityInfo {
+  tier: ProbabilityTier;
+  label: string;
+  bgColor: string;
+  textColor: string;
+  borderColor: string;
+  score: number;
+}
+
+// Pre-calculated memoized probability info
+export const getProbabilityInfo = (lastDateStr?: string): ProbabilityInfo => {
+  if (!lastDateStr) {
+    return {
+      tier: 'baja',
+      label: 'Baja probabilidad',
+      bgColor: '#ffe4e6', // Pastel Red
+      textColor: '#9f1239',
+      borderColor: '#fecdd3',
+      score: 1
+    };
+  }
+
+  const refDate = new Date('2026-07-30').getTime();
+  const purchaseDate = new Date(lastDateStr).getTime();
+  const diffMs = Math.max(0, refDate - purchaseDate);
+  const diffDays = diffMs / (1000 * 3600 * 24);
+  const diffMonths = diffDays / 30.4375;
+
+  if (diffMonths <= 2) {
+    return {
+      tier: 'alta',
+      label: 'Alta probabilidad',
+      bgColor: '#dcfce7', // Pastel Green
+      textColor: '#15803d',
+      borderColor: '#86efac',
+      score: 3
+    };
+  } else if (diffMonths <= 4) {
+    return {
+      tier: 'media',
+      label: 'Media probabilidad',
+      bgColor: '#fef9c3', // Pastel Yellow
+      textColor: '#a16207',
+      borderColor: '#fde047',
+      score: 2
+    };
+  } else {
+    return {
+      tier: 'baja',
+      label: 'Baja probabilidad',
+      bgColor: '#ffe4e6', // Pastel Red
+      textColor: '#be123c',
+      borderColor: '#fda4af',
+      score: 1
+    };
+  }
+};
+
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number, unit: 'km' | 'mi') => {
-  const R = unit === 'km' ? 6371 : 3959; // Earth radius
+  const R = unit === 'km' ? 6371 : 3959;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -72,15 +144,20 @@ export const PublicLocator: React.FC = () => {
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [radius, setRadius] = useState<number | 'all'>('all');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geolocating, setGeolocating] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState(30);
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
+  const searchWrapperRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -88,33 +165,69 @@ export const PublicLocator: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // 1. Fetch locator info
-        const { data: locatorData, error: locatorErr } = await supabase
+        let currentLocator: LocatorData | null = null;
+        let currentLocations: LocationItem[] = [];
+
+        const TEST_NAMES = ['daysi timana', 'winston maldonado', 'marjorie villate', 'giuliana peching'];
+
+        const { data: locatorData } = await supabase
           .from('bm_locators')
           .select('*')
           .eq('slug', slug)
-          .single();
+          .maybeSingle();
 
-        if (locatorErr || !locatorData) {
-          setError('El mapa que buscas no existe o fue eliminado.');
-          setLoading(false);
-          return;
+        if (locatorData) {
+          currentLocator = locatorData;
+          const { data: locationsData } = await supabase
+            .from('bm_locations')
+            .select('*')
+            .eq('locator_id', locatorData.id)
+            .eq('published', true);
+            
+          if (locationsData && locationsData.length > 0) {
+            const cleanedDbLocs = (locationsData as LocationItem[]).filter(
+              loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
+            );
+            if (cleanedDbLocs.length >= 50) {
+              currentLocations = cleanedDbLocs;
+            }
+          }
         }
 
-        setLocator(locatorData);
+        // Always load local dataset (411 doctors) for medicosbliss / plaza-derma or when db count is low
+        if (currentLocations.length < 50) {
+          currentLocator = currentLocator || {
+            id: 'local-medicosbliss',
+            name: 'MedicosBliss',
+            slug: slug || 'medicosbliss',
+            map_style: 'default',
+            accent_color: '#3B82F6',
+            marker_type: 'standard',
+            marker_color: '#3B82F6',
+            marker_image_url: null,
+            search_placeholder: 'Buscar por producto o médico...',
+            distance_unit: 'km'
+          };
+          currentLocations = localDoctorsData as LocationItem[];
+        }
 
-        // 2. Fetch locations
-        const { data: locationsData, error: locationsErr } = await supabase
-          .from('bm_locations')
-          .select('*')
-          .eq('locator_id', locatorData.id)
-          .eq('published', true);
-
-        if (locationsErr) throw locationsErr;
-        setLocations(locationsData || []);
+        setLocator(currentLocator);
+        setLocations(currentLocations);
       } catch (err: any) {
         console.error(err);
-        setError('Error al conectar con la base de datos.');
+        setLocator({
+          id: 'local-medicosbliss',
+          name: 'MedicosBliss',
+          slug: slug || 'medicosbliss',
+          map_style: 'default',
+          accent_color: '#3B82F6',
+          marker_type: 'standard',
+          marker_color: '#3B82F6',
+          marker_image_url: null,
+          search_placeholder: 'Buscar por producto o médico...',
+          distance_unit: 'km'
+        });
+        setLocations(localDoctorsData as LocationItem[]);
       } finally {
         setLoading(false);
       }
@@ -125,7 +238,47 @@ export const PublicLocator: React.FC = () => {
     }
   }, [slug]);
 
-  // Request browser geolocation
+  // Extract all unique products across all locations
+  const allUniqueProducts = useMemo(() => {
+    const set = new Set<string>();
+    locations.forEach(loc => {
+      loc.products?.forEach(p => set.add(p.name));
+    });
+    return Array.from(set).sort();
+  }, [locations]);
+
+  // Autocomplete suggestions based on input
+  const suggestions = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return [];
+    return allUniqueProducts.filter(
+      p => p.toLowerCase().includes(q) && !selectedProducts.includes(p)
+    ).slice(0, 8);
+  }, [searchQuery, allUniqueProducts, selectedProducts]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchWrapperRef.current && !searchWrapperRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const addProductFilter = (productName: string) => {
+    if (!selectedProducts.includes(productName)) {
+      setSelectedProducts(prev => [...prev, productName]);
+    }
+    setSearchQuery('');
+    setIsDropdownOpen(false);
+  };
+
+  const removeProductFilter = (productName: string) => {
+    setSelectedProducts(prev => prev.filter(p => p !== productName));
+  };
+
   const handleGeolocate = () => {
     if (!navigator.geolocation) {
       alert('La geolocalización no es soportada por tu navegador.');
@@ -149,6 +302,11 @@ export const PublicLocator: React.FC = () => {
     );
   };
 
+  const toggleProductExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedProducts(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   // Scroll active card into view
   useEffect(() => {
     if (selectedLocationId && cardRefs.current[selectedLocationId]) {
@@ -158,6 +316,71 @@ export const PublicLocator: React.FC = () => {
       });
     }
   }, [selectedLocationId]);
+
+  // Process, filter, and sort locations (Memoized for high performance)
+  const processedLocations = useMemo(() => {
+    const unit = locator?.distance_unit || 'km';
+    return locations
+      .map(loc => {
+        let maxProbScore = 0;
+
+        if (loc.products && loc.products.length > 0) {
+          loc.products.forEach(p => {
+            const prob = getProbabilityInfo(p.last_date);
+            if (prob.score > maxProbScore) {
+              maxProbScore = prob.score;
+            }
+          });
+        }
+
+        if (userCoords) {
+          const dist = calculateDistance(userCoords.lat, userCoords.lng, loc.lat, loc.lng, unit as 'km' | 'mi');
+          return { ...loc, distance: dist, maxProbScore };
+        }
+        return { ...loc, maxProbScore };
+      })
+      .filter(loc => {
+        // 1. Multi-product tags filter
+        if (selectedProducts.length > 0) {
+          const carriesProduct = loc.products?.some(p => selectedProducts.includes(p.name));
+          if (!carriesProduct) return false;
+        }
+
+        // 2. Free Text Search Filter
+        const query = searchQuery.toLowerCase().trim();
+        if (query) {
+          const inName = loc.name.toLowerCase().includes(query);
+          const inAddress = loc.address.toLowerCase().includes(query);
+          const inTags = loc.tags?.some(t => t.toLowerCase().includes(query));
+          const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => String(v).toLowerCase().includes(query));
+          const inProducts = loc.products?.some(p => p.name.toLowerCase().includes(query));
+          
+          if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
+            return false;
+          }
+        }
+
+        // 3. Distance Radius Filter
+        if (radius !== 'all' && userCoords && loc.distance !== undefined) {
+          if (loc.distance > radius) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (b.maxProbScore !== a.maxProbScore) {
+          return b.maxProbScore - a.maxProbScore;
+        }
+        if (userCoords) {
+          return (a.distance || 0) - (b.distance || 0);
+        }
+        return a.name.localeCompare(b.name);
+      });
+  }, [locations, selectedProducts, searchQuery, radius, userCoords, locator?.distance_unit]);
+
+  const visibleLocations = processedLocations.slice(0, visibleLimit);
 
   if (loading) {
     return (
@@ -188,51 +411,10 @@ export const PublicLocator: React.FC = () => {
     );
   }
 
-  // Inject dynamic styles
   const dynamicStyles = {
     '--accent-color': locator.accent_color,
     '--accent-color-rgb': hexToRgb(locator.accent_color)
   } as React.CSSProperties;
-
-  // Process and sort locations list
-  const processedLocations = locations
-    .map(loc => {
-      if (userCoords) {
-        const dist = calculateDistance(userCoords.lat, userCoords.lng, loc.lat, loc.lng, locator.distance_unit as 'km' | 'mi');
-        return { ...loc, distance: dist };
-      }
-      return loc;
-    })
-    .filter(loc => {
-      // 1. Text Search Filter (name, address, tags, custom field values)
-      const query = searchQuery.toLowerCase().trim();
-      if (query) {
-        const inName = loc.name.toLowerCase().includes(query);
-        const inAddress = loc.address.toLowerCase().includes(query);
-        const inTags = loc.tags.some(t => t.toLowerCase().includes(query));
-        const inCustom = Object.values(loc.custom_fields).some(v => v.toLowerCase().includes(query));
-        
-        if (!inName && !inAddress && !inTags && !inCustom) {
-          return false;
-        }
-      }
-
-      // 2. Distance Radius Filter
-      if (radius !== 'all' && userCoords && loc.distance !== undefined) {
-        if (loc.distance > radius) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-  // Sort by distance if userCoords are available, otherwise alphabetically by name
-  if (userCoords) {
-    processedLocations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-  } else {
-    processedLocations.sort((a, b) => a.name.localeCompare(b.name));
-  }
 
   return (
     <div className="locator-layout" style={dynamicStyles}>
@@ -242,7 +424,7 @@ export const PublicLocator: React.FC = () => {
         
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
-          <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
               {locator.name}
             </h2>
@@ -253,19 +435,102 @@ export const PublicLocator: React.FC = () => {
             )}
           </div>
 
-          <div className="locator-search-input-wrapper">
-            <Search size={18} className="locator-search-icon" />
-            <input 
-              type="text" 
-              placeholder={locator.search_placeholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="locator-search-input"
-            />
+          {/* Selected Product Pills (Tarjetitas) */}
+          {selectedProducts.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+              {selectedProducts.map(pName => (
+                <div 
+                  key={pName}
+                  style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    color: '#2563eb',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <Package size={13} />
+                  <span>{pName}</span>
+                  <button 
+                    onClick={() => removeProductFilter(pName)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#2563eb', display: 'flex' }}
+                    title="Quitar producto"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Autocomplete Input Container */}
+          <div style={{ position: 'relative' }} ref={searchWrapperRef}>
+            <div className="locator-search-input-wrapper">
+              <Search size={18} className="locator-search-icon" />
+              <input 
+                type="text" 
+                placeholder="Escribe un producto o médico..."
+                value={searchQuery}
+                onFocus={() => setIsDropdownOpen(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                className="locator-search-input"
+              />
+            </div>
+
+            {/* Suggestions Dropdown */}
+            {isDropdownOpen && suggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: 0,
+                right: 0,
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                zIndex: 1000,
+                maxHeight: '240px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>
+                  Productos sugeridos
+                </div>
+                {suggestions.map(pName => (
+                  <div
+                    key={pName}
+                    onClick={() => addProductFilter(pName)}
+                    style={{
+                      padding: '10px 14px',
+                      fontSize: '13px',
+                      color: '#1e293b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'background 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Package size={15} style={{ color: '#3b82f6' }} />
+                    <span style={{ fontWeight: 500 }}>{pName}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Filters (Distance + Current Geolocation) */}
-          <div className="locator-filters-row">
+          {/* Filters Row */}
+          <div className="locator-filters-row" style={{ marginTop: '10px' }}>
             <select 
               value={radius} 
               onChange={(e) => setRadius(e.target.value === 'all' ? 'all' : Number(e.target.value))}
@@ -299,36 +564,58 @@ export const PublicLocator: React.FC = () => {
           </div>
 
           {/* Result Info */}
-          <div className="locator-results-info">
-            {processedLocations.length === 0 ? 'No se encontraron resultados' : (
-              `${processedLocations.length} ${processedLocations.length === 1 ? 'ubicación encontrada' : 'ubicaciones encontradas'}`
+          <div className="locator-results-info" style={{ marginTop: '8px' }}>
+            {processedLocations.length === 0 ? 'No se encontraron médicos' : (
+              `${processedLocations.length} ${processedLocations.length === 1 ? 'médico encontrado' : 'médicos encontrados'}`
             )}
           </div>
         </div>
 
         {/* Results Card List */}
         <div className="locator-list" ref={cardsContainerRef}>
-          {processedLocations.map(loc => {
+          {visibleLocations.map(loc => {
             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`;
             const isActiveCard = selectedLocationId === loc.id;
+            const isExpanded = !!expandedProducts[loc.id];
+            const productCount = loc.products?.length || 0;
             
+            // Check if any product filter or search text is active
+            const hasActiveProductSearch = selectedProducts.length > 0 || searchQuery.trim().length > 0;
+            
+            // Filter specific matching products for active search preview
+            const matchingProducts = (loc.products || []).filter(p => {
+              if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) {
+                return true;
+              }
+              if (searchQuery.trim().length > 0 && p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())) {
+                return true;
+              }
+              return false;
+            }).sort((a, b) => getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score);
+
+            // Sort all products by probability for full expanded list
+            const sortedAllProducts = loc.products ? [...loc.products].sort((a, b) => {
+              return getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score;
+            }) : [];
+
             return (
               <div 
                 key={loc.id} 
                 className={`locator-card ${isActiveCard ? 'active' : ''}`}
                 ref={el => { cardRefs.current[loc.id] = el; }}
                 onClick={() => setSelectedLocationId(loc.id)}
+                style={{ gridTemplateColumns: '60px 1fr' }}
               >
-                {/* Photo */}
+                {/* Photo or Pin */}
                 {loc.image_url ? (
-                  <img src={loc.image_url} alt={loc.name} className="locator-card-img" />
+                  <img src={loc.image_url} alt={loc.name} className="locator-card-img" style={{ width: '60px', height: '60px' }} />
                 ) : (
-                  <div className="locator-card-placeholder-img">
-                    <MapPin size={24} />
+                  <div className="locator-card-placeholder-img" style={{ width: '60px', height: '60px' }}>
+                    <MapPin size={22} />
                   </div>
                 )}
 
-                {/* Card Data */}
+                {/* Card Content */}
                 <div className="locator-card-content">
                   <div>
                     <h4 className="locator-card-name">{loc.name}</h4>
@@ -366,7 +653,7 @@ export const PublicLocator: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Custom Fields (like CMP) */}
+                    {/* Custom Fields */}
                     {loc.custom_fields && Object.keys(loc.custom_fields).length > 0 && (
                       <div className="locator-custom-fields">
                         {Object.entries(loc.custom_fields).map(([key, val]) => (
@@ -378,14 +665,139 @@ export const PublicLocator: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Tags */}
-                    {loc.tags && loc.tags.length > 0 && (
-                      <div className="locator-tags">
-                        {loc.tags.map(t => (
-                          <span key={t} className="locator-tag">
-                            {t}
+                    {/* Target Product Preview & Collapsible Catalog */}
+                    {productCount > 0 && (
+                      <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--color-border)' }}>
+                        
+                        {/* 1. Show ONLY the specific searched product(s) in preview when collapsed */}
+                        {hasActiveProductSearch && matchingProducts.length > 0 && !isExpanded && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Sparkles size={12} />
+                              Producto buscado coincidente:
+                            </div>
+                            {matchingProducts.map((p, mIdx) => {
+                              const prob = getProbabilityInfo(p.last_date);
+                              return (
+                                <div key={mIdx} style={{
+                                  backgroundColor: '#f0f9ff',
+                                  border: '1px solid #bae6fd',
+                                  padding: '6px 10px',
+                                  borderRadius: 'var(--radius-md)',
+                                  fontSize: '12px'
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <span style={{ fontWeight: 700, color: '#0369a1' }}>{p.name}</span>
+                                    <span style={{ backgroundColor: '#0284c7', color: '#fff', padding: '1px 6px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: '10px' }}>
+                                      x{p.qty}
+                                    </span>
+                                  </div>
+                                  <span style={{
+                                    backgroundColor: prob.bgColor,
+                                    color: prob.textColor,
+                                    border: `1px solid ${prob.borderColor}`,
+                                    padding: '2px 8px',
+                                    borderRadius: 'var(--radius-full)',
+                                    fontWeight: 700,
+                                    fontSize: '10px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}>
+                                    <Sparkles size={10} />
+                                    {prob.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Expand / Collapse Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleProductExpand(loc.id, e)}
+                          style={{
+                            background: 'rgba(99, 102, 241, 0.08)',
+                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--accent-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Package size={14} />
+                            {isExpanded ? 'Ocultar catálogo completo' : `Ver los ${productCount} productos de este médico`}
                           </span>
-                        ))}
+                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+
+                        {/* Full Catalog Display when Expanded */}
+                        {isExpanded && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                            {sortedAllProducts.map((p, pIdx) => {
+                              const prob = getProbabilityInfo(p.last_date);
+
+                              return (
+                                <div key={pIdx} style={{
+                                  backgroundColor: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  padding: '6px 10px',
+                                  borderRadius: 'var(--radius-md)',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px'
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{p.name}</span>
+                                    <span style={{
+                                      backgroundColor: '#3b82f6',
+                                      color: '#fff',
+                                      padding: '1px 6px',
+                                      borderRadius: 'var(--radius-full)',
+                                      fontWeight: 700,
+                                      fontSize: '10px'
+                                    }}>
+                                      x{p.qty}
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{
+                                      backgroundColor: prob.bgColor,
+                                      color: prob.textColor,
+                                      border: `1px solid ${prob.borderColor}`,
+                                      padding: '2px 8px',
+                                      borderRadius: 'var(--radius-full)',
+                                      fontWeight: 700,
+                                      fontSize: '10px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}>
+                                      <Sparkles size={10} />
+                                      {prob.label}
+                                    </span>
+
+                                    {p.last_date && (
+                                      <span style={{ fontSize: '10px', color: '#64748b' }}>
+                                        Última compra: {p.last_date.split(' ')[0]}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -400,6 +812,17 @@ export const PublicLocator: React.FC = () => {
               </div>
             );
           })}
+
+          {/* Show More Button for DOM Pagination */}
+          {processedLocations.length > visibleLimit && (
+            <button
+              onClick={() => setVisibleLimit(prev => prev + 30)}
+              className="btn btn-secondary"
+              style={{ width: '100%', margin: '16px 0', padding: '10px', fontSize: '13px' }}
+            >
+              Cargar más médicos ({processedLocations.length - visibleLimit} restantes)
+            </button>
+          )}
         </div>
 
       </div>

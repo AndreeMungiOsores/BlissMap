@@ -27,6 +27,19 @@ export interface Locator {
   distance_unit: string;
 }
 
+const DEFAULT_LOCAL_LOCATOR: Locator = {
+  id: 'local-medicosbliss',
+  name: 'PlazaDerma Médicos',
+  slug: 'medicosbliss',
+  map_style: 'default',
+  accent_color: '#3B82F6',
+  marker_type: 'standard',
+  marker_color: '#3B82F6',
+  marker_image_url: null,
+  search_placeholder: 'Buscar por médico, dirección o producto...',
+  distance_unit: 'km'
+};
+
 export const DashboardLayout: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -38,33 +51,36 @@ export const DashboardLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const fetchLocators = async () => {
-    if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('bm_locators')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      
-      setLocators(data || []);
-      
-      // Keep active locator synced
-      if (data && data.length > 0) {
-        const storedId = localStorage.getItem('bm_active_locator_id');
-        const found = data.find(l => l.id === storedId);
-        if (found) {
-          setActiveLocator(found);
-        } else {
-          setActiveLocator(data[0]);
-          localStorage.setItem('bm_active_locator_id', data[0].id);
+      let fetched: Locator[] = [];
+      if (user) {
+        const { data } = await supabase
+          .from('bm_locators')
+          .select('*')
+          .order('created_at', { ascending: true });
+        if (data && data.length > 0) {
+          fetched = data as Locator[];
         }
+      }
+
+      if (fetched.length === 0) {
+        fetched = [DEFAULT_LOCAL_LOCATOR];
+      }
+
+      setLocators(fetched);
+      
+      const storedId = localStorage.getItem('bm_active_locator_id');
+      const found = fetched.find(l => l.id === storedId);
+      if (found) {
+        setActiveLocator(found);
       } else {
-        setActiveLocator(null);
-        localStorage.removeItem('bm_active_locator_id');
+        setActiveLocator(fetched[0]);
+        localStorage.setItem('bm_active_locator_id', fetched[0].id);
       }
     } catch (err) {
       console.error('Error fetching locators:', err);
+      setLocators([DEFAULT_LOCAL_LOCATOR]);
+      setActiveLocator(DEFAULT_LOCAL_LOCATOR);
     } finally {
       setLoading(false);
     }
@@ -103,7 +119,7 @@ export const DashboardLayout: React.FC = () => {
           top: '20px',
           right: '20px',
           zIndex: 100,
-          display: 'none', // Managed by responsive CSS if added, otherwise keep inline logic
+          display: 'none',
           backgroundColor: 'var(--color-dark-surface)',
           border: '1px solid var(--color-dark-border)',
           borderRadius: 'var(--radius-sm)',
@@ -118,10 +134,7 @@ export const DashboardLayout: React.FC = () => {
       </button>
 
       {/* Sidebar */}
-      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`} style={{
-        // Add mobile conditional styles manually to ensure zero dependency layout
-        zIndex: 50
-      }}>
+      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`} style={{ zIndex: 50 }}>
         <div>
           {/* Brand Logo */}
           <div className="sidebar-header">
@@ -224,7 +237,7 @@ export const DashboardLayout: React.FC = () => {
               {user?.email ? user.email.charAt(0).toUpperCase() : <User size={16} />}
             </div>
             <div className="user-info">
-              <span className="user-name">{user?.user_metadata?.display_name || user?.email}</span>
+              <span className="user-name">{user?.user_metadata?.display_name || user?.email || 'Administrador'}</span>
               <span className="user-role">Administrador</span>
             </div>
           </div>
