@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowRight } from 'lucide-react';
+import logoImg from '../assets/logo.png';
 
 export const LandingPage: React.FC = () => {
   return (
@@ -26,7 +27,7 @@ export const LandingPage: React.FC = () => {
         {/* Brand New Logo */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <img 
-            src="/src/assets/logo.png" 
+            src={logoImg} 
             alt="BlissCorp Logo" 
             style={{ height: '48px', objectFit: 'contain' }} 
           />

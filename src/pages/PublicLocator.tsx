@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LocatorMap } from '../components/LocatorMap';
 import localDoctorsData from '../data/doctors_data.json';
+import logoImg from '../assets/logo.png';
 import { 
   Search, 
   MapPin, 
@@ -425,7 +426,7 @@ export const PublicLocator: React.FC = () => {
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <img src="/logo.png" alt="PlazaDerma Logo" style={{ height: '36px', objectFit: 'contain' }} />
+            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '36px', objectFit: 'contain' }} />
             {isPreview && (
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(30, 200, 170, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                 Vista Previa

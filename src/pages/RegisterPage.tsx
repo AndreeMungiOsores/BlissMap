@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { UserPlus, Mail, Lock, User, AlertCircle, ArrowLeft } from 'lucide-react';
+import logoImg from '../assets/logo.png';
 
 export const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -85,7 +86,7 @@ export const RegisterPage: React.FC = () => {
         {/* Title & Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <img src="/src/assets/logo.png" alt="BlissCorp Logo" style={{ height: '42px', objectFit: 'contain' }} />
+            <img src={logoImg} alt="BlissCorp Logo" style={{ height: '42px', objectFit: 'contain' }} />
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', color: '#00506E' }}>Crear Cuenta</h2>
           <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px' }}>Registra tus datos para acceder al sistema BlissCorp</p>

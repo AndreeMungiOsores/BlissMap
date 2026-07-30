@@ -13,6 +13,7 @@ import {
   User,
   Plus
 } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 export interface Locator {
   id: string;
@@ -138,7 +139,7 @@ export const DashboardLayout: React.FC = () => {
         <div>
           {/* Brand Logo */}
           <div className="sidebar-header">
-            <img src="/src/assets/logo.png" alt="BlissCorp Logo" style={{ height: '34px', objectFit: 'contain' }} />
+            <img src={logoImg} alt="BlissCorp Logo" style={{ height: '34px', objectFit: 'contain' }} />
           </div>
 
           {/* Active Locator Selector */}
