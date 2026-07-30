@@ -16,13 +16,15 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Sparkles
+  Sparkles,
+  Tag
 } from 'lucide-react';
 
 interface ProductItem {
   name: string;
   qty: number;
   last_date?: string;
+  brand?: string;
 }
 
 interface LocationItem {
@@ -202,11 +204,11 @@ export const PublicLocator: React.FC = () => {
             name: 'MedicosBliss',
             slug: slug || 'medicosbliss',
             map_style: 'default',
-            accent_color: '#3B82F6',
+            accent_color: '#1EC8AA',
             marker_type: 'standard',
-            marker_color: '#3B82F6',
+            marker_color: '#1EC8AA',
             marker_image_url: null,
-            search_placeholder: 'Buscar por producto o médico...',
+            search_placeholder: 'Buscar por producto, marca o médico...',
             distance_unit: 'km'
           };
           currentLocations = localDoctorsData as LocationItem[];
@@ -221,11 +223,11 @@ export const PublicLocator: React.FC = () => {
           name: 'MedicosBliss',
           slug: slug || 'medicosbliss',
           map_style: 'default',
-          accent_color: '#3B82F6',
+          accent_color: '#1EC8AA',
           marker_type: 'standard',
-          marker_color: '#3B82F6',
+          marker_color: '#1EC8AA',
           marker_image_url: null,
-          search_placeholder: 'Buscar por producto o médico...',
+          search_placeholder: 'Buscar por producto, marca o médico...',
           distance_unit: 'km'
         });
         setLocations(localDoctorsData as LocationItem[]);
@@ -239,21 +241,43 @@ export const PublicLocator: React.FC = () => {
     }
   }, [slug]);
 
-  // Extract all unique products across all locations
-  const allUniqueProducts = useMemo(() => {
+  // Extract all unique brands across dataset
+  const allUniqueBrands = useMemo(() => {
     const set = new Set<string>();
     locations.forEach(loc => {
-      loc.products?.forEach(p => set.add(p.name));
+      loc.products?.forEach(p => {
+        if (p.brand) set.add(p.brand.toUpperCase());
+      });
     });
     return Array.from(set).sort();
   }, [locations]);
 
-  // Autocomplete suggestions based on input
-  const suggestions = useMemo(() => {
+  // Extract all unique products across all locations
+  const allUniqueProducts = useMemo(() => {
+    const map = new Map<string, ProductItem>();
+    locations.forEach(loc => {
+      loc.products?.forEach(p => {
+        if (!map.has(p.name)) {
+          map.set(p.name, p);
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [locations]);
+
+  // Brand suggestions matching query
+  const brandSuggestions = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return [];
+    return allUniqueBrands.filter(b => b.toLowerCase().includes(q));
+  }, [searchQuery, allUniqueBrands]);
+
+  // Product suggestions matching query or brand
+  const productSuggestions = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return [];
     return allUniqueProducts.filter(
-      p => p.toLowerCase().includes(q) && !selectedProducts.includes(p)
+      p => (p.name.toLowerCase().includes(q) || (p.brand && p.brand.toLowerCase().includes(q))) && !selectedProducts.includes(p.name)
     ).slice(0, 8);
   }, [searchQuery, allUniqueProducts, selectedProducts]);
 
@@ -278,6 +302,11 @@ export const PublicLocator: React.FC = () => {
 
   const removeProductFilter = (productName: string) => {
     setSelectedProducts(prev => prev.filter(p => p !== productName));
+  };
+
+  const selectBrandFilter = (brandName: string) => {
+    setSearchQuery(brandName);
+    setIsDropdownOpen(false);
   };
 
   const handleGeolocate = () => {
@@ -347,14 +376,14 @@ export const PublicLocator: React.FC = () => {
           if (!carriesProduct) return false;
         }
 
-        // 2. Free Text Search Filter
+        // 2. Free Text Search Filter (Matches Doctor Name, Address, Product Name, OR Product Brand!)
         const query = searchQuery.toLowerCase().trim();
         if (query) {
           const inName = loc.name.toLowerCase().includes(query);
           const inAddress = loc.address.toLowerCase().includes(query);
           const inTags = loc.tags?.some(t => t.toLowerCase().includes(query));
           const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => String(v).toLowerCase().includes(query));
-          const inProducts = loc.products?.some(p => p.name.toLowerCase().includes(query));
+          const inProducts = loc.products?.some(p => p.name.toLowerCase().includes(query) || (p.brand && p.brand.toLowerCase().includes(query)));
           
           if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
             return false;
@@ -385,7 +414,7 @@ export const PublicLocator: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#f8fafc' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#FAF8F5' }}>
         <div className="spinner"></div>
       </div>
     );
@@ -399,7 +428,7 @@ export const PublicLocator: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#FAF8F5',
         color: '#0f172a',
         padding: '20px',
         textAlign: 'center',
@@ -426,7 +455,7 @@ export const PublicLocator: React.FC = () => {
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '36px', objectFit: 'contain' }} />
+            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '54px', maxWidth: '220px', objectFit: 'contain' }} />
             {isPreview && (
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(30, 200, 170, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                 Vista Previa
@@ -441,9 +470,9 @@ export const PublicLocator: React.FC = () => {
                 <div 
                   key={pName}
                   style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    color: '#2563eb',
+                    backgroundColor: 'rgba(30, 200, 170, 0.12)',
+                    border: '1px solid rgba(30, 200, 170, 0.3)',
+                    color: '#00506E',
                     padding: '4px 10px',
                     borderRadius: 'var(--radius-full)',
                     fontSize: '12px',
@@ -454,11 +483,11 @@ export const PublicLocator: React.FC = () => {
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                   }}
                 >
-                  <Package size={13} />
+                  <Package size={13} style={{ color: '#1EC8AA' }} />
                   <span>{pName}</span>
                   <button 
                     onClick={() => removeProductFilter(pName)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#2563eb', display: 'flex' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#00506E', display: 'flex' }}
                     title="Quitar producto"
                   >
                     <X size={13} />
@@ -474,7 +503,7 @@ export const PublicLocator: React.FC = () => {
               <Search size={18} className="locator-search-icon" />
               <input 
                 type="text" 
-                placeholder="Escribe un producto o médico..."
+                placeholder="Escribe producto, marca (ej. SVR) o médico..."
                 value={searchQuery}
                 onFocus={() => setIsDropdownOpen(true)}
                 onChange={(e) => {
@@ -485,8 +514,8 @@ export const PublicLocator: React.FC = () => {
               />
             </div>
 
-            {/* Suggestions Dropdown */}
-            {isDropdownOpen && suggestions.length > 0 && (
+            {/* Suggestions Dropdown (Brands & Products) */}
+            {isDropdownOpen && (brandSuggestions.length > 0 || productSuggestions.length > 0) && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 4px)',
@@ -497,33 +526,81 @@ export const PublicLocator: React.FC = () => {
                 borderRadius: 'var(--radius-md)',
                 boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
                 zIndex: 1000,
-                maxHeight: '240px',
+                maxHeight: '300px',
                 overflowY: 'auto'
               }}>
-                <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>
-                  Productos sugeridos
-                </div>
-                {suggestions.map(pName => (
-                  <div
-                    key={pName}
-                    onClick={() => addProductFilter(pName)}
-                    style={{
-                      padding: '10px 14px',
-                      fontSize: '13px',
-                      color: '#1e293b',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'background 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <Package size={15} style={{ color: '#3b82f6' }} />
-                    <span style={{ fontWeight: 500 }}>{pName}</span>
+                {/* Brand Suggestions Header */}
+                {brandSuggestions.length > 0 && (
+                  <div>
+                    <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: '#00506E', textTransform: 'uppercase', backgroundColor: '#FAF8F5', borderBottom: '1px solid #f1f5f9' }}>
+                      🏷️ Marcas coincidentes
+                    </div>
+                    {brandSuggestions.map(bName => (
+                      <div
+                        key={bName}
+                        onClick={() => selectBrandFilter(bName)}
+                        style={{
+                          padding: '10px 14px',
+                          fontSize: '13px',
+                          color: '#00506E',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderBottom: '1px solid #f8fafc',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 200, 170, 0.08)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Tag size={15} style={{ color: '#1EC8AA' }} />
+                        <span>Marca: {bName}</span>
+                        <span style={{ fontSize: '10px', backgroundColor: '#1EC8AA', color: '#fff', padding: '1px 6px', borderRadius: '10px', marginLeft: 'auto' }}>
+                          Ver productos de {bName}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* Product Suggestions Header */}
+                {productSuggestions.length > 0 && (
+                  <div>
+                    <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', backgroundColor: '#FAF8F5', borderBottom: '1px solid #f1f5f9' }}>
+                      📦 Productos sugeridos
+                    </div>
+                    {productSuggestions.map(p => (
+                      <div
+                        key={p.name}
+                        onClick={() => addProductFilter(p.name)}
+                        style={{
+                          padding: '10px 14px',
+                          fontSize: '13px',
+                          color: '#1e293b',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Package size={15} style={{ color: '#1EC8AA' }} />
+                          <span style={{ fontWeight: 500 }}>{p.name}</span>
+                        </div>
+                        {p.brand && (
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#00506E', backgroundColor: '#F4F0E8', padding: '1px 6px', borderRadius: '4px' }}>
+                            {p.brand}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -579,15 +656,17 @@ export const PublicLocator: React.FC = () => {
             const productCount = loc.products?.length || 0;
             
             // Check if any product filter or search text is active
-            const hasActiveProductSearch = selectedProducts.length > 0 || searchQuery.trim().length > 0;
+            const queryClean = searchQuery.trim().toLowerCase();
+            const hasActiveProductSearch = selectedProducts.length > 0 || queryClean.length > 0;
             
-            // Filter specific matching products for active search preview
+            // Filter specific matching products for active search preview (by name OR by brand!)
             const matchingProducts = (loc.products || []).filter(p => {
               if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) {
                 return true;
               }
-              if (searchQuery.trim().length > 0 && p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())) {
-                return true;
+              if (queryClean.length > 0) {
+                if (p.name.toLowerCase().includes(queryClean)) return true;
+                if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
               }
               return false;
             }).sort((a, b) => getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score);
@@ -668,12 +747,12 @@ export const PublicLocator: React.FC = () => {
                     {productCount > 0 && (
                       <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--color-border)' }}>
                         
-                        {/* 1. Show ONLY the specific searched product(s) in preview when collapsed */}
+                        {/* 1. Show ONLY the specific searched product(s) or brand matching products in preview when collapsed */}
                         {hasActiveProductSearch && matchingProducts.length > 0 && !isExpanded && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
                             <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Sparkles size={12} />
-                              Producto buscado coincidente:
+                              {queryClean ? `Productos coincidentes con "${searchQuery}":` : 'Producto seleccionado:'}
                             </div>
                             {matchingProducts.map((p, mIdx) => {
                               const prob = getProbabilityInfo(p.last_date);
@@ -686,7 +765,10 @@ export const PublicLocator: React.FC = () => {
                                   fontSize: '12px'
                                 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                    <span style={{ fontWeight: 700, color: '#0369a1' }}>{p.name}</span>
+                                    <span style={{ fontWeight: 700, color: '#0369a1' }}>
+                                      {p.brand && <span style={{ backgroundColor: '#00506E', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '9px', marginRight: '6px' }}>{p.brand}</span>}
+                                      {p.name}
+                                    </span>
                                     <span style={{ backgroundColor: '#0284c7', color: '#fff', padding: '1px 6px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: '10px' }}>
                                       x{p.qty}
                                     </span>
@@ -717,13 +799,13 @@ export const PublicLocator: React.FC = () => {
                           type="button"
                           onClick={(e) => toggleProductExpand(loc.id, e)}
                           style={{
-                            background: 'rgba(99, 102, 241, 0.08)',
-                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            background: 'rgba(30, 200, 170, 0.08)',
+                            border: '1px solid rgba(30, 200, 170, 0.25)',
                             borderRadius: 'var(--radius-sm)',
                             padding: '4px 10px',
                             fontSize: '12px',
                             fontWeight: 600,
-                            color: 'var(--accent-color)',
+                            color: '#00506E',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
@@ -732,7 +814,7 @@ export const PublicLocator: React.FC = () => {
                           }}
                         >
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Package size={14} />
+                            <Package size={14} style={{ color: '#1EC8AA' }} />
                             {isExpanded ? 'Ocultar catálogo completo' : `Ver los ${productCount} productos de este médico`}
                           </span>
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -756,9 +838,12 @@ export const PublicLocator: React.FC = () => {
                                   gap: '4px'
                                 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{p.name}</span>
+                                    <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                                      {p.brand && <span style={{ backgroundColor: '#00506E', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '9px', marginRight: '6px' }}>{p.brand}</span>}
+                                      {p.name}
+                                    </span>
                                     <span style={{
-                                      backgroundColor: '#3b82f6',
+                                      backgroundColor: '#1EC8AA',
                                       color: '#fff',
                                       padding: '1px 6px',
                                       borderRadius: 'var(--radius-full)',
