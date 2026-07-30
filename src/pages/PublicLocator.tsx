@@ -350,24 +350,45 @@ export const PublicLocator: React.FC = () => {
   // Process, filter, and sort locations (Memoized for high performance)
   const processedLocations = useMemo(() => {
     const unit = locator?.distance_unit || 'km';
+    const queryClean = searchQuery.trim().toLowerCase();
+    const hasActiveProductSearch = selectedProducts.length > 0 || queryClean.length > 0;
+
     return locations
       .map(loc => {
         let maxProbScore = 0;
+        let latestMatchingDate = '';
 
         if (loc.products && loc.products.length > 0) {
-          loc.products.forEach(p => {
+          // If a specific product or brand search filter is active, calculate probability score ONLY on matching products!
+          const matchingProducts = hasActiveProductSearch
+            ? loc.products.filter(p => {
+                if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) return true;
+                if (queryClean.length > 0) {
+                  if (p.name.toLowerCase().includes(queryClean)) return true;
+                  if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
+                }
+                return false;
+              })
+            : loc.products;
+
+          const targetProducts = matchingProducts.length > 0 ? matchingProducts : loc.products;
+
+          targetProducts.forEach(p => {
             const prob = getProbabilityInfo(p.last_date);
             if (prob.score > maxProbScore) {
               maxProbScore = prob.score;
+            }
+            if (p.last_date && p.last_date > latestMatchingDate) {
+              latestMatchingDate = p.last_date;
             }
           });
         }
 
         if (userCoords) {
           const dist = calculateDistance(userCoords.lat, userCoords.lng, loc.lat, loc.lng, unit as 'km' | 'mi');
-          return { ...loc, distance: dist, maxProbScore };
+          return { ...loc, distance: dist, maxProbScore, latestMatchingDate };
         }
-        return { ...loc, maxProbScore };
+        return { ...loc, maxProbScore, latestMatchingDate };
       })
       .filter(loc => {
         // 1. Multi-product tags filter
@@ -400,12 +421,19 @@ export const PublicLocator: React.FC = () => {
         return true;
       })
       .sort((a, b) => {
+        // 1. Sort strictly by matching product probability score (Alta = 3, Media = 2, Baja = 1)
         if (b.maxProbScore !== a.maxProbScore) {
           return b.maxProbScore - a.maxProbScore;
         }
+        // 2. Secondary sort: Most recent purchase date first
+        if (b.latestMatchingDate !== a.latestMatchingDate) {
+          return b.latestMatchingDate.localeCompare(a.latestMatchingDate);
+        }
+        // 3. Distance radius if user coordinates active
         if (userCoords) {
           return (a.distance || 0) - (b.distance || 0);
         }
+        // 4. Alphabetical doctor name
         return a.name.localeCompare(b.name);
       });
   }, [locations, selectedProducts, searchQuery, radius, userCoords, locator?.distance_unit]);
