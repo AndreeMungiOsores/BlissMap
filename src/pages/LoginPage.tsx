@@ -67,7 +67,7 @@ export const LoginPage: React.FC = () => {
         {/* Title & Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <img src={logoImg} alt="BlissCorp Logo" style={{ height: '42px', objectFit: 'contain' }} />
+            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '54px', objectFit: 'contain' }} />
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', color: '#00506E' }}>Ingresar al Sistema</h2>
           <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px' }}>Gestión de médicos y localizadores BlissCorp</p>

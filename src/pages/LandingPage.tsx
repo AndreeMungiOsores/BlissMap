@@ -28,8 +28,8 @@ export const LandingPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <img 
             src={logoImg} 
-            alt="BlissCorp Logo" 
-            style={{ height: '48px', objectFit: 'contain' }} 
+            alt="PlazaDerma Logo" 
+            style={{ height: '62px', objectFit: 'contain' }} 
           />
         </div>
         
