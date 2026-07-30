@@ -14,48 +14,24 @@ export const LandingPage: React.FC = () => {
       flexDirection: 'column',
       justifyContent: 'space-between'
     }}>
-      {/* Header / Nav */}
+      {/* Header */}
       <header style={{
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
-        padding: '24px 60px',
+        padding: '30px 60px 10px 60px',
         maxWidth: '1200px',
         width: '100%',
         margin: '0 auto'
       }}>
-        {/* Brand New Logo */}
+        {/* PlazaDerma Logo */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <img 
             src={logoImg} 
             alt="PlazaDerma Logo" 
-            style={{ height: '62px', objectFit: 'contain' }} 
+            style={{ height: '64px', objectFit: 'contain' }} 
           />
         </div>
-        
-        {/* Single Navigation Action */}
-        <nav>
-          <Link 
-            to="/login" 
-            className="btn btn-primary" 
-            style={{ 
-              padding: '10px 24px', 
-              borderRadius: 'var(--radius-md)', 
-              fontSize: '15px', 
-              fontWeight: 600,
-              backgroundColor: '#1EC8AA',
-              borderColor: '#1EC8AA',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(30, 200, 170, 0.25)'
-            }}
-          >
-            Ingresar
-            <ArrowRight size={16} />
-          </Link>
-        </nav>
       </header>
 
       {/* Main Hero Section */}
