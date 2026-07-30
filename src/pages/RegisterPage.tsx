@@ -16,7 +16,6 @@ export const RegisterPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    // 1. Sign up the user in Supabase
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -33,15 +32,12 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    // 2. To ensure immediate login (especially if email confirmation is disabled on Supabase backend),
-    // we attempt to sign in right after signing up.
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (signInError) {
-      // If sign in fails, but sign up succeeded, it might be because email confirmation is still turned on in Supabase settings
       setError(
         "Cuenta creada con éxito. Si la confirmación de correo está activada en Supabase, por favor revisa tu correo. De lo contrario, intenta ingresar."
       );
@@ -53,8 +49,8 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <div style={{
-      backgroundColor: '#090d16',
-      color: '#f9fafb',
+      backgroundColor: '#FAF8F5',
+      color: '#0F172A',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -65,8 +61,8 @@ export const RegisterPage: React.FC = () => {
       <div style={{
         width: '100%',
         maxWidth: '440px',
-        backgroundColor: '#111827',
-        border: '1px solid #1f2937',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5DFD5',
         borderRadius: 'var(--radius-lg)',
         padding: '40px',
         boxShadow: 'var(--shadow-xl)'
@@ -76,30 +72,23 @@ export const RegisterPage: React.FC = () => {
           display: 'inline-flex',
           alignItems: 'center',
           gap: '6px',
-          color: '#9ca3af',
+          color: '#64748B',
           fontSize: '14px',
           marginBottom: '24px',
-          transition: 'color 0.2s'
-        }} onMouseEnter={(e) => e.currentTarget.style.color = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
+          transition: 'color 0.2s',
+          fontWeight: 500
+        }} onMouseEnter={(e) => e.currentTarget.style.color = '#0F172A'} onMouseLeave={(e) => e.currentTarget.style.color = '#64748B'}>
           <ArrowLeft size={16} />
           Volver al inicio
         </Link>
 
-        {/* Title */}
+        {/* Title & Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <img src="/src/assets/logo.svg" alt="BlissMap Logo" style={{ width: '32px', height: '32px' }} />
-            <span style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: '22px',
-              background: 'linear-gradient(135deg, #ec4899, #8b5cf6)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>BlissMap</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <img src="/src/assets/logo.png" alt="BlissCorp Logo" style={{ height: '42px', objectFit: 'contain' }} />
           </div>
-          <h2 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Crea tu cuenta gratis</h2>
-          <p style={{ color: '#9ca3af', fontSize: '14px', marginTop: '6px' }}>Crea y personaliza localizadores en minutos</p>
+          <h2 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', color: '#00506E' }}>Crear Cuenta</h2>
+          <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px' }}>Registra tus datos para acceder al sistema BlissCorp</p>
         </div>
 
         {/* Error / Info Alert */}
@@ -107,7 +96,7 @@ export const RegisterPage: React.FC = () => {
           <div style={{
             backgroundColor: error.includes("éxito") ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
             border: error.includes("éxito") ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
-            color: error.includes("éxito") ? '#34d399' : '#f87171',
+            color: error.includes("éxito") ? '#059669' : '#ef4444',
             padding: '12px',
             borderRadius: 'var(--radius-md)',
             marginBottom: '20px',
@@ -124,25 +113,25 @@ export const RegisterPage: React.FC = () => {
         {/* Form */}
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Nombre Completo / Empresa</label>
+            <label className="form-label" style={{ color: '#334155' }}>Nombre Completo / Empresa</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <User size={18} style={{ position: 'absolute', left: '12px', color: '#6b7280' }} />
+              <User size={18} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
               <input
                 type="text"
                 required
-                placeholder="Blisscorp SAC"
+                placeholder="BlissCorp S.A.C."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="form-control"
-                style={{ width: '100%', paddingLeft: '40px' }}
+                style={{ width: '100%', paddingLeft: '40px', borderColor: '#E5DFD5', backgroundColor: '#FAF8F5', color: '#0F172A' }}
               />
             </div>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Correo Electrónico</label>
+            <label className="form-label" style={{ color: '#334155' }}>Correo Electrónico</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', color: '#6b7280' }} />
+              <Mail size={18} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
               <input
                 type="email"
                 required
@@ -150,15 +139,15 @@ export const RegisterPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-control"
-                style={{ width: '100%', paddingLeft: '40px' }}
+                style={{ width: '100%', paddingLeft: '40px', borderColor: '#E5DFD5', backgroundColor: '#FAF8F5', color: '#0F172A' }}
               />
             </div>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Contraseña</label>
+            <label className="form-label" style={{ color: '#334155' }}>Contraseña</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', color: '#6b7280' }} />
+              <Lock size={18} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
               <input
                 type="password"
                 required
@@ -166,7 +155,7 @@ export const RegisterPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="form-control"
-                style={{ width: '100%', paddingLeft: '40px' }}
+                style={{ width: '100%', paddingLeft: '40px', borderColor: '#E5DFD5', backgroundColor: '#FAF8F5', color: '#0F172A' }}
               />
             </div>
           </div>
@@ -175,7 +164,7 @@ export const RegisterPage: React.FC = () => {
             type="submit"
             disabled={loading}
             className="btn btn-primary"
-            style={{ width: '100%', marginTop: '8px', padding: '12px' }}
+            style={{ width: '100%', marginTop: '8px', padding: '12px', backgroundColor: '#1EC8AA', borderColor: '#1EC8AA', color: '#ffffff', fontWeight: 700 }}
           >
             {loading ? <div className="spinner" style={{ width: '18px', height: '18px', borderTopColor: '#fff' }}></div> : (
               <>
@@ -191,12 +180,12 @@ export const RegisterPage: React.FC = () => {
           textAlign: 'center',
           marginTop: '28px',
           fontSize: '14px',
-          color: '#9ca3af',
-          borderTop: '1px solid #1f2937',
+          color: '#64748B',
+          borderTop: '1px solid #E5DFD5',
           paddingTop: '20px'
         }}>
           ¿Ya tienes una cuenta?{' '}
-          <Link to="/login" style={{ color: '#6366f1', fontWeight: 600 }}>
+          <Link to="/login" style={{ color: '#1EC8AA', fontWeight: 600 }}>
             Inicia Sesión
           </Link>
         </div>

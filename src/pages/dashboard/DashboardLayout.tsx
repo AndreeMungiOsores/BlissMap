@@ -138,8 +138,7 @@ export const DashboardLayout: React.FC = () => {
         <div>
           {/* Brand Logo */}
           <div className="sidebar-header">
-            <img src="/src/assets/logo.svg" alt="BlissMap Logo" style={{ width: '28px', height: '28px' }} />
-            <span className="sidebar-logo-text">BlissMap</span>
+            <img src="/src/assets/logo.png" alt="BlissCorp Logo" style={{ height: '34px', objectFit: 'contain' }} />
           </div>
 
           {/* Active Locator Selector */}
