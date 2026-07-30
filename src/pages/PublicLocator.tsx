@@ -425,11 +425,9 @@ export const PublicLocator: React.FC = () => {
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
-              {locator.name}
-            </h2>
+            <img src="/logo.png" alt="PlazaDerma Logo" style={{ height: '36px', objectFit: 'contain' }} />
             {isPreview && (
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(30, 200, 170, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                 Vista Previa
               </span>
             )}

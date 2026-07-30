@@ -197,7 +197,7 @@ export const Overview: React.FC = () => {
                         <Map size={20} />
                       </div>
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'white' }}>{locator.name}</h3>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--color-dark-text-primary)' }}>{locator.name}</h3>
                         <span style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)' }}>/{locator.slug}</span>
                       </div>
                     </div>
@@ -232,7 +232,7 @@ export const Overview: React.FC = () => {
                 <div style={{ display: 'flex', gap: '12px', borderTop: '1px solid var(--color-dark-border)', paddingTop: '16px', marginTop: 'auto' }}>
                   <button 
                     className="btn btn-secondary" 
-                    style={{ flexGrow: 1, padding: '8px 12px', fontSize: '14px', color: 'white', borderColor: 'var(--color-dark-border)' }}
+                    style={{ flexGrow: 1, padding: '8px 12px', fontSize: '14px', color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
                     onClick={() => {
                       setActiveLocator(locator);
                       localStorage.setItem('bm_active_locator_id', locator.id);

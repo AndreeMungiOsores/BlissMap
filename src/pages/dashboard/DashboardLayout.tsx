@@ -151,6 +151,7 @@ export const DashboardLayout: React.FC = () => {
                 value={activeLocator?.id || ''} 
                 onChange={handleLocatorChange}
                 className="locator-selector"
+                style={{ backgroundColor: '#FAF8F5', color: 'var(--color-dark-text-primary)', borderColor: '#E5DFD5' }}
               >
                 {locators.map(l => (
                   <option key={l.id} value={l.id}>{l.name}</option>
@@ -164,7 +165,7 @@ export const DashboardLayout: React.FC = () => {
                   width: '100%', 
                   fontSize: '13px', 
                   padding: '8px', 
-                  color: 'white', 
+                  color: 'var(--color-dark-text-primary)', 
                   borderColor: 'var(--color-dark-border)', 
                   display: 'flex', 
                   alignItems: 'center', 

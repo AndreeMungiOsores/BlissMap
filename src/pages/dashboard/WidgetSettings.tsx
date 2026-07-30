@@ -192,7 +192,7 @@ export const WidgetSettings: React.FC = () => {
           
           {/* Section 1: Map Style */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Map size={16} /> Estilo del Mapa
             </h3>
 
@@ -218,7 +218,7 @@ export const WidgetSettings: React.FC = () => {
                     onChange={(e) => setMapStyle(e.target.value)}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Color Predeterminado</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Color Predeterminado</span>
                   <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>Mapa clásico de Google Maps/Leaflet</span>
                 </label>
 
@@ -240,7 +240,7 @@ export const WidgetSettings: React.FC = () => {
                     onChange={(e) => setMapStyle(e.target.value)}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Gris Claro</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Gris Claro</span>
                   <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>Estilo minimalista limpio y claro</span>
                 </label>
 
@@ -262,7 +262,7 @@ export const WidgetSettings: React.FC = () => {
                     onChange={(e) => setMapStyle(e.target.value)}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Escala de Grises Oscura</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Escala de Grises Oscura</span>
                   <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>Moderno tema oscuro para mapas</span>
                 </label>
 
@@ -284,7 +284,7 @@ export const WidgetSettings: React.FC = () => {
                     onChange={(e) => setMapStyle(e.target.value)}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Satélite</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Satélite</span>
                   <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>Fotografías reales satelitales</span>
                 </label>
 
@@ -294,7 +294,7 @@ export const WidgetSettings: React.FC = () => {
 
           {/* Section 2: Colors and Text */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Palette size={16} /> Interfaz y Colores
             </h3>
 
@@ -353,7 +353,7 @@ export const WidgetSettings: React.FC = () => {
 
           {/* Section 3: Marker Icon Style */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MapPin size={16} /> Icono del Marcador
             </h3>
 
@@ -378,7 +378,7 @@ export const WidgetSettings: React.FC = () => {
                     onChange={(e) => setMarkerType(e.target.value)}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Pin Estándar</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Pin Estándar</span>
                   <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>Pin clásico con color personalizable</span>
                 </label>
 
@@ -400,7 +400,7 @@ export const WidgetSettings: React.FC = () => {
                     onChange={(e) => setMarkerType(e.target.value)}
                     style={{ display: 'none' }}
                   />
-                  <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Subir Icono Propio</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Subir Icono Propio</span>
                   <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>Usa una imagen PNG personalizada</span>
                 </label>
               </div>
@@ -511,7 +511,7 @@ export const WidgetSettings: React.FC = () => {
         {/* Right Side: Interactive Preview */}
         <div className="customizer-preview-container">
           <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'white' }}>
+            <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-dark-text-primary)' }}>
               <Eye size={16} /> Vista Previa del Widget
             </h3>
             <button 

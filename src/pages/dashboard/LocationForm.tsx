@@ -245,7 +245,7 @@ export const LocationForm: React.FC = () => {
 
   if (!activeLocator) {
     return (
-      <div style={{ color: 'white', textAlign: 'center', padding: '40px' }}>
+      <div style={{ color: 'var(--color-dark-text-primary)', textAlign: 'center', padding: '40px' }}>
         No hay ningún localizador seleccionado.
       </div>
     );
@@ -266,7 +266,7 @@ export const LocationForm: React.FC = () => {
         <button 
           onClick={() => navigate('/dashboard/locations')}
           className="btn btn-secondary" 
-          style={{ padding: '8px 12px', color: 'white', borderColor: 'var(--color-dark-border)' }}
+          style={{ padding: '8px 12px', color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
         >
           <ArrowLeft size={16} />
         </button>
@@ -306,7 +306,7 @@ export const LocationForm: React.FC = () => {
           
           {/* Card 1: Basic details */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)' }}>
               Información Básica
             </h3>
 
@@ -340,7 +340,7 @@ export const LocationForm: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'white',
+                        color: 'var(--color-dark-text-primary)',
                         cursor: 'pointer',
                         fontSize: '11px'
                       }}
@@ -392,7 +392,7 @@ export const LocationForm: React.FC = () => {
 
           {/* Card 2: Contact Info */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)' }}>
               Contacto y Enlaces
             </h3>
 
@@ -446,12 +446,12 @@ export const LocationForm: React.FC = () => {
           {/* Card 3: Custom fields */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px' }}>
-              <h3 style={{ fontSize: '16px', color: 'white' }}>Campos Personalizados</h3>
+              <h3 style={{ fontSize: '16px', color: 'var(--color-dark-text-primary)' }}>Campos Personalizados</h3>
               <button 
                 type="button" 
                 onClick={handleAddCustomField}
                 className="btn btn-secondary" 
-                style={{ padding: '4px 8px', fontSize: '12px', color: 'white', borderColor: 'var(--color-dark-border)' }}
+                style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
               >
                 <Plus size={12} /> Agregar Campo
               </button>
@@ -502,7 +502,7 @@ export const LocationForm: React.FC = () => {
           
           {/* Geolocation Card */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)' }}>
               Ubicación en el Mapa
             </h3>
             
@@ -547,13 +547,13 @@ export const LocationForm: React.FC = () => {
 
           {/* Settings / Publishing */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'white' }}>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)' }}>
               Configuración de Publicación
             </h3>
 
             <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>Estado de publicación</div>
+                <div style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>Estado de publicación</div>
                 <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
                   Las ubicaciones en borrador no se mostrarán en el buscador público.
                 </div>
@@ -606,7 +606,7 @@ export const LocationForm: React.FC = () => {
                     border: 'none', 
                     background: 'none', 
                     flexGrow: 1, 
-                    color: 'white', 
+                    color: 'var(--color-dark-text-primary)', 
                     fontSize: '13px',
                     padding: 0
                   }}
@@ -625,7 +625,7 @@ export const LocationForm: React.FC = () => {
               type="button"
               onClick={() => navigate('/dashboard/locations')}
               className="btn btn-secondary"
-              style={{ flexGrow: 1, color: 'white', borderColor: 'var(--color-dark-border)' }}
+              style={{ flexGrow: 1, color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
             >
               Cancelar
             </button>

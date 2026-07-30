@@ -205,7 +205,7 @@ export const ManageLocations: React.FC = () => {
         ) : filteredLocations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-dark-text-secondary)' }}>
             <MapPin size={40} style={{ color: 'var(--color-dark-text-tertiary)', marginBottom: '12px' }} />
-            <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'white', marginBottom: '6px' }}>No se encontraron ubicaciones</h4>
+            <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-dark-text-primary)', marginBottom: '6px' }}>No se encontraron ubicaciones</h4>
             <p style={{ fontSize: '14px' }}>
               {search ? 'Intenta cambiar los términos de búsqueda.' : 'Crea tu primera ubicación haciendo clic en "Agregar Ubicación".'}
             </p>
@@ -243,7 +243,7 @@ export const ManageLocations: React.FC = () => {
                         )}
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: 'white' }}>{loc.name}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)' }}>{loc.name}</div>
                         {loc.custom_fields?.["Razón Social"] && (
                           <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
                             RS: {loc.custom_fields["Razón Social"]}
