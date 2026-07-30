@@ -138,8 +138,8 @@ export const DashboardLayout: React.FC = () => {
       <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`} style={{ zIndex: 50 }}>
         <div>
           {/* Brand Logo */}
-          <div className="sidebar-header">
-            <img src={logoImg} alt="BlissCorp Logo" style={{ height: '34px', objectFit: 'contain' }} />
+          <div className="sidebar-header" style={{ padding: '24px 20px' }}>
+            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '48px', maxWidth: '100%', objectFit: 'contain' }} />
           </div>
 
           {/* Active Locator Selector */}

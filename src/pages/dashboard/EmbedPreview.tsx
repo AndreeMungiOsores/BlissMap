@@ -96,37 +96,6 @@ export const EmbedPreview: React.FC = () => {
               </span>
             </span>
           </div>
-
-          {/* Card 2: Platforms Guides */}
-          <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', color: 'var(--color-dark-text-primary)', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px' }}>
-              ¿Cómo integrarlo en tu plataforma?
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '14px' }}>
-              <div>
-                <strong style={{ color: 'var(--color-dark-text-primary)', display: 'block', marginBottom: '4px' }}>WordPress</strong>
-                <span style={{ color: 'var(--color-dark-text-secondary)' }}>
-                  Añade un bloque de <strong>HTML personalizado</strong> en Gutenberg o en Elementor, y pega el código copiado.
-                </span>
-              </div>
-              
-              <div>
-                <strong style={{ color: 'var(--color-dark-text-primary)', display: 'block', marginBottom: '4px' }}>Shopify</strong>
-                <span style={{ color: 'var(--color-dark-text-secondary)' }}>
-                  Ve a Páginas, selecciona tu página de contacto/locales, haz clic en el botón <strong>Mostrar HTML</strong> (&lt;&gt;) en el editor de contenido y pega el código.
-                </span>
-              </div>
-
-              <div>
-                <strong style={{ color: 'var(--color-dark-text-primary)', display: 'block', marginBottom: '4px' }}>Webflow</strong>
-                <span style={{ color: 'var(--color-dark-text-secondary)' }}>
-                  Arrastra un componente de tipo <strong>Embed Code</strong> a la sección de la página y inserta el iframe dentro del cuadro de texto.
-                </span>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         {/* Right Side: Resizable Live Preview */}
