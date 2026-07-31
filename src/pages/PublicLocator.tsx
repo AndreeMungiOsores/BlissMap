@@ -14,7 +14,8 @@ import {
   Sparkles,
   Tag,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface ProductItem {
@@ -559,6 +560,40 @@ export const PublicLocator: React.FC = () => {
           </div>
         </div>
 
+        {/* Selected Product Banner Header (Image 2 style) */}
+        {hasActiveProductSearch && (
+          <div className="bottom-sheet-product-banner" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 18px',
+            backgroundColor: '#FFFFFF',
+            borderBottom: '1px solid #E5DFD5'
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(30, 200, 170, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#1EC8AA',
+              flexShrink: 0
+            }}>
+              <Package size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#1EC8AA', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Producto seleccionado
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#00506E', marginTop: '2px', lineHeight: '1.3' }}>
+                {selectedProducts.length > 0 ? selectedProducts.join(', ') : searchQuery}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
           {/* Logo Row (Hidden on Mobile) */}
@@ -778,103 +813,108 @@ export const PublicLocator: React.FC = () => {
             // Extract Razón Social from custom_fields
             const razonSocial = loc.custom_fields?.['Razón Social'] || loc.custom_fields?.['Razon Social'] || loc.custom_fields?.['razon_social'];
 
+            // Calculate top probability info
+            const topProb = matchingProducts.length > 0 ? getProbabilityInfo(matchingProducts[0].last_date) : null;
+
             return (
               <div 
                 key={loc.id} 
                 className={`locator-card ${isActiveCard ? 'active' : ''}`}
                 ref={el => { cardRefs.current[loc.id] = el; }}
                 onClick={() => {
-                  setSelectedLocationId(loc.id);
+                  setSelectedLocationId(prev => prev === loc.id ? null : loc.id);
                 }}
-                style={{ gridTemplateColumns: '60px 1fr' }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '0', padding: '14px 16px', gridTemplateColumns: 'none' }}
               >
-                {/* Photo or Pin */}
-                {loc.image_url ? (
-                  <img src={loc.image_url} alt={loc.name} className="locator-card-img" style={{ width: '60px', height: '60px' }} />
-                ) : (
-                  <div className="locator-card-placeholder-img" style={{ width: '60px', height: '60px' }}>
-                    <MapPin size={22} />
+                {/* Main Row: Doctor Icon, Doctor Info, Stock Probability & Chevron */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
+                  
+                  {/* Left: Map Pin Icon & Doctor Name + Address */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexGrow: 1, minWidth: 0 }}>
+                    {loc.image_url ? (
+                      <img src={loc.image_url} alt={loc.name} style={{ width: '42px', height: '42px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', flexShrink: 0 }}>
+                        <MapPin size={20} />
+                      </div>
+                    )}
+
+                    <div style={{ minWidth: 0, flexGrow: 1 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#00506E', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {loc.name}
+                      </h4>
+                      <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {loc.address}
+                      </p>
+                    </div>
                   </div>
-                )}
 
-                {/* Card Content: ONLY Doctor Name, Address, and Razón Social */}
-                <div className="locator-card-content">
-                  <div>
-                    {/* 1. Doctor Name */}
-                    <h4 className="locator-card-name">{loc.name}</h4>
+                  {/* Right: Stock Probability Badge & Chevron Arrow */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    {topProb && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Stock:</span>
+                        <span style={{
+                          backgroundColor: topProb.bgColor,
+                          color: topProb.textColor,
+                          border: `1px solid ${topProb.borderColor}`,
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          fontWeight: 700,
+                          fontSize: '11px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          <Sparkles size={11} />
+                          {topProb.label}
+                        </span>
+                      </div>
+                    )}
+                    <ChevronRight size={18} style={{ color: '#94A3B8', transform: isActiveCard ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                  </div>
 
-                    {/* 2. Address */}
-                    <p className="locator-card-address">{loc.address}</p>
+                </div>
 
-                    {/* 3. Razón Social (only) */}
+                {/* Expanded View / Desglose on Selection */}
+                {isActiveCard && (
+                  <div style={{
+                    marginTop: '12px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #E2E8F0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
                     {razonSocial && (
-                      <p style={{ fontSize: '12px', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
+                      <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>
                         <strong style={{ color: '#00506E', fontWeight: 600 }}>Razón Social:</strong> {razonSocial}
                       </p>
                     )}
 
-                    {/* Distance if geolocated */}
                     {loc.distance !== undefined && (
-                      <span className="locator-card-distance" style={{ marginTop: '6px' }}>
-                        A {loc.distance.toFixed(1)} {locator.distance_unit} de ti
-                      </span>
+                      <p style={{ fontSize: '12px', color: '#1EC8AA', fontWeight: 600, margin: 0 }}>
+                        📍 A {loc.distance.toFixed(1)} {locator.distance_unit} de ti
+                      </p>
                     )}
 
-                    {/* Render ONLY the searched/selected product(s) when a product search is active */}
-                    {hasActiveProductSearch && matchingProducts.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--color-border)' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Sparkles size={12} />
-                          {isQueryActive ? `Producto coincidente:` : 'Producto seleccionado:'}
-                        </div>
-                        {matchingProducts.map((p, mIdx) => {
-                          const prob = getProbabilityInfo(p.last_date);
-                          return (
-                            <div key={mIdx} style={{
-                              backgroundColor: '#f0f9ff',
-                              border: '1px solid #bae6fd',
-                              padding: '6px 10px',
-                              borderRadius: 'var(--radius-md)',
-                              fontSize: '12px'
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                <span style={{ fontWeight: 700, color: '#0369a1' }}>
-                                  {p.brand && <span style={{ backgroundColor: '#00506E', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontSize: '9px', marginRight: '6px' }}>{p.brand}</span>}
-                                  {p.name}
-                                </span>
-                                <span style={{ backgroundColor: '#0284c7', color: '#fff', padding: '1px 6px', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: '10px' }}>
-                                  x{p.qty}
-                                </span>
-                              </div>
-                              <span style={{
-                                backgroundColor: prob.bgColor,
-                                color: prob.textColor,
-                                border: `1px solid ${prob.borderColor}`,
-                                padding: '2px 8px',
-                                borderRadius: 'var(--radius-full)',
-                                fontWeight: 700,
-                                fontSize: '10px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}>
-                                <Sparkles size={10} />
-                                {prob.label}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {/* Actions Row */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                      <a 
+                        href={googleMapsUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="locator-directions-btn" 
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ flexGrow: 1, justifyContent: 'center', padding: '9px 14px', fontSize: '13px', fontWeight: 700 }}
+                      >
+                        <Navigation size={14} />
+                        Cómo llegar
+                      </a>
+                    </div>
                   </div>
-
-                  {/* Get Directions Button */}
-                  <a href={googleMapsUrl} target="_blank" rel="noreferrer" className="locator-directions-btn" onClick={(e) => e.stopPropagation()}>
-                    <Navigation size={12} />
-                    Cómo llegar
-                  </a>
-
-                </div>
+                )}
               </div>
             );
           })}

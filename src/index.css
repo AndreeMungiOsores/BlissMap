@@ -853,6 +853,7 @@ button, input, select, textarea {
     border: 1px solid rgba(229, 223, 213, 0.9);
     padding: 8px 12px;
     gap: 0;
+    pointer-events: auto;
   }
 
   /* Bottom Sheet Drawer fixed at bottom of mobile screen with iOS Safe Area support */
@@ -875,9 +876,18 @@ button, input, select, textarea {
     padding-bottom: max(12px, env(safe-area-inset-bottom, 16px));
   }
 
-  /* Hide Bottom Sheet completely when no search query or product chip is active */
-  .locator-sidebar.mobile-hidden-sheet {
+  /* Hide ONLY the bottom sheet handle bar & list on mobile when no search query or product chip is active */
+  .locator-sidebar.mobile-hidden-sheet .bottom-sheet-handle-bar,
+  .locator-sidebar.mobile-hidden-sheet .locator-list {
     display: none !important;
+  }
+
+  .locator-sidebar.mobile-hidden-sheet {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+    height: 0 !important;
   }
 
   .locator-sidebar.sheet-collapsed {
