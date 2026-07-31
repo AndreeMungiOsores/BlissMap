@@ -158,6 +158,39 @@ export const PublicLocator: React.FC = () => {
   // Mobile Bottom Sheet State ('collapsed' | 'expanded')
   const [mobileSheetState, setMobileSheetState] = useState<'collapsed' | 'expanded'>('collapsed');
 
+  // Touch Gesture Handling for Mobile Swipe (Deslizar con el dedo hacia arriba / abajo)
+  const touchStartYRef = useRef<number | null>(null);
+  const touchCurrentYRef = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches && e.touches.length === 1) {
+      touchStartYRef.current = e.touches[0].clientY;
+      touchCurrentYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartYRef.current !== null && e.touches && e.touches.length === 1) {
+      touchCurrentYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartYRef.current !== null && touchCurrentYRef.current !== null) {
+      const deltaY = touchCurrentYRef.current - touchStartYRef.current;
+      // If dragged UP by more than 20px -> EXPAND
+      if (deltaY < -20) {
+        setMobileSheetState('expanded');
+      } 
+      // If dragged DOWN by more than 20px -> COLLAPSE
+      else if (deltaY > 20) {
+        setMobileSheetState('collapsed');
+      }
+    }
+    touchStartYRef.current = null;
+    touchCurrentYRef.current = null;
+  };
+
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -479,14 +512,17 @@ export const PublicLocator: React.FC = () => {
       {/* Sidebar Panel / Mobile Bottom Sheet */}
       <div className={`locator-sidebar sheet-${mobileSheetState}`}>
         
-        {/* Mobile Drag Handle Bar (Prominent Accessible Google Maps Pattern) */}
+        {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
         <div 
           className="bottom-sheet-handle-bar"
           onClick={() => setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed')}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           role="button"
           tabIndex={0}
           aria-expanded={mobileSheetState === 'expanded'}
-          aria-label={mobileSheetState === 'collapsed' ? 'Deslizar para ver la lista de médicos' : 'Deslizar para ver el mapa'}
+          aria-label={mobileSheetState === 'collapsed' ? 'Deslizar hacia arriba para ver la lista de médicos' : 'Deslizar hacia abajo para ver el mapa'}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed');
