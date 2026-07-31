@@ -875,6 +875,11 @@ button, input, select, textarea {
     padding-bottom: max(12px, env(safe-area-inset-bottom, 16px));
   }
 
+  /* Hide Bottom Sheet completely when no search query or product chip is active */
+  .locator-sidebar.mobile-hidden-sheet {
+    display: none !important;
+  }
+
   .locator-sidebar.sheet-collapsed {
     height: calc(125px + env(safe-area-inset-bottom, 16px));
     overflow: hidden;

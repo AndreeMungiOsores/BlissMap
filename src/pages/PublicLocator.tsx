@@ -510,7 +510,7 @@ export const PublicLocator: React.FC = () => {
     <div className="locator-layout" style={dynamicStyles}>
       
       {/* Sidebar Panel / Mobile Bottom Sheet */}
-      <div className={`locator-sidebar sheet-${mobileSheetState}`}>
+      <div className={`locator-sidebar sheet-${mobileSheetState} ${!hasActiveProductSearch ? 'mobile-hidden-sheet' : ''}`}>
         
         {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
         <div 
@@ -548,7 +548,7 @@ export const PublicLocator: React.FC = () => {
             {mobileSheetState === 'collapsed' ? (
               <>
                 <ChevronUp size={18} style={{ color: '#1EC8AA' }} />
-                <span>Desliza para ver médicos ({processedLocations.length})</span>
+                <span>Desliza para ver médicos</span>
               </>
             ) : (
               <>
