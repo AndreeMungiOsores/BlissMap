@@ -13,7 +13,8 @@ import {
   X,
   Sparkles,
   Tag,
-  List
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 interface ProductItem {
@@ -830,12 +831,12 @@ export const PublicLocator: React.FC = () => {
       >
         {mobileSheetState === 'collapsed' ? (
           <>
-            <List size={14} />
-            <span>Lista ({processedLocations.length})</span>
+            <ChevronUp size={16} />
+            <span>Lista</span>
           </>
         ) : (
           <>
-            <MapPin size={14} />
+            <ChevronDown size={16} />
             <span>Mapa</span>
           </>
         )}
