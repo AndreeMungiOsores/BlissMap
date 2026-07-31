@@ -4,7 +4,6 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-import { getProbabilityInfo } from '../pages/PublicLocator';
 
 interface ProductItem {
   name: string;
@@ -141,7 +140,7 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
         center={[-12.046374, -77.042793]} // default Lima, Peru
         zoom={12}
         style={{ width: '100%', height: '100%' }}
-        zoomControl={true}
+        zoomControl={false}
       >
         <FitMapBounds locations={locations} selectedLocation={selectedLocation} />
         
@@ -161,13 +160,6 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
           disableClusteringAtZoom={17}
         >
           {locations.map(loc => {
-            const productCount = loc.products?.length || 0;
-
-            // Sort products by score descending (Alta -> Media -> Baja)
-            const sortedProducts = loc.products ? [...loc.products].sort((a, b) => {
-              return getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score;
-            }) : [];
-
             return (
               <LeafletMarker
                 key={loc.id}
@@ -178,50 +170,34 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
                 }}
               >
                 <Popup>
-                  <div style={{ color: '#0f172a', width: '230px', fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
-                    <h4 style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px 0', color: '#1e293b' }}>{loc.name}</h4>
-                    <p style={{ fontSize: '11px', color: '#475569', margin: '0 0 6px 0', lineHeight: 1.3 }}>{loc.address}</p>
+                  <div style={{ color: '#00506E', width: '210px', fontFamily: 'var(--font-sans)', fontSize: '13px', padding: '2px' }}>
+                    <h4 style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px 0', color: '#00506E', lineHeight: '1.3' }}>{loc.name}</h4>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 8px 0', lineHeight: '1.3' }}>{loc.address}</p>
                     
-                    {loc.phone && <div style={{ fontSize: '11px', fontWeight: 600, margin: '2px 0 6px 0' }}>Tel: {loc.phone}</div>}
+                    {loc.phone && <div style={{ fontSize: '11px', fontWeight: 600, color: '#475569', margin: '0 0 8px 0' }}>Tel: {loc.phone}</div>}
 
-                    {productCount > 0 && (
-                      <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#3b82f6', marginBottom: '4px' }}>
-                          📦 {productCount} productos registrados:
-                        </div>
-                        <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {sortedProducts.slice(0, 5).map((p, idx) => {
-                            const prob = getProbabilityInfo(p.last_date);
-
-                            return (
-                              <div key={idx} style={{ fontSize: '10px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#f8fafc', padding: '3px 6px', borderRadius: '4px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
-                                  <span>{p.name}</span>
-                                  <span>x{p.qty}</span>
-                                </div>
-                                <span style={{
-                                  backgroundColor: prob.bgColor,
-                                  color: prob.textColor,
-                                  border: `1px solid ${prob.borderColor}`,
-                                  padding: '1px 6px',
-                                  borderRadius: '10px',
-                                  fontSize: '9px',
-                                  fontWeight: 700,
-                                  alignSelf: 'flex-start'
-                                }}>
-                                  {prob.label}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          {productCount > 5 && (
-                            <div style={{ fontSize: '10px', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>
-                              + {productCount - 5} más...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    <a 
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
+                      target="_blank" 
+                      rel="noreferrer" 
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        width: '100%',
+                        backgroundColor: '#1EC8AA',
+                        color: '#FFFFFF',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                        padding: '7px 12px',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        boxShadow: '0 2px 4px rgba(30, 200, 170, 0.25)'
+                      }}
+                    >
+                      📍 Cómo llegar
+                    </a>
                   </div>
                 </Popup>
               </LeafletMarker>

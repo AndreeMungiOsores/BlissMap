@@ -149,6 +149,7 @@ export const PublicLocator: React.FC = () => {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [radius, setRadius] = useState<number | 'all'>('all');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -298,11 +299,14 @@ export const PublicLocator: React.FC = () => {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [locations]);
 
+  // An explicit selection is ONLY active when a user clicked a product chip or clicked a brand from suggestions
+  const isSelectionActive = selectedProducts.length > 0 || selectedBrand !== null;
+
   // Search Query Active State (Requires at least 4 characters for text search)
   const minQueryLen = 4;
   const queryClean = searchQuery.trim().toLowerCase();
   const isQueryActive = queryClean.length >= minQueryLen;
-  const hasActiveProductSearch = selectedProducts.length > 0 || isQueryActive;
+  const hasActiveProductSearch = isSelectionActive || isQueryActive;
 
   // Brand suggestions matching query (only when >= 4 chars typed)
   const brandSuggestions = useMemo(() => {
@@ -333,10 +337,10 @@ export const PublicLocator: React.FC = () => {
     if (!selectedProducts.includes(productName)) {
       setSelectedProducts(prev => [...prev, productName]);
     }
+    setSelectedBrand(null);
     setSearchQuery('');
     setIsDropdownOpen(false);
-    // Expand mobile sheet when selecting a product to let user see results
-    setMobileSheetState('expanded');
+    setMobileSheetState('collapsed');
   };
 
   const removeProductFilter = (productName: string) => {
@@ -344,10 +348,15 @@ export const PublicLocator: React.FC = () => {
   };
 
   const selectBrandFilter = (brandName: string) => {
-    setSearchQuery(brandName);
+    setSelectedBrand(brandName);
+    setSelectedProducts([]);
+    setSearchQuery('');
     setIsDropdownOpen(false);
-    // Expand mobile sheet when selecting a brand
-    setMobileSheetState('expanded');
+    setMobileSheetState('collapsed');
+  };
+
+  const removeBrandFilter = () => {
+    setSelectedBrand(null);
   };
 
   const handleGeolocate = () => {
@@ -397,6 +406,7 @@ export const PublicLocator: React.FC = () => {
           const matchingProducts = hasActiveProductSearch
             ? loc.products.filter(p => {
                 if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) return true;
+                if (selectedBrand && p.brand && p.brand.toUpperCase() === selectedBrand.toUpperCase()) return true;
                 if (isQueryActive) {
                   if (p.name.toLowerCase().includes(queryClean)) return true;
                   if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
@@ -431,8 +441,14 @@ export const PublicLocator: React.FC = () => {
           if (!carriesProduct) return false;
         }
 
-        // 2. Free Text Search Filter (Only active when at least 4 characters typed)
-        if (isQueryActive) {
+        // 2. Selected brand filter
+        if (selectedBrand) {
+          const carriesBrand = loc.products?.some(p => p.brand && p.brand.toUpperCase() === selectedBrand.toUpperCase());
+          if (!carriesBrand) return false;
+        }
+
+        // 3. Free Text Search Filter (Only active when at least 4 characters typed and no explicit selection)
+        if (isQueryActive && !isSelectionActive) {
           const inName = loc.name.toLowerCase().includes(queryClean);
           const inAddress = loc.address.toLowerCase().includes(queryClean);
           const inTags = loc.tags?.some(t => t.toLowerCase().includes(queryClean));
@@ -444,7 +460,7 @@ export const PublicLocator: React.FC = () => {
           }
         }
 
-        // 3. Distance Radius Filter
+        // 4. Distance Radius Filter
         if (radius !== 'all' && userCoords && loc.distance !== undefined) {
           if (loc.distance > radius) {
             return false;
@@ -454,22 +470,18 @@ export const PublicLocator: React.FC = () => {
         return true;
       })
       .sort((a, b) => {
-        // 1. Sort strictly by matching product probability score (Alta = 3, Media = 2, Baja = 1)
         if (b.maxProbScore !== a.maxProbScore) {
           return b.maxProbScore - a.maxProbScore;
         }
-        // 2. Secondary sort: Most recent purchase date first
         if (b.latestMatchingDate !== a.latestMatchingDate) {
           return b.latestMatchingDate.localeCompare(a.latestMatchingDate);
         }
-        // 3. Distance radius if user coordinates active
         if (userCoords) {
           return (a.distance || 0) - (b.distance || 0);
         }
-        // 4. Alphabetical doctor name
         return a.name.localeCompare(b.name);
       });
-  }, [locations, selectedProducts, queryClean, isQueryActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit]);
+  }, [locations, selectedProducts, selectedBrand, queryClean, isQueryActive, isSelectionActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit]);
 
   const visibleLocations = processedLocations.slice(0, visibleLimit);
 
@@ -511,7 +523,7 @@ export const PublicLocator: React.FC = () => {
     <div className="locator-layout" style={dynamicStyles}>
       
       {/* Sidebar Panel / Mobile Bottom Sheet */}
-      <div className={`locator-sidebar sheet-${mobileSheetState} ${!hasActiveProductSearch ? 'mobile-hidden-sheet' : ''}`}>
+      <div className={`locator-sidebar sheet-${mobileSheetState} ${!isSelectionActive ? 'mobile-hidden-sheet' : ''}`}>
         
         {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
         <div 
@@ -560,8 +572,8 @@ export const PublicLocator: React.FC = () => {
           </div>
         </div>
 
-        {/* Selected Product Banner Header (Image 2 style) */}
-        {hasActiveProductSearch && (
+        {/* Selected Product/Brand Banner Header (Image 2 style) */}
+        {isSelectionActive && (
           <div className="bottom-sheet-product-banner" style={{
             display: 'flex',
             alignItems: 'center',
@@ -581,14 +593,14 @@ export const PublicLocator: React.FC = () => {
               color: '#1EC8AA',
               flexShrink: 0
             }}>
-              <Package size={22} />
+              {selectedBrand ? <Tag size={22} /> : <Package size={22} />}
             </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#1EC8AA', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                Producto seleccionado
+                {selectedBrand ? 'Marca seleccionada' : 'Producto seleccionado'}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 800, color: '#00506E', marginTop: '2px', lineHeight: '1.3' }}>
-                {selectedProducts.length > 0 ? selectedProducts.join(', ') : searchQuery}
+                {selectedBrand ? selectedBrand : selectedProducts.join(', ')}
               </div>
             </div>
           </div>
@@ -606,9 +618,37 @@ export const PublicLocator: React.FC = () => {
             )}
           </div>
 
-          {/* Selected Product Pills (Tarjetitas) */}
-          {selectedProducts.length > 0 && (
+          {/* Selected Product/Brand Pills (Tarjetitas) */}
+          {isSelectionActive && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+              {selectedBrand && (
+                <div 
+                  style={{
+                    backgroundColor: 'rgba(0, 80, 110, 0.12)',
+                    border: '1px solid rgba(0, 80, 110, 0.3)',
+                    color: '#00506E',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <Tag size={13} style={{ color: '#00506E' }} />
+                  <span>Marca: {selectedBrand}</span>
+                  <button 
+                    onClick={removeBrandFilter}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#00506E', display: 'flex' }}
+                    title="Quitar marca"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+
               {selectedProducts.map(pName => (
                 <div 
                   key={pName}
