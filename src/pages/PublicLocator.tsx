@@ -302,8 +302,8 @@ export const PublicLocator: React.FC = () => {
   // An explicit selection is ONLY active when a user clicked a product chip or clicked a brand from suggestions
   const isSelectionActive = selectedProducts.length > 0 || selectedBrand !== null;
 
-  // Search Query Active State (Requires at least 4 characters for text search)
-  const minQueryLen = 4;
+  // Search Query Active State (Requires at least 3 characters for text search)
+  const minQueryLen = 3;
   const queryClean = searchQuery.trim().toLowerCase();
   const isQueryActive = queryClean.length >= minQueryLen;
   const hasActiveProductSearch = isSelectionActive || isQueryActive;
@@ -976,7 +976,7 @@ export const PublicLocator: React.FC = () => {
       {/* Map Panel */}
       <div className="locator-map-container">
         <LocatorMap 
-          locations={processedLocations}
+          locations={isSelectionActive ? processedLocations : []}
           selectedLocationId={selectedLocationId}
           onSelectLocation={(locId) => {
             setSelectedLocationId(locId);
