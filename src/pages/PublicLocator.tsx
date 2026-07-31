@@ -498,20 +498,25 @@ export const PublicLocator: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
-            fontSize: '13px',
+            gap: '8px',
+            fontSize: '14px',
             fontWeight: 700,
             color: '#00506E',
-            marginTop: '2px'
+            marginTop: '4px',
+            backgroundColor: 'rgba(30, 200, 170, 0.12)',
+            border: '1px solid rgba(30, 200, 170, 0.35)',
+            padding: '6px 18px',
+            borderRadius: 'var(--radius-full)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
           }}>
             {mobileSheetState === 'collapsed' ? (
               <>
-                <ChevronUp size={16} style={{ color: '#1EC8AA' }} />
+                <ChevronUp size={18} style={{ color: '#1EC8AA' }} />
                 <span>Desliza para ver médicos ({processedLocations.length})</span>
               </>
             ) : (
               <>
-                <ChevronDown size={16} style={{ color: '#1EC8AA' }} />
+                <ChevronDown size={18} style={{ color: '#1EC8AA' }} />
                 <span>Desliza para ver el mapa</span>
               </>
             )}
