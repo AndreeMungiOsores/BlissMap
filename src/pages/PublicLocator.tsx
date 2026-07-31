@@ -12,7 +12,8 @@ import {
   Package,
   X,
   Sparkles,
-  Tag
+  Tag,
+  List
 } from 'lucide-react';
 
 interface ProductItem {
@@ -152,6 +153,9 @@ export const PublicLocator: React.FC = () => {
   const [geolocating, setGeolocating] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(30);
+
+  // Mobile Bottom Sheet State ('collapsed' | 'expanded')
+  const [mobileSheetState, setMobileSheetState] = useState<'collapsed' | 'expanded'>('collapsed');
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
@@ -296,6 +300,8 @@ export const PublicLocator: React.FC = () => {
     }
     setSearchQuery('');
     setIsDropdownOpen(false);
+    // Expand mobile sheet when selecting a product to let user see results
+    setMobileSheetState('expanded');
   };
 
   const removeProductFilter = (productName: string) => {
@@ -305,6 +311,8 @@ export const PublicLocator: React.FC = () => {
   const selectBrandFilter = (brandName: string) => {
     setSearchQuery(brandName);
     setIsDropdownOpen(false);
+    // Expand mobile sheet when selecting a brand
+    setMobileSheetState('expanded');
   };
 
   const handleGeolocate = () => {
@@ -467,13 +475,24 @@ export const PublicLocator: React.FC = () => {
   return (
     <div className="locator-layout" style={dynamicStyles}>
       
-      {/* Sidebar Panel */}
-      <div className="locator-sidebar">
+      {/* Sidebar Panel / Mobile Bottom Sheet */}
+      <div className={`locator-sidebar sheet-${mobileSheetState}`}>
         
+        {/* Mobile Drag Handle Bar (Google Maps Style) */}
+        <div 
+          className="bottom-sheet-handle-bar"
+          onClick={() => setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed')}
+        >
+          <div className="bottom-sheet-pill" />
+          <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B' }}>
+            {mobileSheetState === 'collapsed' ? 'Desliza para ver la lista de médicos' : 'Desliza para ver el mapa'}
+          </span>
+        </div>
+
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '54px', maxWidth: '220px', objectFit: 'contain' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }} />
             {isPreview && (
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(30, 200, 170, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                 Vista Previa
@@ -483,7 +502,7 @@ export const PublicLocator: React.FC = () => {
 
           {/* Selected Product Pills (Tarjetitas) */}
           {selectedProducts.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
               {selectedProducts.map(pName => (
                 <div 
                   key={pName}
@@ -624,7 +643,7 @@ export const PublicLocator: React.FC = () => {
           </div>
 
           {/* Filters Row */}
-          <div className="locator-filters-row" style={{ marginTop: '10px' }}>
+          <div className="locator-filters-row" style={{ marginTop: '8px' }}>
             <select 
               value={radius} 
               onChange={(e) => setRadius(e.target.value === 'all' ? 'all' : Number(e.target.value))}
@@ -658,7 +677,7 @@ export const PublicLocator: React.FC = () => {
           </div>
 
           {/* Result Info */}
-          <div className="locator-results-info" style={{ marginTop: '8px' }}>
+          <div className="locator-results-info" style={{ marginTop: '6px' }}>
             {processedLocations.length === 0 ? 'No se encontraron médicos' : (
               `${processedLocations.length} ${processedLocations.length === 1 ? 'médico encontrado' : 'médicos encontrados'}`
             )}
@@ -693,7 +712,9 @@ export const PublicLocator: React.FC = () => {
                 key={loc.id} 
                 className={`locator-card ${isActiveCard ? 'active' : ''}`}
                 ref={el => { cardRefs.current[loc.id] = el; }}
-                onClick={() => setSelectedLocationId(loc.id)}
+                onClick={() => {
+                  setSelectedLocationId(loc.id);
+                }}
                 style={{ gridTemplateColumns: '60px 1fr' }}
               >
                 {/* Photo or Pin */}
@@ -801,12 +822,33 @@ export const PublicLocator: React.FC = () => {
 
       </div>
 
+      {/* Floating Toggle Button on Mobile (Google Maps Style) */}
+      <button 
+        className={`mobile-view-toggle-btn ${mobileSheetState === 'expanded' ? 'expanded-pos' : ''}`}
+        onClick={() => setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed')}
+        aria-label="Cambiar vista entre mapa y lista"
+      >
+        {mobileSheetState === 'collapsed' ? (
+          <>
+            <List size={14} />
+            <span>Lista ({processedLocations.length})</span>
+          </>
+        ) : (
+          <>
+            <MapPin size={14} />
+            <span>Mapa</span>
+          </>
+        )}
+      </button>
+
       {/* Map Panel */}
       <div className="locator-map-container">
         <LocatorMap 
           locations={processedLocations}
           selectedLocationId={selectedLocationId}
-          onSelectLocation={setSelectedLocationId}
+          onSelectLocation={(locId) => {
+            setSelectedLocationId(locId);
+          }}
           mapStyle={locator.map_style}
           markerType={locator.marker_type}
           markerColor={locator.marker_color}
