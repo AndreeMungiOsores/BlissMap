@@ -479,20 +479,49 @@ export const PublicLocator: React.FC = () => {
       {/* Sidebar Panel / Mobile Bottom Sheet */}
       <div className={`locator-sidebar sheet-${mobileSheetState}`}>
         
-        {/* Mobile Drag Handle Bar (Google Maps Style) */}
+        {/* Mobile Drag Handle Bar (Prominent Accessible Google Maps Pattern) */}
         <div 
           className="bottom-sheet-handle-bar"
           onClick={() => setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed')}
+          role="button"
+          tabIndex={0}
+          aria-expanded={mobileSheetState === 'expanded'}
+          aria-label={mobileSheetState === 'collapsed' ? 'Deslizar para ver la lista de médicos' : 'Deslizar para ver el mapa'}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed');
+            }
+          }}
         >
           <div className="bottom-sheet-pill" />
-          <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B' }}>
-            {mobileSheetState === 'collapsed' ? 'Desliza para ver la lista de médicos' : 'Desliza para ver el mapa'}
-          </span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            fontSize: '13px',
+            fontWeight: 700,
+            color: '#00506E',
+            marginTop: '2px'
+          }}>
+            {mobileSheetState === 'collapsed' ? (
+              <>
+                <ChevronUp size={16} style={{ color: '#1EC8AA' }} />
+                <span>Desliza para ver médicos ({processedLocations.length})</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} style={{ color: '#1EC8AA' }} />
+                <span>Desliza para ver el mapa</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          {/* Logo Row (Hidden on Mobile) */}
+          <div className="locator-logo-row mobile-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }} />
             {isPreview && (
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(30, 200, 170, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
@@ -541,7 +570,7 @@ export const PublicLocator: React.FC = () => {
               <Search size={18} className="locator-search-icon" />
               <input 
                 type="text" 
-                placeholder="Escribe producto, marca o médico (mínimo 4 letras)..."
+                placeholder="Escribe producto, marca o médico..."
                 value={searchQuery}
                 onFocus={() => setIsDropdownOpen(true)}
                 onChange={(e) => {
@@ -643,8 +672,8 @@ export const PublicLocator: React.FC = () => {
             )}
           </div>
 
-          {/* Filters Row */}
-          <div className="locator-filters-row" style={{ marginTop: '8px' }}>
+          {/* Filters Row (Hidden on Mobile) */}
+          <div className="locator-filters-row mobile-hide" style={{ marginTop: '8px' }}>
             <select 
               value={radius} 
               onChange={(e) => setRadius(e.target.value === 'all' ? 'all' : Number(e.target.value))}
@@ -677,8 +706,8 @@ export const PublicLocator: React.FC = () => {
             </button>
           </div>
 
-          {/* Result Info */}
-          <div className="locator-results-info" style={{ marginTop: '6px' }}>
+          {/* Result Info (Hidden on Mobile) */}
+          <div className="locator-results-info mobile-hide" style={{ marginTop: '6px' }}>
             {processedLocations.length === 0 ? 'No se encontraron médicos' : (
               `${processedLocations.length} ${processedLocations.length === 1 ? 'médico encontrado' : 'médicos encontrados'}`
             )}
@@ -822,25 +851,6 @@ export const PublicLocator: React.FC = () => {
         </div>
 
       </div>
-
-      {/* Floating Toggle Button on Mobile (Google Maps Style) */}
-      <button 
-        className={`mobile-view-toggle-btn ${mobileSheetState === 'expanded' ? 'expanded-pos' : ''}`}
-        onClick={() => setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed')}
-        aria-label="Cambiar vista entre mapa y lista"
-      >
-        {mobileSheetState === 'collapsed' ? (
-          <>
-            <ChevronUp size={16} />
-            <span>Lista</span>
-          </>
-        ) : (
-          <>
-            <ChevronDown size={16} />
-            <span>Mapa</span>
-          </>
-        )}
-      </button>
 
       {/* Map Panel */}
       <div className="locator-map-container">
