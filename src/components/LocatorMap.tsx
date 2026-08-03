@@ -170,34 +170,71 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
                 }}
               >
                 <Popup>
-                  <div style={{ color: '#00506E', width: '210px', fontFamily: 'var(--font-sans)', fontSize: '13px', padding: '2px' }}>
+                  <div style={{ color: '#00506E', width: '220px', fontFamily: 'var(--font-sans)', fontSize: '13px', padding: '2px' }}>
                     <h4 style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 4px 0', color: '#00506E', lineHeight: '1.3' }}>{loc.name}</h4>
                     <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 8px 0', lineHeight: '1.3' }}>{loc.address}</p>
                     
                     {loc.phone && <div style={{ fontSize: '11px', fontWeight: 600, color: '#475569', margin: '0 0 8px 0' }}>Tel: {loc.phone}</div>}
 
-                    <a 
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
-                      target="_blank" 
-                      rel="noreferrer" 
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        width: '100%',
-                        backgroundColor: '#1EC8AA',
-                        color: '#FFFFFF',
-                        fontWeight: 700,
-                        fontSize: '12px',
-                        padding: '7px 12px',
-                        borderRadius: '8px',
-                        textDecoration: 'none',
-                        boxShadow: '0 2px 4px rgba(30, 200, 170, 0.25)'
-                      }}
-                    >
-                      📍 Cómo llegar
-                    </a>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                      <a 
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
+                        target="_blank" 
+                        rel="noreferrer" 
+                        style={{
+                          flexGrow: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          backgroundColor: '#1EC8AA',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          fontSize: '11px',
+                          padding: '7px 8px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          boxShadow: '0 2px 4px rgba(30, 200, 170, 0.25)'
+                        }}
+                      >
+                        📍 Cómo llegar
+                      </a>
+
+                      {(() => {
+                        const cleanDigits = loc.phone ? loc.phone.replace(/\D/g, '') : '';
+                        const cleanPhone = (cleanDigits.length === 9 && cleanDigits.startsWith('9')) 
+                          ? cleanDigits 
+                          : (cleanDigits.length === 11 && cleanDigits.startsWith('519')) 
+                            ? cleanDigits.substring(2) 
+                            : (cleanDigits.length >= 7 ? cleanDigits : null);
+                        
+                        if (!cleanPhone) return null;
+                        return (
+                          <a 
+                            href={`https://wa.me/51${cleanPhone}`}
+                            target="_blank" 
+                            rel="noreferrer" 
+                            style={{
+                              flexGrow: 1,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              backgroundColor: '#25D366',
+                              color: '#FFFFFF',
+                              fontWeight: 700,
+                              fontSize: '11px',
+                              padding: '7px 8px',
+                              borderRadius: '8px',
+                              textDecoration: 'none',
+                              boxShadow: '0 2px 4px rgba(37, 211, 102, 0.25)'
+                            }}
+                          >
+                            💬 WhatsApp
+                          </a>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </Popup>
               </LeafletMarker>

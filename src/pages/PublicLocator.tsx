@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LocatorMap } from '../components/LocatorMap';
 import localDoctorsData from '../data/doctors_data.json';
+import { fetchB2BSalesLocations } from '../services/b2bApiService';
 import logoImg from '../assets/logo.png';
 import { 
   Search, 
@@ -15,7 +16,8 @@ import {
   Tag,
   ChevronUp,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  MessageCircle
 } from 'lucide-react';
 
 interface ProductItem {
@@ -23,6 +25,8 @@ interface ProductItem {
   qty: number;
   last_date?: string;
   brand?: string;
+  sku?: string;
+  image_url?: string;
 }
 
 interface LocationItem {
@@ -231,27 +235,28 @@ export const PublicLocator: React.FC = () => {
           }
         }
 
-        // Always load local dataset (411 doctors) for medicosbliss / plaza-derma or when db count is low
-        if (currentLocations.length < 50) {
-          currentLocator = currentLocator || {
-            id: 'local-medicosbliss',
-            name: 'MedicosBliss',
-            slug: slug || 'medicosbliss',
-            map_style: 'default',
-            accent_color: '#1EC8AA',
-            marker_type: 'standard',
-            marker_color: '#1EC8AA',
-            marker_image_url: null,
-            search_placeholder: 'Escribe producto, marca o médico...',
-            distance_unit: 'km'
-          };
-          currentLocations = localDoctorsData as LocationItem[];
-        }
+        // Load live sales data from ERP API with 1-hour cache and fallback
+        const baseFallback = currentLocations.length >= 50 ? currentLocations : (localDoctorsData as LocationItem[]);
+        const { locations: apiLocations } = await fetchB2BSalesLocations(baseFallback);
+
+        currentLocator = currentLocator || {
+          id: 'local-medicosbliss',
+          name: 'MedicosBliss',
+          slug: slug || 'medicosbliss',
+          map_style: 'default',
+          accent_color: '#1EC8AA',
+          marker_type: 'standard',
+          marker_color: '#1EC8AA',
+          marker_image_url: null,
+          search_placeholder: 'Escribe producto, marca o médico...',
+          distance_unit: 'km'
+        };
 
         setLocator(currentLocator);
-        setLocations(currentLocations);
+        setLocations(apiLocations);
       } catch (err: any) {
         console.error(err);
+        const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
         setLocator({
           id: 'local-medicosbliss',
           name: 'MedicosBliss',
@@ -264,7 +269,7 @@ export const PublicLocator: React.FC = () => {
           search_placeholder: 'Escribe producto, marca o médico...',
           distance_unit: 'km'
         });
-        setLocations(localDoctorsData as LocationItem[]);
+        setLocations(apiLocations);
       } finally {
         setLoading(false);
       }
@@ -939,20 +944,165 @@ export const PublicLocator: React.FC = () => {
                       </p>
                     )}
 
-                    {/* Actions Row */}
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                      <a 
-                        href={googleMapsUrl} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="locator-directions-btn" 
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ flexGrow: 1, justifyContent: 'center', padding: '9px 14px', fontSize: '13px', fontWeight: 700 }}
-                      >
-                        <Navigation size={14} />
-                        Cómo llegar
-                      </a>
-                    </div>
+                    {/* Products List Section with Images (Only shown when a product or brand is selected) */}
+                    {(() => {
+                      if (!isSelectionActive || !loc.products || loc.products.length === 0) return null;
+
+                      const matchingProducts = loc.products.filter(prod => {
+                        if (selectedProducts.length > 0) {
+                          return selectedProducts.some(sp => prod.name.toLowerCase().includes(sp.toLowerCase()));
+                        }
+                        if (selectedBrand) {
+                          return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
+                        }
+                        return true;
+                      });
+
+                      if (matchingProducts.length === 0) return null;
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#00506E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Producto Seleccionado ({matchingProducts.length})
+                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '2px' }}>
+                            {matchingProducts.map((prod, pIdx) => {
+                              const pProb = getProbabilityInfo(prod.last_date);
+                              return (
+                                <div key={pIdx} style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  backgroundColor: '#F8FAFC',
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  border: '1px solid #E2E8F0'
+                                }}>
+                                  {/* Product Thumbnail Image */}
+                                  {prod.image_url ? (
+                                    <img 
+                                      src={prod.image_url} 
+                                      alt={prod.name}
+                                      style={{
+                                        width: '38px',
+                                        height: '38px',
+                                        objectFit: 'contain',
+                                        backgroundColor: '#FFFFFF',
+                                        borderRadius: '6px',
+                                        border: '1px solid #E2E8F0',
+                                        padding: '2px',
+                                        flexShrink: 0
+                                      }}
+                                      onError={(e) => {
+                                        (e.target as HTMLElement).style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div style={{
+                                      width: '38px',
+                                      height: '38px',
+                                      borderRadius: '6px',
+                                      backgroundColor: '#E6FFFA',
+                                      border: '1px solid #B2F5EA',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#1EC8AA',
+                                      flexShrink: 0
+                                    }}>
+                                      <Package size={18} />
+                                    </div>
+                                  )}
+
+                                  {/* Product Info */}
+                                  <div style={{ flexGrow: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#00506E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {prod.name}
+                                    </div>
+                                    {prod.brand && (
+                                      <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 500 }}>
+                                        Marca: <span style={{ fontWeight: 700, color: '#1EC8AA' }}>{prod.brand}</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Probability Badge */}
+                                  <span style={{
+                                    backgroundColor: pProb.bgColor,
+                                    color: pProb.textColor,
+                                    border: `1px solid ${pProb.borderColor}`,
+                                    padding: '2px 6px',
+                                    borderRadius: 'var(--radius-full)',
+                                    fontWeight: 700,
+                                    fontSize: '10px',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
+                                  }}>
+                                    {pProb.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Actions Row: Cómo llegar + WhatsApp */}
+                    {(() => {
+                      const cleanDigits = loc.phone ? loc.phone.replace(/\D/g, '') : '';
+                      const cleanPhone = (cleanDigits.length === 9 && cleanDigits.startsWith('9')) 
+                        ? cleanDigits 
+                        : (cleanDigits.length === 11 && cleanDigits.startsWith('519')) 
+                          ? cleanDigits.substring(2) 
+                          : (cleanDigits.length >= 7 ? cleanDigits : null);
+                      const whatsappUrl = cleanPhone ? `https://wa.me/51${cleanPhone}` : null;
+
+                      return (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                          <a 
+                            href={googleMapsUrl} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="locator-directions-btn" 
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ flexGrow: 1, justifyContent: 'center', padding: '9px 12px', fontSize: '13px', fontWeight: 700 }}
+                          >
+                            <Navigation size={14} />
+                            Cómo llegar
+                          </a>
+
+                          {whatsappUrl && (
+                            <a 
+                              href={whatsappUrl} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                flexGrow: 1,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                backgroundColor: '#25D366',
+                                color: '#FFFFFF',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                padding: '9px 12px',
+                                borderRadius: 'var(--radius-md)',
+                                textDecoration: 'none',
+                                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)',
+                                transition: 'transform 0.15s ease, background-color 0.15s ease'
+                              }}
+                              title={`Enviar WhatsApp a ${loc.name}`}
+                            >
+                              <MessageCircle size={15} />
+                              WhatsApp
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

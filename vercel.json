@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/b2b-erp", "destination": "https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
