@@ -70,7 +70,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_images_v9';
+const CACHE_KEY = 'blissmap_b2b_api_fixed_v10';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 /**
@@ -263,15 +263,17 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
         const cleanCompanyDoc = med.nro_doc.replace(/\D/g, '');
         const cleanMedDoc = (med.nro_doc_med || '').replace(/\D/g, '');
 
-        let cliente = clientesDocMap.get(cleanCompanyDoc) || (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
+        // Primary cliente: ALWAYS from exact RUC match — used for Razón Social, address, website
+        const primaryCliente = clientesDocMap.get(cleanCompanyDoc) || (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
 
-        // Token match for doctor name if no direct phone in primary company doc
-        if (!cliente || !cliente.telefono || !cliente.telefono.trim()) {
+        // Secondary phone match: token-based ONLY to find a phone number — never overrides Razón Social
+        let phoneNumber = (primaryCliente?.telefono || '').trim() || null;
+        if (!phoneNumber) {
           const locRawTokens = med.medico.toLowerCase().match(/[a-z0-9]+/g) || [];
           const locTokens = locRawTokens.filter(t => t.length > 2 && !STOP_WORDS.has(t));
           
           let maxCommon = 0;
-          let bestMatch: B2BCliente | undefined = undefined;
+          let bestPhoneMatch: B2BCliente | undefined = undefined;
 
           for (const item of clientesTokenList) {
             let commonCount = 0;
@@ -280,13 +282,13 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
             }
             if (commonCount >= 2 && commonCount > maxCommon) {
               maxCommon = commonCount;
-              bestMatch = item.cliente;
+              bestPhoneMatch = item.cliente;
             }
           }
-          if (bestMatch) cliente = bestMatch;
+          if (bestPhoneMatch) phoneNumber = (bestPhoneMatch.telefono || '').trim() || null;
         }
 
-        const rawAddress = direccionesMap.get(med.nro_doc) || cliente?.direccion_fiscal || 'Lima, Perú';
+        const rawAddress = direccionesMap.get(med.nro_doc) || primaryCliente?.direccion_fiscal || 'Lima, Perú';
         const products = detalleMap.get(med.nro_doc) || [];
 
         // Geocoded coordinates lookup
@@ -295,24 +297,24 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           lng: DEFAULT_LNG + (idx * 0.002)
         };
 
-        const cleanDoctorName = cleanSpanishText(med.medico || cliente?.nombre_comercial || cliente?.razon_social || 'Médico Dermatólogo');
+        const cleanDoctorName = cleanSpanishText(med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo');
         const cleanDoctorAddress = cleanSpanishText(rawAddress);
-        const cleanRazonSocial = cleanSpanishText(cliente?.razon_social || cliente?.nombre_comercial || '');
+        const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
 
         apiDoctorsList.push({
           id: `erp-doc-${med.nro_doc_med || med.nro_doc}-${idx}`,
           name: cleanDoctorName,
           image_url: null,
           address: cleanDoctorAddress,
-          phone: cliente?.telefono || null,
+          phone: phoneNumber,
           email: null,
-          website: cliente?.website || null,
+          website: primaryCliente?.website || null,
           lat: coords.lat,
           lng: coords.lng,
           tags: ['ERP B2B', 'Verificado'],
           custom_fields: {
             'Razón Social': cleanRazonSocial,
-            'Documento': cliente?.nro_doc || med.nro_doc,
+            'Documento': primaryCliente?.nro_doc || med.nro_doc,
             'Colegiatura': med.colegiatura ? `CMP ${med.colegiatura}` : ''
           },
           description: null,
