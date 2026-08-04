@@ -61,7 +61,23 @@ const FitMapBounds: React.FC<{ locations: LocationItem[]; selectedLocation: Loca
 
   useEffect(() => {
     if (selectedLocation) {
-      map.setView([selectedLocation.lat, selectedLocation.lng], 15, { animate: true });
+      map.setView([selectedLocation.lat, selectedLocation.lng], 18, { animate: true });
+
+      // On mobile the map is full-screen (100vh) with a bottom sheet overlaid on top.
+      // getSize().y always returns ~100vh so we can't rely on it.
+      // Instead detect mobile via window width and shift the view up by the
+      // approximate height of the bottom sheet so the pin lands in the
+      // visible portion of the map above the sheet.
+      map.once('moveend', () => {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          // sheet-expanded is 62vh; centre the pin halfway between top of
+          // visible area and top of sheet → offset = 62vh / 2 ≈ 31vh
+          const sheetH = window.innerHeight * 0.62;
+          const offsetPx = Math.round(sheetH / 2);
+          map.panBy([0, offsetPx], { animate: true, duration: 0.4 });
+        }
+      });
     } else if (locations.length > 0) {
       const bounds = L.latLngBounds(locations.map(loc => [loc.lat, loc.lng]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });

@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Package,
   X,
-  Sparkles,
   Tag,
   ChevronUp,
   ChevronDown,
@@ -577,39 +576,7 @@ export const PublicLocator: React.FC = () => {
           </div>
         </div>
 
-        {/* Selected Product/Brand Banner Header (Image 2 style) */}
-        {isSelectionActive && (
-          <div className="bottom-sheet-product-banner" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px 18px',
-            backgroundColor: '#FFFFFF',
-            borderBottom: '1px solid #E5DFD5'
-          }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(30, 200, 170, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#1EC8AA',
-              flexShrink: 0
-            }}>
-              {selectedBrand ? <Tag size={22} /> : <Package size={22} />}
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#1EC8AA', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                {selectedBrand ? 'Marca seleccionada' : 'Producto seleccionado'}
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#00506E', marginTop: '2px', lineHeight: '1.3' }}>
-                {selectedBrand ? selectedBrand : selectedProducts.join(', ')}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Selected Product/Brand Banner: REMOVED — chip in search bar is sufficient */}
 
         {/* Sidebar Header & Search Box */}
         <div className="locator-search-container">
@@ -836,6 +803,24 @@ export const PublicLocator: React.FC = () => {
         </div>
 
         {/* Results Card List */}
+        {/* Probability legend — shown once when a product/brand is selected */}
+        {isSelectionActive && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '6px 16px 8px',
+            flexWrap: 'wrap'
+          }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', marginRight: '2px' }}>Stock:</span>
+            {[{ color: '#22c55e', label: 'Alta' }, { color: '#f59e0b', label: 'Media' }, { color: '#ef4444', label: 'Baja' }].map(({ color, label }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#475569', fontWeight: 600 }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color, display: 'inline-block', flexShrink: 0 }} />
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="locator-list" ref={cardsContainerRef}>
           {visibleLocations.map(loc => {
             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`;
@@ -885,37 +870,31 @@ export const PublicLocator: React.FC = () => {
                     )}
 
                     <div style={{ minWidth: 0, flexGrow: 1 }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#00506E', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#00506E', margin: 0, lineHeight: '1.35', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {loc.name}
                       </h4>
-                      <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {loc.address}
                       </p>
                     </div>
                   </div>
 
-                  {/* Right: Stock Probability Badge & Chevron Arrow */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  {/* Right: Stock Probability Dot & Chevron Arrow */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                     {topProb && (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Stock:</span>
-                        <span style={{
-                          backgroundColor: topProb.bgColor,
-                          color: topProb.textColor,
-                          border: `1px solid ${topProb.borderColor}`,
-                          padding: '2px 8px',
-                          borderRadius: 'var(--radius-full)',
-                          fontWeight: 700,
-                          fontSize: '11px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          <Sparkles size={11} />
-                          {topProb.label}
-                        </span>
-                      </div>
+                      <span
+                        aria-label={`Probabilidad de stock: ${topProb.label}`}
+                        title={topProb.label}
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          backgroundColor: topProb.label === 'Alta probabilidad' ? '#22c55e' : topProb.label === 'Media probabilidad' ? '#f59e0b' : '#ef4444',
+                          display: 'inline-block',
+                          flexShrink: 0,
+                          boxShadow: `0 0 0 2px ${topProb.label === 'Alta probabilidad' ? 'rgba(34,197,94,0.2)' : topProb.label === 'Media probabilidad' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}`
+                        }}
+                      />
                     )}
                     <ChevronRight size={18} style={{ color: '#94A3B8', transform: isActiveCard ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }} />
                   </div>
