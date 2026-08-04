@@ -835,9 +835,42 @@ button, input, select, textarea {
   width: 100% !important;
 }
 
-/* Custom Marker Styling */
+/* Custom Marker Styling — filter now applied inline per-marker state */
 .custom-leaflet-marker {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+  display: block;
+}
+
+/* Active marker wrapper: positions the pulse ring relative to the pin */
+.active-pin-container {
+  overflow: visible !important;
+}
+
+.active-marker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* Animated pulsing ring behind the selected pin */
+.active-marker-pulse {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--pulse-color, #FF6B2C);
+  opacity: 0;
+  animation: pulse-ring 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: translateX(-50%) scale(0.4); opacity: 0.7; }
+  60%  { opacity: 0.25; }
+  100% { transform: translateX(-50%) scale(2.4); opacity: 0; }
 }
 
 .leaflet-control-container .leaflet-routing-container-shrink {
@@ -933,8 +966,8 @@ button, input, select, textarea {
   }
 
   .locator-sidebar.sheet-expanded {
-    height: 62vh;
-    max-height: calc(100vh - 170px);
+    height: 45vh;
+    max-height: calc(100vh - 220px);
     overflow-y: auto;
   }
 
