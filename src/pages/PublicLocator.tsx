@@ -1056,7 +1056,33 @@ export const PublicLocator: React.FC = () => {
                         : (cleanDigits.length === 11 && cleanDigits.startsWith('519')) 
                           ? cleanDigits.substring(2) 
                           : (cleanDigits.length >= 7 ? cleanDigits : null);
-                      const whatsappUrl = cleanPhone ? `https://wa.me/51${cleanPhone}` : null;
+
+                      // Build pre-filled WhatsApp message with selected products/brands
+                      let whatsappUrl: string | null = null;
+                      if (cleanPhone) {
+                        let waMessage = '';
+                        if (isSelectionActive && loc.products && loc.products.length > 0) {
+                          const matchingProds = loc.products.filter(prod => {
+                            if (selectedProducts.length > 0) return selectedProducts.some(sp => prod.name.toLowerCase().includes(sp.toLowerCase()));
+                            if (selectedBrand) return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
+                            return false;
+                          });
+
+                          if (matchingProds.length === 1) {
+                            const p = matchingProds[0];
+                            const brandStr = p.brand ? ` de ${p.brand}` : '';
+                            waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen "${p.name}"${brandStr} para acercarme a comprarlo?`;
+                          } else if (matchingProds.length > 1) {
+                            const names = matchingProds.map(p => `"${p.name}"`).join(', ');
+                            const brands = [...new Set(matchingProds.map(p => p.brand).filter(Boolean))];
+                            const brandsStr = brands.length > 0 ? ` de ${brands.join(', ')}` : '';
+                            waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen los productos ${names}${brandsStr} para acercarme a comprarlo?`;
+                          }
+                        }
+
+                        const encodedMsg = waMessage ? `?text=${encodeURIComponent(waMessage)}` : '';
+                        whatsappUrl = `https://wa.me/51${cleanPhone}${encodedMsg}`;
+                      }
 
                       return (
                         <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -1066,7 +1092,7 @@ export const PublicLocator: React.FC = () => {
                             rel="noreferrer" 
                             className="locator-directions-btn" 
                             onClick={(e) => e.stopPropagation()}
-                            style={{ flexGrow: 1, justifyContent: 'center', padding: '9px 12px', fontSize: '13px', fontWeight: 700 }}
+                            style={{ flex: '1 1 0', justifyContent: 'center', padding: '9px 12px', fontSize: '13px', fontWeight: 700 }}
                           >
                             <Navigation size={14} />
                             Cómo llegar
@@ -1079,7 +1105,7 @@ export const PublicLocator: React.FC = () => {
                               rel="noreferrer" 
                               onClick={(e) => e.stopPropagation()}
                               style={{
-                                flexGrow: 1,
+                                flex: '1 1 0',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
