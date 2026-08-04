@@ -1073,10 +1073,18 @@ export const PublicLocator: React.FC = () => {
                             const brandStr = p.brand ? ` de ${p.brand}` : '';
                             waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen "${p.name}"${brandStr} para acercarme a comprarlo?`;
                           } else if (matchingProds.length > 1) {
-                            const names = matchingProds.map(p => `"${p.name}"`).join(', ');
-                            const brands = [...new Set(matchingProds.map(p => p.brand).filter(Boolean))];
-                            const brandsStr = brands.length > 0 ? ` de ${brands.join(', ')}` : '';
-                            waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen los productos ${names}${brandsStr} para acercarme a comprarlo?`;
+                            const uniqueBrands = [...new Set(matchingProds.map(p => p.brand).filter(Boolean))];
+                            const sameBrand = uniqueBrands.length === 1;
+
+                            if (sameBrand) {
+                              // All products from same brand → list all products then "de MARCA"
+                              const names = matchingProds.map(p => `"${p.name}"`).join(', ');
+                              waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen los productos ${names} de ${uniqueBrands[0]} para acercarme a comprarlo?`;
+                            } else {
+                              // Products from different brands → inline each with its brand
+                              const productList = matchingProds.map(p => p.brand ? `"${p.name}" de ${p.brand}` : `"${p.name}"`).join(', ');
+                              waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen los productos ${productList} para acercarme a comprarlo?`;
+                            }
                           }
                         }
 
