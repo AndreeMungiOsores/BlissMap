@@ -107,6 +107,12 @@ button, input, select, textarea {
   transition: all var(--transition-fast);
 }
 
+.locator-directions-btn,
+.locator-whatsapp-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .btn-primary {
   background-color: var(--color-primary);
   color: #ffffff;
@@ -772,6 +778,32 @@ button, input, select, textarea {
 
 .locator-directions-btn:hover {
   opacity: 0.9;
+}
+
+.locator-whatsapp-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background-color: #25D366;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);
+  white-space: nowrap;
+}
+
+.locator-whatsapp-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .locator-map-container {

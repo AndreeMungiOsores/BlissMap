@@ -1093,14 +1093,14 @@ export const PublicLocator: React.FC = () => {
                       }
 
                       return (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px', width: '100%' }}>
                           <a 
                             href={googleMapsUrl} 
                             target="_blank" 
                             rel="noreferrer" 
                             className="locator-directions-btn" 
                             onClick={(e) => e.stopPropagation()}
-                            style={{ flex: '1 1 0', justifyContent: 'center', padding: '9px 12px', fontSize: '13px', fontWeight: 700 }}
+                            style={{ marginTop: 0, padding: '9px 12px', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap' }}
                           >
                             <Navigation size={14} />
                             Cómo llegar
@@ -1111,23 +1111,9 @@ export const PublicLocator: React.FC = () => {
                               href={whatsappUrl} 
                               target="_blank" 
                               rel="noreferrer" 
+                              className="locator-whatsapp-btn"
                               onClick={(e) => e.stopPropagation()}
-                              style={{
-                                flex: '1 1 0',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                backgroundColor: '#25D366',
-                                color: '#FFFFFF',
-                                fontWeight: 700,
-                                fontSize: '13px',
-                                padding: '9px 12px',
-                                borderRadius: 'var(--radius-md)',
-                                textDecoration: 'none',
-                                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)',
-                                transition: 'transform 0.15s ease, background-color 0.15s ease'
-                              }}
+                              style={{ padding: '9px 12px', fontSize: '13px' }}
                               title={`Enviar WhatsApp a ${loc.name}`}
                             >
                               <MessageCircle size={15} />
