@@ -197,7 +197,7 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
                     
                     {loc.phone && <div style={{ fontSize: '11px', fontWeight: 600, color: '#475569', margin: '0 0 8px 0' }}>Tel: {loc.phone}</div>}
 
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                       <a 
                         href={`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`}
                         target="_blank" 
@@ -207,18 +207,43 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '4px',
+                          gap: '3px',
                           backgroundColor: '#1EC8AA',
                           color: '#FFFFFF',
                           fontWeight: 700,
                           fontSize: '11px',
-                          padding: '7px 8px',
+                          padding: '6px 6px',
                           borderRadius: '8px',
                           textDecoration: 'none',
                           boxShadow: '0 2px 4px rgba(30, 200, 170, 0.25)'
                         }}
+                        title="Navegar con Google Maps"
                       >
-                        📍 Cómo llegar
+                        🗺️ Maps
+                      </a>
+
+                      <a 
+                        href={`https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes`}
+                        target="_blank" 
+                        rel="noreferrer" 
+                        style={{
+                          flexGrow: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '3px',
+                          backgroundColor: '#05C3DD',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          fontSize: '11px',
+                          padding: '6px 6px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          boxShadow: '0 2px 4px rgba(5, 195, 221, 0.25)'
+                        }}
+                        title="Navegar con Waze"
+                      >
+                        🚙 Waze
                       </a>
 
                       {(() => {

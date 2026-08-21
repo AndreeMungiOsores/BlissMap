@@ -160,6 +160,9 @@ export const PublicLocator: React.FC = () => {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(30);
 
+  // Navigation Selector Modal State
+  const [navTarget, setNavTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
+
   // Mobile Bottom Sheet State ('collapsed' | 'expanded')
   const [mobileSheetState, setMobileSheetState] = useState<'collapsed' | 'expanded'>('collapsed');
 
@@ -823,7 +826,6 @@ export const PublicLocator: React.FC = () => {
         )}
         <div className="locator-list" ref={cardsContainerRef}>
           {visibleLocations.map(loc => {
-            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`;
             const isActiveCard = selectedLocationId === loc.id;
             
             // Filter specific matching products ONLY when active search is performed
@@ -839,9 +841,6 @@ export const PublicLocator: React.FC = () => {
                   return false;
                 }).sort((a, b) => getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score)
               : [];
-
-            // Extract Razón Social from custom_fields
-            const razonSocial = loc.custom_fields?.['Razón Social'] || loc.custom_fields?.['Razon Social'] || loc.custom_fields?.['razon_social'];
 
             // Calculate top probability info
             const topProb = matchingProducts.length > 0 ? getProbabilityInfo(matchingProducts[0].last_date) : null;
@@ -911,12 +910,6 @@ export const PublicLocator: React.FC = () => {
                     flexDirection: 'column',
                     gap: '8px'
                   }}>
-                    {razonSocial && (
-                      <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>
-                        <strong style={{ color: '#00506E', fontWeight: 600 }}>Razón Social:</strong> {razonSocial}
-                      </p>
-                    )}
-
                     {loc.distance !== undefined && (
                       <p style={{ fontSize: '12px', color: '#1EC8AA', fontWeight: 600, margin: 0 }}>
                         📍 A {loc.distance.toFixed(1)} {locator.distance_unit} de ti
@@ -1073,17 +1066,18 @@ export const PublicLocator: React.FC = () => {
 
                       return (
                         <div style={{ display: 'flex', gap: '8px', marginTop: '6px', width: '100%' }}>
-                          <a 
-                            href={googleMapsUrl} 
-                            target="_blank" 
-                            rel="noreferrer" 
+                          <button 
+                            type="button"
                             className="locator-directions-btn" 
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNavTarget({ lat: loc.lat, lng: loc.lng, name: loc.name });
+                            }}
                             style={{ marginTop: 0, padding: '9px 12px', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap' }}
                           >
                             <Navigation size={14} />
                             Cómo llegar
-                          </a>
+                          </button>
 
                           {whatsappUrl && (
                             <a 
@@ -1137,6 +1131,135 @@ export const PublicLocator: React.FC = () => {
         />
       </div>
 
+      {/* Navigation App Chooser Modal (Google Maps & Waze) */}
+      {navTarget && (
+        <div 
+          role="dialog"
+          aria-modal="true"
+          aria-label="Seleccionar aplicación de mapas"
+          onClick={() => setNavTarget(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 50, 80, 0.5)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 3000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '360px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              position: 'relative'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setNavTarget(null)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#64748B',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              aria-label="Cerrar modal"
+            >
+              <X size={20} />
+            </button>
+
+            <div>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#00506E', margin: 0, paddingRight: '24px' }}>
+                ¿Cómo deseas llegar?
+              </h3>
+              <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0 0', lineHeight: '1.3' }}>
+                Selecciona tu aplicación de navegación preferida para llegar a <strong>{navTarget.name}</strong>:
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Google Maps Link */}
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${navTarget.lat},${navTarget.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setNavTarget(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  backgroundColor: '#F8FAFC',
+                  border: '1.5px solid #E2E8F0',
+                  color: '#0F172A',
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span style={{ fontSize: '22px' }}>🗺️</span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 800, color: '#1E293B' }}>Google Maps</span>
+                  <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Navegación estándar en web / app</span>
+                </div>
+                <ChevronRight size={18} style={{ marginLeft: 'auto', color: '#94A3B8' }} />
+              </a>
+
+              {/* Waze Link */}
+              <a
+                href={`https://waze.com/ul?ll=${navTarget.lat},${navTarget.lng}&navigate=yes`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setNavTarget(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  backgroundColor: 'rgba(5, 195, 221, 0.08)',
+                  border: '1.5px solid rgba(5, 195, 221, 0.35)',
+                  color: '#00506E',
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span style={{ fontSize: '22px' }}>🚙</span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 800, color: '#00506E' }}>Waze</span>
+                  <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: 500 }}>Navegación con tráfico en vivo</span>
+                </div>
+                <ChevronRight size={18} style={{ marginLeft: 'auto', color: '#05C3DD' }} />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ export interface ProductItem {
   brand?: string;
   sku?: string;
   image_url?: string;
+  empresa?: string;
 }
 
 export interface LocationItem {
@@ -25,9 +26,11 @@ export interface LocationItem {
   description: string | null;
   products?: ProductItem[];
   distance?: number;
+  empresa?: string;
 }
 
 export interface B2BCliente {
+  empresa?: string;
   nro_doc: string;
   razon_social: string;
   nombre_comercial: string;
@@ -40,11 +43,13 @@ export interface B2BCliente {
 }
 
 export interface B2BDireccionEnvio {
+  empresa?: string;
   nro_doc: string;
   direccion_envio: string;
 }
 
 export interface B2BMedico {
+  empresa?: string;
   nro_doc: string;
   medico: string;
   nro_doc_med: string;
@@ -52,6 +57,7 @@ export interface B2BMedico {
 }
 
 export interface B2BVentaDetalle {
+  empresa?: string;
   nro_doc: string;
   sku: string;
   producto: string;
@@ -70,7 +76,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_fixed_v10';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v13';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 /**
@@ -204,15 +210,21 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
       throw new Error(`API returned non-OK status: ${payload.status}`);
     }
 
-    // Lookup maps from live ERP API response
+    // Lookup maps from live ERP API response v2.0
+    // Composite key: `${empresa}_${cleanDoc}` with fallback to `${cleanDoc}`
+    const clientesCompMap = new Map<string, B2BCliente>();
     const clientesDocMap = new Map<string, B2BCliente>();
     const clientesTokenList: { tokens: Set<string>; cliente: B2BCliente }[] = [];
 
     const STOP_WORDS = new Set(['sac', 'eirl', 'srl', 'del', 'los', 'las', 'san', 'santa', 'medico', 'clinica', 'doctor', 'doctora', 'dr', 'dra']);
 
     (payload.clientes || []).forEach(c => {
+      const emp = (c.empresa || 'BLISSFARMA').toUpperCase();
       const digits = c.nro_doc.replace(/\D/g, '');
-      if (digits) clientesDocMap.set(digits, c);
+      if (digits) {
+        clientesCompMap.set(`${emp}_${digits}`, c);
+        if (!clientesDocMap.has(digits)) clientesDocMap.set(digits, c);
+      }
 
       const tel = (c.telefono || '').trim();
       if (tel && tel.replace(/\D/g, '').length >= 7) {
@@ -225,29 +237,45 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
       }
     });
 
-    const direccionesMap = new Map<string, string>();
-    (payload.direcciones_envio || []).forEach(d => direccionesMap.set(d.nro_doc, d.direccion_envio));
+    const direccionesCompMap = new Map<string, string>();
+    const direccionesDocMap = new Map<string, string>();
+    (payload.direcciones_envio || []).forEach(d => {
+      const emp = (d.empresa || 'BLISSFARMA').toUpperCase();
+      direccionesCompMap.set(`${emp}_${d.nro_doc}`, d.direccion_envio);
+      if (!direccionesDocMap.has(d.nro_doc)) direccionesDocMap.set(d.nro_doc, d.direccion_envio);
+    });
 
     const bySkuMap = (productImagesMap as any).by_sku || {};
     const byNameMap = (productImagesMap as any).by_name || {};
 
-    const detalleMap = new Map<string, ProductItem[]>();
+    const detalleCompMap = new Map<string, ProductItem[]>();
+    const detalleDocMap = new Map<string, ProductItem[]>();
     (payload.detalle || []).forEach(item => {
-      const existing = detalleMap.get(item.nro_doc) || [];
+      const emp = (item.empresa || 'BLISSFARMA').toUpperCase();
+      const compKey = `${emp}_${item.nro_doc}`;
+
       const cleanProductName = cleanSpanishText(item.producto);
       const skuStr = (item.sku || '').trim();
       const cleanNameKey = cleanProductName.toLowerCase().replace(/\s+/g, '').replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e').replace(/[íìïî]/g, 'i').replace(/[óòöô]/g, 'o').replace(/[úùüû]/g, 'u');
       const imgUrl = bySkuMap[skuStr] || byNameMap[cleanNameKey] || undefined;
 
-      existing.push({
+      const productObj: ProductItem = {
         name: cleanProductName,
         qty: Number(item.cantidad) || 1,
         last_date: item.ultima_compra,
         sku: item.sku,
         brand: detectBrand(cleanProductName),
-        image_url: imgUrl
-      });
-      detalleMap.set(item.nro_doc, existing);
+        image_url: imgUrl,
+        empresa: emp
+      };
+
+      const existingComp = detalleCompMap.get(compKey) || [];
+      existingComp.push(productObj);
+      detalleCompMap.set(compKey, existingComp);
+
+      const existingDoc = detalleDocMap.get(item.nro_doc) || [];
+      existingDoc.push(productObj);
+      detalleDocMap.set(item.nro_doc, existingDoc);
     });
 
     const geocodeLookup = apiGeocodedCoords as Record<string, { lat: number; lng: number }>;
@@ -256,17 +284,24 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
 
     const apiDoctorsList: LocationItem[] = [];
 
-    // Map each doctor entry directly from ERP API payload with expanded phone matching
+    // Map each doctor entry directly from ERP API payload v2.0
     const medicos = payload.medicos || [];
     if (medicos.length > 0) {
       medicos.forEach((med, idx) => {
+        const emp = (med.empresa || 'BLISSFARMA').toUpperCase();
         const cleanCompanyDoc = med.nro_doc.replace(/\D/g, '');
         const cleanMedDoc = (med.nro_doc_med || '').replace(/\D/g, '');
 
-        // Primary cliente: ALWAYS from exact RUC match — used for Razón Social, address, website
-        const primaryCliente = clientesDocMap.get(cleanCompanyDoc) || (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
+        const compKeyCompany = `${emp}_${cleanCompanyDoc}`;
+        const compKeyMed = `${emp}_${cleanMedDoc}`;
 
-        // Secondary phone match: token-based ONLY to find a phone number — never overrides Razón Social
+        // Primary cliente: ALWAYS from exact RUC / DNI match for that specific empresa
+        const primaryCliente = clientesCompMap.get(compKeyCompany) ||
+          (cleanMedDoc ? clientesCompMap.get(compKeyMed) : undefined) ||
+          clientesDocMap.get(cleanCompanyDoc) ||
+          (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
+
+        // Secondary phone match: token-based ONLY to find a phone number
         let phoneNumber = (primaryCliente?.telefono || '').trim() || null;
         if (!phoneNumber) {
           const locRawTokens = med.medico.toLowerCase().match(/[a-z0-9]+/g) || [];
@@ -288,22 +323,31 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           if (bestPhoneMatch) phoneNumber = (bestPhoneMatch.telefono || '').trim() || null;
         }
 
-        const rawAddress = direccionesMap.get(med.nro_doc) || primaryCliente?.direccion_fiscal || 'Lima, Perú';
-        const products = detalleMap.get(med.nro_doc) || [];
+        const rawAddress = direccionesCompMap.get(`${emp}_${med.nro_doc}`) ||
+          direccionesDocMap.get(med.nro_doc) ||
+          primaryCliente?.direccion_fiscal ||
+          'Lima, Perú';
 
-        // Geocoded coordinates lookup
-        const coords = geocodeLookup[med.nro_doc] || {
-          lat: DEFAULT_LAT + (idx * 0.002),
-          lng: DEFAULT_LNG + (idx * 0.002)
-        };
+        const products = detalleCompMap.get(`${emp}_${med.nro_doc}`) ||
+          detalleDocMap.get(med.nro_doc) ||
+          [];
 
+        // Geocoded coordinates lookup (check composite key first, then doc)
+        const coords = geocodeLookup[`${emp}_${med.nro_doc}`] ||
+          geocodeLookup[med.nro_doc] ||
+          geocodeLookup[cleanCompanyDoc] || {
+            lat: DEFAULT_LAT + (idx * 0.002),
+            lng: DEFAULT_LNG + (idx * 0.002)
+          };
+
+        const cleanNombreComercial = cleanSpanishText(primaryCliente?.nombre_comercial || primaryCliente?.razon_social || med.medico || 'Centro Dermatológico');
         const cleanDoctorName = cleanSpanishText(med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo');
         const cleanDoctorAddress = cleanSpanishText(rawAddress);
         const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
 
         apiDoctorsList.push({
-          id: `erp-doc-${med.nro_doc_med || med.nro_doc}-${idx}`,
-          name: cleanDoctorName,
+          id: `erp-doc-${emp.toLowerCase()}-${med.nro_doc_med || med.nro_doc}-${idx}`,
+          name: cleanNombreComercial,
           image_url: null,
           address: cleanDoctorAddress,
           phone: phoneNumber,
@@ -311,14 +355,18 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           website: primaryCliente?.website || null,
           lat: coords.lat,
           lng: coords.lng,
-          tags: ['ERP B2B', 'Verificado'],
+          tags: ['ERP B2B', emp, 'Verificado', cleanDoctorName],
           custom_fields: {
+            'Nombre Comercial': cleanNombreComercial,
+            'Médico': cleanDoctorName,
             'Razón Social': cleanRazonSocial,
             'Documento': primaryCliente?.nro_doc || med.nro_doc,
-            'Colegiatura': med.colegiatura ? `CMP ${med.colegiatura}` : ''
+            'Colegiatura': med.colegiatura ? `CMP ${med.colegiatura}` : '',
+            'Empresa': emp
           },
           description: null,
-          products: products
+          products: products,
+          empresa: emp
         });
       });
     }
