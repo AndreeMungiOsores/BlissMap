@@ -166,37 +166,51 @@ export const PublicLocator: React.FC = () => {
   // Mobile Bottom Sheet State ('collapsed' | 'expanded')
   const [mobileSheetState, setMobileSheetState] = useState<'collapsed' | 'expanded'>('collapsed');
 
-  // Touch Gesture Handling for Mobile Swipe (Deslizar con el dedo hacia arriba / abajo)
+  // Touch Gesture Handling for Mobile Swipe (Android Chrome & iOS Safari compatible)
   const touchStartYRef = useRef<number | null>(null);
-  const touchCurrentYRef = useRef<number | null>(null);
+  const isSwipingRef = useRef<boolean>(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches && e.touches.length === 1) {
       touchStartYRef.current = e.touches[0].clientY;
-      touchCurrentYRef.current = e.touches[0].clientY;
+      isSwipingRef.current = false;
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartYRef.current !== null && e.touches && e.touches.length === 1) {
-      touchCurrentYRef.current = e.touches[0].clientY;
+      const deltaY = e.touches[0].clientY - touchStartYRef.current;
+      if (Math.abs(deltaY) > 10) {
+        isSwipingRef.current = true;
+      }
     }
   };
 
-  const handleTouchEnd = () => {
-    if (touchStartYRef.current !== null && touchCurrentYRef.current !== null) {
-      const deltaY = touchCurrentYRef.current - touchStartYRef.current;
-      // If dragged UP by more than 20px -> EXPAND
-      if (deltaY < -20) {
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartYRef.current !== null && e.changedTouches && e.changedTouches.length > 0) {
+      const endY = e.changedTouches[0].clientY;
+      const deltaY = endY - touchStartYRef.current;
+      // If dragged UP by more than 15px -> EXPAND
+      if (deltaY < -15) {
         setMobileSheetState('expanded');
+        isSwipingRef.current = true;
       } 
-      // If dragged DOWN by more than 20px -> COLLAPSE
-      else if (deltaY > 20) {
+      // If dragged DOWN by more than 15px -> COLLAPSE
+      else if (deltaY > 15) {
         setMobileSheetState('collapsed');
+        isSwipingRef.current = true;
       }
     }
     touchStartYRef.current = null;
-    touchCurrentYRef.current = null;
+  };
+
+  const handleClickHandleBar = () => {
+    // If a touch swipe gesture was performed, suppress synthetic click event on Android/Chrome
+    if (isSwipingRef.current) {
+      isSwipingRef.current = false;
+      return;
+    }
+    setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed');
   };
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
@@ -535,7 +549,7 @@ export const PublicLocator: React.FC = () => {
         {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
         <div 
           className="bottom-sheet-handle-bar"
-          onClick={() => setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed')}
+          onClick={handleClickHandleBar}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
