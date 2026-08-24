@@ -165,47 +165,72 @@ export const PublicLocator: React.FC = () => {
 
   // Mobile Bottom Sheet State ('collapsed' | 'expanded')
   const [mobileSheetState, setMobileSheetState] = useState<'collapsed' | 'expanded'>('collapsed');
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
 
-  // Touch Gesture Handling for Mobile Swipe (Android Chrome & iOS Safari compatible)
+  // Touch & Drag Handling for Mobile Sheet (Google Maps 1-to-1 finger tracking)
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const initialHeightRef = useRef<number>(140);
   const isSwipingRef = useRef<boolean>(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches && e.touches.length === 1) {
       touchStartYRef.current = e.touches[0].clientY;
       isSwipingRef.current = false;
+      if (sidebarRef.current) {
+        initialHeightRef.current = sidebarRef.current.getBoundingClientRect().height;
+      }
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartYRef.current !== null && e.touches && e.touches.length === 1) {
       const deltaY = e.touches[0].clientY - touchStartYRef.current;
-      if (Math.abs(deltaY) > 10) {
+      if (Math.abs(deltaY) > 5) {
         isSwipingRef.current = true;
       }
+
+      // Calculate 1-to-1 height following user finger exactly
+      const calculatedHeight = initialHeightRef.current - deltaY;
+
+      // Min/Max height bounds for smooth mobile drag
+      const minH = 110;
+      const maxH = Math.min(window.innerHeight * 0.70, window.innerHeight - 140);
+      const clampedHeight = Math.max(minH, Math.min(maxH, calculatedHeight));
+
+      setDragHeight(clampedHeight);
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartYRef.current !== null && e.changedTouches && e.changedTouches.length > 0) {
-      const endY = e.changedTouches[0].clientY;
+    if (touchStartYRef.current !== null) {
+      const endY = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientY : touchStartYRef.current;
       const deltaY = endY - touchStartYRef.current;
-      // If dragged UP by more than 15px -> EXPAND
-      if (deltaY < -15) {
+
+      const collapsedH = 140;
+      const expandedH = Math.min(window.innerHeight * 0.45, window.innerHeight - 220);
+      const midPoint = (collapsedH + expandedH) / 2;
+
+      const currentH = dragHeight !== null ? dragHeight : (initialHeightRef.current - deltaY);
+
+      if (deltaY < -20) {
         setMobileSheetState('expanded');
         isSwipingRef.current = true;
-      } 
-      // If dragged DOWN by more than 15px -> COLLAPSE
-      else if (deltaY > 15) {
+      } else if (deltaY > 20) {
         setMobileSheetState('collapsed');
         isSwipingRef.current = true;
+      } else if (currentH > midPoint) {
+        setMobileSheetState('expanded');
+      } else {
+        setMobileSheetState('collapsed');
       }
     }
+
     touchStartYRef.current = null;
+    setDragHeight(null);
   };
 
   const handleClickHandleBar = () => {
-    // If a touch swipe gesture was performed, suppress synthetic click event on Android/Chrome
     if (isSwipingRef.current) {
       isSwipingRef.current = false;
       return;
@@ -544,7 +569,11 @@ export const PublicLocator: React.FC = () => {
     <div className="locator-layout" style={dynamicStyles}>
       
       {/* Sidebar Panel / Mobile Bottom Sheet */}
-      <div className={`locator-sidebar sheet-${mobileSheetState} ${!isSelectionActive ? 'mobile-hidden-sheet' : ''}`}>
+      <div 
+        ref={sidebarRef}
+        className={`locator-sidebar sheet-${mobileSheetState} ${!isSelectionActive ? 'mobile-hidden-sheet' : ''}`}
+        style={dragHeight !== null ? { height: `${dragHeight}px`, transition: 'none' } : undefined}
+      >
         
         {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
         <div 
