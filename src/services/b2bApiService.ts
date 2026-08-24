@@ -1,4 +1,5 @@
 import apiGeocodedCoords from '../data/api_geocoded_coords.json';
+import excelGeocodedOverrides from '../data/excel_geocoded_overrides.json';
 import productImagesMap from '../data/product_images_map.json';
 
 export interface ProductItem {
@@ -76,7 +77,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v13';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v15';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 /**
@@ -279,6 +280,7 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
     });
 
     const geocodeLookup = apiGeocodedCoords as Record<string, { lat: number; lng: number }>;
+    const excelOverridesLookup = excelGeocodedOverrides as Record<string, { address?: string; lat?: number; lng?: number }>;
     const DEFAULT_LAT = -12.046374;
     const DEFAULT_LNG = -77.042793;
 
@@ -300,6 +302,11 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           (cleanMedDoc ? clientesCompMap.get(compKeyMed) : undefined) ||
           clientesDocMap.get(cleanCompanyDoc) ||
           (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
+
+        // Check Excel ReporteClientes overrides first by RUC or DNI
+        const excelOverride = excelOverridesLookup[cleanCompanyDoc] ||
+          (cleanMedDoc ? excelOverridesLookup[cleanMedDoc] : undefined) ||
+          excelOverridesLookup[med.nro_doc];
 
         // Secondary phone match: token-based ONLY to find a phone number
         let phoneNumber = (primaryCliente?.telefono || '').trim() || null;
@@ -323,7 +330,9 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           if (bestPhoneMatch) phoneNumber = (bestPhoneMatch.telefono || '').trim() || null;
         }
 
-        const rawAddress = direccionesCompMap.get(`${emp}_${med.nro_doc}`) ||
+        // Priority for address: Excel DATOS DE ENVÍO > API direcciones_envio > API dirección fiscal
+        const rawAddress = excelOverride?.address ||
+          direccionesCompMap.get(`${emp}_${med.nro_doc}`) ||
           direccionesDocMap.get(med.nro_doc) ||
           primaryCliente?.direccion_fiscal ||
           'Lima, Perú';
@@ -332,13 +341,15 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           detalleDocMap.get(med.nro_doc) ||
           [];
 
-        // Geocoded coordinates lookup (check composite key first, then doc)
-        const coords = geocodeLookup[`${emp}_${med.nro_doc}`] ||
+        // Priority for coordinates: Excel DATOS DE ENVÍO (Latitud/Longitud) > Legacy apiGeocodedCoords > Default
+        const coords = (excelOverride?.lat && excelOverride?.lng) ? { lat: excelOverride.lat, lng: excelOverride.lng } : (
+          geocodeLookup[`${emp}_${med.nro_doc}`] ||
           geocodeLookup[med.nro_doc] ||
           geocodeLookup[cleanCompanyDoc] || {
             lat: DEFAULT_LAT + (idx * 0.002),
             lng: DEFAULT_LNG + (idx * 0.002)
-          };
+          }
+        );
 
         const cleanNombreComercial = cleanSpanishText(primaryCliente?.nombre_comercial || primaryCliente?.razon_social || med.medico || 'Centro Dermatológico');
         const cleanDoctorName = cleanSpanishText(med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo');
