@@ -964,17 +964,6 @@ export const PublicLocator: React.FC = () => {
                     <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: '1.4', fontWeight: 500 }}>
                       {selectedLocation.address}
                     </p>
-
-                    {selectedLocation.custom_fields?.['Médico'] && selectedLocation.custom_fields['Médico'] !== selectedLocation.name && (
-                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>👨‍⚕️ {selectedLocation.custom_fields['Médico']}</span>
-                        {selectedLocation.custom_fields['Colegiatura'] && (
-                          <span style={{ fontSize: '10px', backgroundColor: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', color: '#475569' }}>
-                            {selectedLocation.custom_fields['Colegiatura']}
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
 
