@@ -963,12 +963,34 @@ button, input, select, textarea {
   .locator-sidebar.sheet-collapsed {
     height: calc(125px + env(safe-area-inset-bottom, 16px));
     overflow: hidden;
+    z-index: 900;
   }
 
+  .locator-sidebar.sheet-half,
   .locator-sidebar.sheet-expanded {
     height: 45vh;
     max-height: calc(100vh - 220px);
     overflow-y: auto;
+    z-index: 900;
+  }
+
+  .locator-sidebar.sheet-full {
+    height: calc(100vh - 8px);
+    max-height: 100vh;
+    overflow-y: auto;
+    z-index: 1200;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+  }
+
+  /* Hide floating search container BEHIND sheet cards when sheet is in FULL mode or dragged over top threshold */
+  .locator-sidebar.sheet-full .locator-search-container,
+  .locator-sidebar.is-drag-full .locator-search-container {
+    z-index: 800 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
   }
 
   .bottom-sheet-handle-bar {

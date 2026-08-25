@@ -16,7 +16,9 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronRight,
-  MessageCircle
+  MessageCircle,
+  ArrowLeft,
+  Building2
 } from 'lucide-react';
 
 interface ProductItem {
@@ -58,6 +60,7 @@ interface LocatorData {
   distance_unit: string;
 }
 
+export type MobileSheetState = 'collapsed' | 'half' | 'full';
 export type ProbabilityTier = 'alta' | 'media' | 'baja';
 
 export interface ProbabilityInfo {
@@ -163,11 +166,11 @@ export const PublicLocator: React.FC = () => {
   // Navigation Selector Modal State
   const [navTarget, setNavTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
-  // Mobile Bottom Sheet State ('collapsed' | 'expanded')
-  const [mobileSheetState, setMobileSheetState] = useState<'collapsed' | 'expanded'>('collapsed');
+  // 3-Stage Mobile Bottom Sheet State ('collapsed' | 'half' | 'full')
+  const [mobileSheetState, setMobileSheetState] = useState<MobileSheetState>('collapsed');
   const [dragHeight, setDragHeight] = useState<number | null>(null);
 
-  // Touch & Drag Handling for Mobile Sheet (Google Maps 1-to-1 finger tracking)
+  // Touch & Drag Handling for Mobile Sheet (Google Maps 3-stage 1-to-1 finger tracking)
   const sidebarRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
   const initialHeightRef = useRef<number>(140);
@@ -193,9 +196,9 @@ export const PublicLocator: React.FC = () => {
       // Calculate 1-to-1 height following user finger exactly
       const calculatedHeight = initialHeightRef.current - deltaY;
 
-      // Min/Max height bounds for smooth mobile drag
+      // Min/Max height bounds (min ~110px, max ~100vh - 8px)
       const minH = 110;
-      const maxH = Math.min(window.innerHeight * 0.70, window.innerHeight - 140);
+      const maxH = window.innerHeight - 8;
       const clampedHeight = Math.max(minH, Math.min(maxH, calculatedHeight));
 
       setDragHeight(clampedHeight);
@@ -208,21 +211,45 @@ export const PublicLocator: React.FC = () => {
       const deltaY = endY - touchStartYRef.current;
 
       const collapsedH = 140;
-      const expandedH = Math.min(window.innerHeight * 0.45, window.innerHeight - 220);
-      const midPoint = (collapsedH + expandedH) / 2;
+      const halfH = Math.min(window.innerHeight * 0.45, window.innerHeight - 220);
+      const fullH = window.innerHeight - 16;
+
+      const midPointLow = (collapsedH + halfH) / 2;
+      const midPointHigh = (halfH + fullH) / 2;
 
       const currentH = dragHeight !== null ? dragHeight : (initialHeightRef.current - deltaY);
 
-      if (deltaY < -20) {
-        setMobileSheetState('expanded');
+      // Fast swipe UP
+      if (deltaY < -40) {
         isSwipingRef.current = true;
-      } else if (deltaY > 20) {
-        setMobileSheetState('collapsed');
+        if (initialHeightRef.current < halfH && deltaY < -150) {
+          setMobileSheetState('full');
+        } else if (initialHeightRef.current >= halfH) {
+          setMobileSheetState('full');
+        } else {
+          setMobileSheetState('half');
+        }
+      }
+      // Fast swipe DOWN
+      else if (deltaY > 40) {
         isSwipingRef.current = true;
-      } else if (currentH > midPoint) {
-        setMobileSheetState('expanded');
-      } else {
-        setMobileSheetState('collapsed');
+        if (initialHeightRef.current > halfH && deltaY > 150) {
+          setMobileSheetState('collapsed');
+        } else if (initialHeightRef.current > halfH) {
+          setMobileSheetState('half');
+        } else {
+          setMobileSheetState('collapsed');
+        }
+      }
+      // Position-based snapping
+      else {
+        if (currentH < midPointLow) {
+          setMobileSheetState('collapsed');
+        } else if (currentH > midPointHigh) {
+          setMobileSheetState('full');
+        } else {
+          setMobileSheetState('half');
+        }
       }
     }
 
@@ -235,7 +262,11 @@ export const PublicLocator: React.FC = () => {
       isSwipingRef.current = false;
       return;
     }
-    setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed');
+    setMobileSheetState(prev => {
+      if (prev === 'collapsed') return 'half';
+      if (prev === 'half') return 'full';
+      return 'collapsed';
+    });
   };
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
@@ -565,14 +596,20 @@ export const PublicLocator: React.FC = () => {
     '--accent-color-rgb': hexToRgb(locator.accent_color)
   } as React.CSSProperties;
 
+  const isDragFull = dragHeight !== null && dragHeight > (window.innerHeight * 0.55);
+
   return (
     <div className="locator-layout" style={dynamicStyles}>
       
       {/* Sidebar Panel / Mobile Bottom Sheet */}
       <div 
         ref={sidebarRef}
-        className={`locator-sidebar sheet-${mobileSheetState} ${!isSelectionActive ? 'mobile-hidden-sheet' : ''}`}
-        style={dragHeight !== null ? { height: `${dragHeight}px`, transition: 'none' } : undefined}
+        className={`locator-sidebar sheet-${mobileSheetState} ${isDragFull ? 'is-drag-full' : ''} ${!isSelectionActive ? 'mobile-hidden-sheet' : ''}`}
+        style={dragHeight !== null ? { 
+          height: `${dragHeight}px`, 
+          transition: 'none',
+          zIndex: isDragFull ? 1200 : undefined 
+        } : undefined}
       >
         
         {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
@@ -584,11 +621,11 @@ export const PublicLocator: React.FC = () => {
           onTouchEnd={handleTouchEnd}
           role="button"
           tabIndex={0}
-          aria-expanded={mobileSheetState === 'expanded'}
-          aria-label={mobileSheetState === 'collapsed' ? 'Deslizar hacia arriba para ver la lista de médicos' : 'Deslizar hacia abajo para ver el mapa'}
+          aria-expanded={mobileSheetState !== 'collapsed'}
+          aria-label={mobileSheetState === 'collapsed' ? 'Deslizar hacia arriba para ver los médicos' : mobileSheetState === 'half' ? 'Deslizar hacia arriba para maximizar' : 'Deslizar hacia abajo para ver el mapa'}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-              setMobileSheetState(prev => prev === 'collapsed' ? 'expanded' : 'collapsed');
+              handleClickHandleBar();
             }
           }}
         >
@@ -848,315 +885,403 @@ export const PublicLocator: React.FC = () => {
           </div>
         </div>
 
-        {/* Results Card List */}
-        {/* Probability legend — shown once when a product/brand is selected */}
-        {isSelectionActive && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '6px 16px 8px',
-            flexWrap: 'wrap'
-          }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', marginRight: '2px' }}>Stock:</span>
-            {[{ color: '#22c55e', label: 'Alta' }, { color: '#f59e0b', label: 'Media' }, { color: '#ef4444', label: 'Baja' }].map(({ color, label }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#475569', fontWeight: 600 }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color, display: 'inline-block', flexShrink: 0 }} />
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="locator-list" ref={cardsContainerRef}>
-          {visibleLocations.map(loc => {
-            const isActiveCard = selectedLocationId === loc.id;
-            
-            // Filter specific matching products ONLY when active search is performed
-            const matchingProducts = hasActiveProductSearch
-              ? (loc.products || []).filter(p => {
-                  if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) {
-                    return true;
-                  }
-                  if (isQueryActive) {
-                    if (p.name.toLowerCase().includes(queryClean)) return true;
-                    if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
-                  }
-                  return false;
-                }).sort((a, b) => getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score)
-              : [];
+        {/* Results View: Conditional Dedicated Detail View vs General Cards List */}
+        {(() => {
+          const selectedLocation = selectedLocationId 
+            ? (processedLocations.find(l => l.id === selectedLocationId) || locations.find(l => l.id === selectedLocationId))
+            : null;
 
-            // Calculate top probability info
-            const topProb = matchingProducts.length > 0 ? getProbabilityInfo(matchingProducts[0].last_date) : null;
-
+          // -------------------------------------------------------------
+          // 1. DEDICATED SINGLE-LOCATION DETAIL VIEW (When a comercio is selected)
+          // -------------------------------------------------------------
+          if (selectedLocation) {
             return (
-              <div 
-                key={loc.id} 
-                className={`locator-card ${isActiveCard ? 'active' : ''}`}
-                ref={el => { cardRefs.current[loc.id] = el; }}
-                onClick={() => {
-                  setSelectedLocationId(prev => prev === loc.id ? null : loc.id);
-                }}
-                style={{ display: 'flex', flexDirection: 'column', gap: '0', padding: '14px 16px', gridTemplateColumns: 'none' }}
-              >
-                {/* Main Row: Doctor Icon, Doctor Info, Stock Probability & Chevron */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
-                  
-                  {/* Left: Map Pin Icon & Doctor Name + Address */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexGrow: 1, minWidth: 0 }}>
-                    {loc.image_url ? (
-                      <img src={loc.image_url} alt={loc.name} style={{ width: '42px', height: '42px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', flexShrink: 0 }}>
-                        <MapPin size={20} />
-                      </div>
-                    )}
+              <div className="location-detail-view" style={{ padding: '8px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                
+                {/* Back Button Bar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLocationId(null)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      borderRadius: 'var(--radius-full)',
+                      backgroundColor: 'rgba(0, 80, 110, 0.08)',
+                      border: '1.5px solid rgba(0, 80, 110, 0.25)',
+                      color: '#00506E',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    aria-label="Volver a la lista general de médicos"
+                  >
+                    <ArrowLeft size={17} style={{ color: '#00506E' }} />
+                    <span>Volver a la lista</span>
+                  </button>
 
-                    <div style={{ minWidth: 0, flexGrow: 1 }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#00506E', margin: 0, lineHeight: '1.35', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {loc.name}
-                      </h4>
-                      <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {loc.address}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right: Stock Probability Dot & Chevron Arrow */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                    {topProb && (
-                      <span
-                        aria-label={`Probabilidad de stock: ${topProb.label}`}
-                        title={topProb.label}
-                        style={{
-                          width: '10px',
-                          height: '10px',
-                          borderRadius: '50%',
-                          backgroundColor: topProb.label === 'Alta probabilidad' ? '#22c55e' : topProb.label === 'Media probabilidad' ? '#f59e0b' : '#ef4444',
-                          display: 'inline-block',
-                          flexShrink: 0,
-                          boxShadow: `0 0 0 2px ${topProb.label === 'Alta probabilidad' ? 'rgba(34,197,94,0.2)' : topProb.label === 'Media probabilidad' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}`
-                        }}
-                      />
-                    )}
-                    <ChevronRight size={18} style={{ color: '#94A3B8', transform: isActiveCard ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }} />
-                  </div>
-
+                  {selectedLocation.distance !== undefined && (
+                    <span style={{ fontSize: '11px', color: '#1EC8AA', fontWeight: 700, backgroundColor: 'rgba(30, 200, 170, 0.12)', border: '1px solid rgba(30, 200, 170, 0.3)', padding: '4px 10px', borderRadius: 'var(--radius-full)' }}>
+                      📍 A {selectedLocation.distance.toFixed(1)} {locator.distance_unit}
+                    </span>
+                  )}
                 </div>
 
-                {/* Expanded View / Desglose on Selection */}
-                {isActiveCard && (
-                  <div style={{
-                    marginTop: '12px',
-                    paddingTop: '12px',
-                    borderTop: '1px solid #E2E8F0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}>
-                    {loc.distance !== undefined && (
-                      <p style={{ fontSize: '12px', color: '#1EC8AA', fontWeight: 600, margin: 0 }}>
-                        📍 A {loc.distance.toFixed(1)} {locator.distance_unit} de ti
-                      </p>
-                    )}
+                {/* Hero Header Card: Large Photo / Avatar & Commerce Details */}
+                <div style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '20px',
+                  padding: '16px',
+                  border: '1.5px solid rgba(30, 200, 170, 0.35)',
+                  boxShadow: '0 4px 20px rgba(0, 80, 110, 0.08)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '14px'
+                }}>
+                  {/* Large Photo / Avatar */}
+                  {selectedLocation.image_url ? (
+                    <img 
+                      src={selectedLocation.image_url} 
+                      alt={selectedLocation.name} 
+                      style={{ width: '64px', height: '64px', borderRadius: '16px', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #E2E8F0', boxShadow: '0 3px 10px rgba(0,0,0,0.08)' }} 
+                    />
+                  ) : (
+                    <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: 'rgba(30, 200, 170, 0.12)', border: '1.5px solid rgba(30, 200, 170, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00506E', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.04)' }}>
+                      <Building2 size={32} />
+                    </div>
+                  )}
 
-                    {/* Products List Section with Images (Only shown when a product or brand is selected) */}
-                    {(() => {
-                      if (!isSelectionActive || !loc.products || loc.products.length === 0) return null;
+                  <div style={{ flexGrow: 1, minWidth: 0 }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#00506E', margin: '0 0 4px 0', lineHeight: '1.3' }}>
+                      {selectedLocation.name}
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: '1.4', fontWeight: 500 }}>
+                      {selectedLocation.address}
+                    </p>
 
-                      const matchingProducts = loc.products.filter(prod => {
-                        if (selectedProducts.length > 0) {
-                          return selectedProducts.some(sp => prod.name.toLowerCase().includes(sp.toLowerCase()));
-                        }
-                        if (selectedBrand) {
-                          return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
-                        }
-                        return true;
-                      });
-
-                      if (matchingProducts.length === 0) return null;
-
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#00506E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Producto Seleccionado ({matchingProducts.length})
+                    {selectedLocation.custom_fields?.['Médico'] && selectedLocation.custom_fields['Médico'] !== selectedLocation.name && (
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>👨‍⚕️ {selectedLocation.custom_fields['Médico']}</span>
+                        {selectedLocation.custom_fields['Colegiatura'] && (
+                          <span style={{ fontSize: '10px', backgroundColor: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', color: '#475569' }}>
+                            {selectedLocation.custom_fields['Colegiatura']}
                           </span>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '2px' }}>
-                            {matchingProducts.map((prod, pIdx) => {
-                              const pProb = getProbabilityInfo(prod.last_date);
-                              return (
-                                <div key={pIdx} style={{
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Products List Section with Enlarged Photos */}
+                {(() => {
+                  const allProds = selectedLocation.products || [];
+                  if (allProds.length === 0) return null;
+
+                  const matchingProds = allProds.filter(prod => {
+                    if (selectedProducts.length > 0) {
+                      return selectedProducts.some(sp => prod.name.toLowerCase().includes(sp.toLowerCase()));
+                    }
+                    if (selectedBrand) {
+                      return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
+                    }
+                    return true;
+                  });
+
+                  const displayProds = matchingProds.length > 0 ? matchingProds : allProds;
+
+                  return (
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '20px',
+                      padding: '16px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#00506E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          PRODUCTO SELECCIONADO ({displayProds.length})
+                        </span>
+                      </div>
+
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: displayProds.length > 1 ? 'repeat(auto-fit, minmax(140px, 1fr))' : '1fr', 
+                        gap: '12px', 
+                        maxHeight: '340px', 
+                        overflowY: 'auto', 
+                        paddingRight: '2px' 
+                      }}>
+                        {displayProds.map((prod, pIdx) => {
+                          const pProb = getProbabilityInfo(prod.last_date);
+                          return (
+                            <div key={pIdx} style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              gap: '10px',
+                              backgroundColor: '#F8FAFC',
+                              padding: '14px 12px',
+                              borderRadius: '16px',
+                              border: '1px solid #E2E8F0',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                            }}>
+                              {/* 1. Large Product Photo (Top First) */}
+                              {prod.image_url ? (
+                                <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                  <img 
+                                    src={prod.image_url} 
+                                    alt={prod.name}
+                                    style={{
+                                      width: '100%',
+                                      maxHeight: '110px',
+                                      height: '110px',
+                                      objectFit: 'contain',
+                                      backgroundColor: '#FFFFFF',
+                                      borderRadius: '12px',
+                                      border: '1.5px solid #E2E8F0',
+                                      padding: '6px',
+                                      boxShadow: '0 3px 10px rgba(0,0,0,0.05)'
+                                    }}
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  height: '95px',
+                                  borderRadius: '12px',
+                                  backgroundColor: '#E6FFFA',
+                                  border: '1.5px solid #B2F5EA',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '10px',
-                                  backgroundColor: '#F8FAFC',
-                                  padding: '6px 10px',
-                                  borderRadius: '8px',
-                                  border: '1px solid #E2E8F0'
+                                  justifyContent: 'center',
+                                  color: '#1EC8AA'
                                 }}>
-                                  {/* Product Thumbnail Image */}
-                                  {prod.image_url ? (
-                                    <img 
-                                      src={prod.image_url} 
-                                      alt={prod.name}
-                                      style={{
-                                        width: '38px',
-                                        height: '38px',
-                                        objectFit: 'contain',
-                                        backgroundColor: '#FFFFFF',
-                                        borderRadius: '6px',
-                                        border: '1px solid #E2E8F0',
-                                        padding: '2px',
-                                        flexShrink: 0
-                                      }}
-                                      onError={(e) => {
-                                        (e.target as HTMLElement).style.display = 'none';
-                                      }}
-                                    />
-                                  ) : (
-                                    <div style={{
-                                      width: '38px',
-                                      height: '38px',
-                                      borderRadius: '6px',
-                                      backgroundColor: '#E6FFFA',
-                                      border: '1px solid #B2F5EA',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      color: '#1EC8AA',
-                                      flexShrink: 0
-                                    }}>
-                                      <Package size={18} />
-                                    </div>
-                                  )}
-
-                                  {/* Product Info */}
-                                  <div style={{ flexGrow: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#00506E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {prod.name}
-                                    </div>
-                                    {prod.brand && (
-                                      <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 500 }}>
-                                        Marca: <span style={{ fontWeight: 700, color: '#1EC8AA' }}>{prod.brand}</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Probability Badge */}
-                                  <span style={{
-                                    backgroundColor: pProb.bgColor,
-                                    color: pProb.textColor,
-                                    border: `1px solid ${pProb.borderColor}`,
-                                    padding: '2px 6px',
-                                    borderRadius: 'var(--radius-full)',
-                                    fontWeight: 700,
-                                    fontSize: '10px',
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0
-                                  }}>
-                                    {pProb.label}
-                                  </span>
+                                  <Package size={32} />
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                              )}
 
-                    {/* Actions Row: Cómo llegar + WhatsApp */}
-                    {(() => {
-                      const cleanDigits = loc.phone ? loc.phone.replace(/\D/g, '') : '';
-                      const cleanPhone = (cleanDigits.length === 9 && cleanDigits.startsWith('9')) 
-                        ? cleanDigits 
-                        : (cleanDigits.length === 11 && cleanDigits.startsWith('519')) 
-                          ? cleanDigits.substring(2) 
-                          : (cleanDigits.length >= 7 ? cleanDigits : null);
+                              {/* 2. Product Name & Brand (Below Image) */}
+                              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 800, color: '#00506E', lineHeight: '1.35', wordBreak: 'break-word' }}>
+                                  {prod.name}
+                                </div>
+                                {prod.brand && (
+                                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
+                                    Marca: <span style={{ fontWeight: 700, color: '#1EC8AA' }}>{prod.brand}</span>
+                                  </div>
+                                )}
+                              </div>
 
-                      // Build pre-filled WhatsApp message with selected products/brands
-                      let whatsappUrl: string | null = null;
-                      if (cleanPhone) {
-                        let waMessage = '';
-                        if (isSelectionActive && loc.products && loc.products.length > 0) {
-                          const matchingProds = loc.products.filter(prod => {
-                            if (selectedProducts.length > 0) return selectedProducts.some(sp => prod.name.toLowerCase().includes(sp.toLowerCase()));
-                            if (selectedBrand) return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
-                            return false;
-                          });
+                              {/* 3. Stock Probability Badge (Bottom) */}
+                              <span style={{
+                                backgroundColor: pProb.bgColor,
+                                color: pProb.textColor,
+                                border: `1px solid ${pProb.borderColor}`,
+                                padding: '4px 12px',
+                                borderRadius: 'var(--radius-full)',
+                                fontWeight: 700,
+                                fontSize: '10px',
+                                whiteSpace: 'nowrap',
+                                marginTop: 'auto'
+                              }}>
+                                {pProb.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                          if (matchingProds.length === 1) {
-                            const p = matchingProds[0];
-                            const brandStr = p.brand ? ` de ${p.brand}` : '';
-                            waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen "${p.name}"${brandStr} para acercarme a comprarlo?`;
-                          } else if (matchingProds.length > 1) {
-                            const uniqueBrands = [...new Set(matchingProds.map(p => p.brand).filter(Boolean))];
-                            const sameBrand = uniqueBrands.length === 1;
+                {/* Primary Action Buttons: Cómo llegar + WhatsApp */}
+                {(() => {
+                  const cleanDigits = selectedLocation.phone ? selectedLocation.phone.replace(/\D/g, '') : '';
+                  const cleanPhone = (cleanDigits.length === 9 && cleanDigits.startsWith('9')) 
+                    ? cleanDigits 
+                    : (cleanDigits.length === 11 && cleanDigits.startsWith('519')) 
+                      ? cleanDigits.substring(2) 
+                      : (cleanDigits.length >= 7 ? cleanDigits : null);
 
-                            if (sameBrand) {
-                              // All products from same brand → list all products then "de MARCA"
-                              const names = matchingProds.map(p => `"${p.name}"`).join(', ');
-                              waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen los productos ${names} de ${uniqueBrands[0]} para acercarme a comprarlo?`;
-                            } else {
-                              // Products from different brands → inline each with its brand
-                              const productList = matchingProds.map(p => p.brand ? `"${p.name}" de ${p.brand}` : `"${p.name}"`).join(', ');
-                              waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen los productos ${productList} para acercarme a comprarlo?`;
-                            }
-                          }
-                        }
+                  let whatsappUrl: string | null = null;
+                  if (cleanPhone) {
+                    let waMessage = `¡Hola! Encontré ${selectedLocation.name} en Plaza Derma, ¿me podrían dar informes?`;
+                    if (isSelectionActive && selectedLocation.products && selectedLocation.products.length > 0) {
+                      const matchingProds = selectedLocation.products.filter(prod => {
+                        if (selectedProducts.length > 0) return selectedProducts.some(sp => prod.name.toLowerCase().includes(sp.toLowerCase()));
+                        if (selectedBrand) return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
+                        return false;
+                      });
 
-                        const encodedMsg = waMessage ? `?text=${encodeURIComponent(waMessage)}` : '';
-                        whatsappUrl = `https://wa.me/51${cleanPhone}${encodedMsg}`;
+                      if (matchingProds.length === 1) {
+                        const p = matchingProds[0];
+                        const brandStr = p.brand ? ` de ${p.brand}` : '';
+                        waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me podrían confirmar que tienen "${p.name}"${brandStr} para acercarme a comprarlo?`;
+                      } else if (matchingProds.length > 1) {
+                        const names = matchingProds.map(p => `"${p.name}"`).join(', ');
+                        waMessage = `¡Hola! Encontré su centro en Plaza Derma, ¿me me podrían confirmar que tienen los productos ${names} para acercarme a comprarlo?`;
                       }
+                    }
+                    whatsappUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(waMessage)}`;
+                  }
 
-                      return (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '6px', width: '100%' }}>
-                          <button 
-                            type="button"
-                            className="locator-directions-btn" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNavTarget({ lat: loc.lat, lng: loc.lng, name: loc.name });
-                            }}
-                            style={{ marginTop: 0, padding: '9px 12px', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap' }}
-                          >
-                            <Navigation size={14} />
-                            Cómo llegar
-                          </button>
+                  return (
+                    <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '4px' }}>
+                      <button 
+                        type="button"
+                        className="locator-directions-btn" 
+                        onClick={() => setNavTarget({ lat: selectedLocation.lat, lng: selectedLocation.lng, name: selectedLocation.name })}
+                        style={{ flex: 1, marginTop: 0, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
+                      >
+                        <Navigation size={16} />
+                        Cómo llegar
+                      </button>
 
-                          {whatsappUrl && (
-                            <a 
-                              href={whatsappUrl} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="locator-whatsapp-btn"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ padding: '9px 12px', fontSize: '13px' }}
-                              title={`Enviar WhatsApp a ${loc.name}`}
-                            >
-                              <MessageCircle size={15} />
-                              WhatsApp
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                      {whatsappUrl && (
+                        <a 
+                          href={whatsappUrl} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="locator-whatsapp-btn"
+                          style={{ flex: 1, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
+                          title={`Enviar WhatsApp a ${selectedLocation.name}`}
+                        >
+                          <MessageCircle size={17} />
+                          WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  );
+                })()}
+
               </div>
             );
-          })}
+          }
 
-          {/* Show More Button for DOM Pagination */}
-          {processedLocations.length > visibleLimit && (
-            <button
-              onClick={() => setVisibleLimit(prev => prev + 30)}
-              className="btn btn-secondary"
-              style={{ width: '100%', margin: '16px 0', padding: '10px', fontSize: '13px' }}
-            >
-              Cargar más médicos ({processedLocations.length - visibleLimit} restantes)
-            </button>
-          )}
-        </div>
+          // -------------------------------------------------------------
+          // 2. GENERAL CARDS LIST VIEW (When no comercio is selected)
+          // -------------------------------------------------------------
+          return (
+            <>
+              {/* Probability legend — shown once when a product/brand is selected */}
+              {isSelectionActive && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '6px 16px 8px',
+                  flexWrap: 'wrap'
+                }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.4px', marginRight: '2px' }}>Stock:</span>
+                  {[{ color: '#22c55e', label: 'Alta' }, { color: '#f59e0b', label: 'Media' }, { color: '#ef4444', label: 'Baja' }].map(({ color, label }) => (
+                    <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#475569', fontWeight: 600 }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color, display: 'inline-block', flexShrink: 0 }} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="locator-list" ref={cardsContainerRef}>
+                {visibleLocations.map(loc => {
+                  const matchingProducts = hasActiveProductSearch
+                    ? (loc.products || []).filter(p => {
+                        if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) {
+                          return true;
+                        }
+                        if (isQueryActive) {
+                          if (p.name.toLowerCase().includes(queryClean)) return true;
+                          if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
+                        }
+                        return false;
+                      }).sort((a, b) => getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score)
+                    : [];
 
+                  const topProb = matchingProducts.length > 0 ? getProbabilityInfo(matchingProducts[0].last_date) : null;
+
+                  return (
+                    <div 
+                      key={loc.id} 
+                      className="locator-card"
+                      ref={el => { cardRefs.current[loc.id] = el; }}
+                      onClick={() => {
+                        setSelectedLocationId(loc.id);
+                        if (mobileSheetState === 'collapsed') {
+                          setMobileSheetState('half');
+                        }
+                      }}
+                      style={{ display: 'flex', flexDirection: 'column', gap: '0', padding: '14px 16px', gridTemplateColumns: 'none' }}
+                    >
+                      {/* Main Row: Doctor Icon, Doctor Name + Address, Stock Probability & Chevron */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%' }}>
+                        
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexGrow: 1, minWidth: 0 }}>
+                          {loc.image_url ? (
+                            <img src={loc.image_url} alt={loc.name} style={{ width: '42px', height: '42px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', flexShrink: 0 }}>
+                              <MapPin size={20} />
+                            </div>
+                          )}
+
+                          <div style={{ minWidth: 0, flexGrow: 1 }}>
+                            <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#00506E', margin: 0, lineHeight: '1.35', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {loc.name}
+                            </h4>
+                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {loc.address}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                          {topProb && (
+                            <span
+                              aria-label={`Probabilidad de stock: ${topProb.label}`}
+                              title={topProb.label}
+                              style={{
+                                width: '10px',
+                                height: '10px',
+                                borderRadius: '50%',
+                                backgroundColor: topProb.label === 'Alta probabilidad' ? '#22c55e' : topProb.label === 'Media probabilidad' ? '#f59e0b' : '#ef4444',
+                                display: 'inline-block',
+                                flexShrink: 0,
+                                boxShadow: `0 0 0 2px ${topProb.label === 'Alta probabilidad' ? 'rgba(34,197,94,0.2)' : topProb.label === 'Media probabilidad' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}`
+                              }}
+                            />
+                          )}
+                          <ChevronRight size={18} style={{ color: '#94A3B8' }} />
+                        </div>
+
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Show More Button for DOM Pagination */}
+                {processedLocations.length > visibleLimit && (
+                  <button
+                    onClick={() => setVisibleLimit(prev => prev + 30)}
+                    className="btn btn-secondary"
+                    style={{ width: '100%', margin: '16px 0', padding: '10px', fontSize: '13px' }}
+                  >
+                    Cargar más médicos ({processedLocations.length - visibleLimit} restantes)
+                  </button>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* Map Panel */}
