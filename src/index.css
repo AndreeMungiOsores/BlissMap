@@ -586,26 +586,35 @@ button, input, select, textarea {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: #FFFFFF;
+  transition: all var(--transition-fast);
+  min-height: 44px;
+  flex-wrap: wrap;
+}
+
+.locator-search-input-wrapper:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.15);
 }
 
 .locator-search-icon {
-  position: absolute;
-  left: 12px;
   color: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
 
 .locator-search-input {
-  width: 100%;
-  padding: 12px 12px 12px 40px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  font-size: 15px;
-  transition: all var(--transition-fast);
-}
-
-.locator-search-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.15);
+  flex: 1;
+  min-width: 100px;
+  padding: 4px 0;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  color: var(--color-dark-text-primary);
 }
 
 .locator-filters-row {

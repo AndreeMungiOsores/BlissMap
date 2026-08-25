@@ -675,75 +675,80 @@ export const PublicLocator: React.FC = () => {
             )}
           </div>
 
-          {/* Selected Product/Brand Pills (Tarjetitas) */}
-          {isSelectionActive && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-              {selectedBrand && (
-                <div 
-                  style={{
-                    backgroundColor: 'rgba(0, 80, 110, 0.12)',
-                    border: '1px solid rgba(0, 80, 110, 0.3)',
-                    color: '#00506E',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                >
-                  <Tag size={13} style={{ color: '#00506E' }} />
-                  <span>Marca: {selectedBrand}</span>
-                  <button 
-                    onClick={removeBrandFilter}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#00506E', display: 'flex' }}
-                    title="Quitar marca"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              )}
-
-              {selectedProducts.map(pName => (
-                <div 
-                  key={pName}
-                  style={{
-                    backgroundColor: 'rgba(30, 200, 170, 0.12)',
-                    border: '1px solid rgba(30, 200, 170, 0.3)',
-                    color: '#00506E',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                >
-                  <Package size={13} style={{ color: '#1EC8AA' }} />
-                  <span>{pName}</span>
-                  <button 
-                    onClick={() => removeProductFilter(pName)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#00506E', display: 'flex' }}
-                    title="Quitar producto"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Autocomplete Input Container */}
+          {/* Autocomplete Input Container with Inline Chips */}
           <div style={{ position: 'relative' }} ref={searchWrapperRef}>
             <div className="locator-search-input-wrapper">
               <Search size={18} className="locator-search-icon" />
+
+              {/* Inline Filter Chips (Pastillas dentro del buscador) */}
+              {isSelectionActive && (
+                <>
+                  {selectedBrand && (
+                    <div 
+                      style={{
+                        backgroundColor: 'rgba(0, 80, 110, 0.10)',
+                        border: '1px solid rgba(0, 80, 110, 0.25)',
+                        color: '#00506E',
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Tag size={12} style={{ color: '#00506E' }} />
+                      <span>Marca: {selectedBrand}</span>
+                      <button 
+                        type="button"
+                        onClick={removeBrandFilter}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#00506E', display: 'inline-flex', alignItems: 'center' }}
+                        title="Quitar marca"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+
+                  {selectedProducts.map(pName => (
+                    <div 
+                      key={pName}
+                      style={{
+                        backgroundColor: 'rgba(30, 200, 170, 0.12)',
+                        border: '1px solid rgba(30, 200, 170, 0.3)',
+                        color: '#00506E',
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Package size={12} style={{ color: '#1EC8AA' }} />
+                      <span>{pName}</span>
+                      <button 
+                        type="button"
+                        onClick={() => removeProductFilter(pName)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#00506E', display: 'inline-flex', alignItems: 'center' }}
+                        title="Quitar producto"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
               <input 
                 type="text" 
-                placeholder="Escribe producto, marca o médico..."
+                placeholder={isSelectionActive ? "Agregar filtro..." : "Escribe producto, marca o médico..."}
                 value={searchQuery}
                 onFocus={() => setIsDropdownOpen(true)}
                 onChange={(e) => {
