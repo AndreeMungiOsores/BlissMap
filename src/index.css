@@ -975,12 +975,12 @@ button, input, select, textarea {
   }
 
   .locator-sidebar.sheet-full {
-    height: calc(100vh - 8px);
-    max-height: 100vh;
+    height: calc(100vh - max(64px, env(safe-area-inset-top, 48px)));
+    max-height: calc(100vh - max(64px, env(safe-area-inset-top, 48px)));
     overflow-y: auto;
     z-index: 1200;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
   }
 
   /* Hide floating search container BEHIND sheet cards when sheet is in FULL mode or dragged over top threshold */
@@ -996,7 +996,7 @@ button, input, select, textarea {
   .bottom-sheet-handle-bar {
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 250;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
     display: flex;

@@ -196,9 +196,10 @@ export const PublicLocator: React.FC = () => {
       // Calculate 1-to-1 height following user finger exactly
       const calculatedHeight = initialHeightRef.current - deltaY;
 
-      // Min/Max height bounds (min ~110px, max ~100vh - 8px)
+      // Min/Max height bounds with safe top margin for mobile status bar
+      const topSafeOffset = Math.max(64, Math.round(window.innerHeight * 0.08));
       const minH = 110;
-      const maxH = window.innerHeight - 8;
+      const maxH = window.innerHeight - topSafeOffset;
       const clampedHeight = Math.max(minH, Math.min(maxH, calculatedHeight));
 
       setDragHeight(clampedHeight);
@@ -210,9 +211,10 @@ export const PublicLocator: React.FC = () => {
       const endY = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientY : touchStartYRef.current;
       const deltaY = endY - touchStartYRef.current;
 
+      const topSafeOffset = Math.max(64, Math.round(window.innerHeight * 0.08));
       const collapsedH = 140;
       const halfH = Math.min(window.innerHeight * 0.45, window.innerHeight - 220);
-      const fullH = window.innerHeight - 16;
+      const fullH = window.innerHeight - topSafeOffset;
 
       const midPointLow = (collapsedH + halfH) / 2;
       const midPointHigh = (halfH + fullH) / 2;
