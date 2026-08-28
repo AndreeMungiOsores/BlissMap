@@ -77,7 +77,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v15';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v16';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 /**
@@ -110,6 +110,43 @@ export const cleanSpanishText = (str: string | null | undefined): string => {
     .replace(/[\uFFFD\?]+/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+};
+
+/**
+ * Convert ALL CAPS commerce and doctor names into clean Title Case
+ * e.g. "CLÍNICA DEL PILAR | AYACUCHO" -> "Clínica Del Pilar | Ayacucho"
+ * Preserves legal & medical acronyms like S.A.C., E.I.R.L., S.R.L., S.A., CDC, DDC, CMP, RUC, DNI
+ */
+export const toTitleCase = (str: string | null | undefined): string => {
+  if (!str) return '';
+  const cleaned = cleanSpanishText(str);
+
+  const acronyms = new Set([
+    'SAC', 'S.A.C.', 'S.A.C', 'EIRL', 'E.I.R.L.', 'E.I.R.L', 'SRL', 'S.R.L.', 'S.R.L',
+    'SA', 'S.A.', 'S.A', 'SCRL', 'S.C.R.L.', 'S.C.R.L', 'CMP', 'C.M.P.', 'RUC', 'DNI',
+    'CDC', 'DDC', 'PLG', 'CAP', 'E.I.R.L..', 'S.A.C..'
+  ]);
+
+  return cleaned
+    .split(' ')
+    .map(part => {
+      if (!part) return '';
+      
+      if (part.includes('|')) {
+        return part.split('|').map(sub => toTitleCase(sub)).join(' | ');
+      }
+      if (part.includes('/')) {
+        return part.split('/').map(sub => toTitleCase(sub)).join('/');
+      }
+
+      const stripped = part.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ.]/g, '');
+      if (acronyms.has(part.toUpperCase()) || acronyms.has(stripped)) {
+        return part.toUpperCase();
+      }
+
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join(' ');
 };
 
 // Map product brands based on 6 core brands
@@ -351,8 +388,8 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           }
         );
 
-        const cleanNombreComercial = cleanSpanishText(primaryCliente?.nombre_comercial || primaryCliente?.razon_social || med.medico || 'Centro Dermatológico');
-        const cleanDoctorName = cleanSpanishText(med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo');
+        const cleanNombreComercial = toTitleCase(primaryCliente?.nombre_comercial || primaryCliente?.razon_social || med.medico || 'Centro Dermatológico');
+        const cleanDoctorName = toTitleCase(med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo');
         const cleanDoctorAddress = cleanSpanishText(rawAddress);
         const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
 

@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LocatorMap } from '../components/LocatorMap';
 import localDoctorsData from '../data/doctors_data.json';
-import { fetchB2BSalesLocations } from '../services/b2bApiService';
+import { fetchB2BSalesLocations, toTitleCase } from '../services/b2bApiService';
 import logoImg from '../assets/logo.png';
 import { 
   Search, 
@@ -964,7 +964,7 @@ export const PublicLocator: React.FC = () => {
 
                   <div style={{ flexGrow: 1, minWidth: 0 }}>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#00506E', margin: '0 0 4px 0', lineHeight: '1.3' }}>
-                      {selectedLocation.name}
+                      {toTitleCase(selectedLocation.name)}
                     </h3>
                     <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: '1.4', fontWeight: 500 }}>
                       {selectedLocation.address}
@@ -1232,7 +1232,7 @@ export const PublicLocator: React.FC = () => {
 
                           <div style={{ minWidth: 0, flexGrow: 1 }}>
                             <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#00506E', margin: 0, lineHeight: '1.35', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                              {loc.name}
+                              {toTitleCase(loc.name)}
                             </h4>
                             <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {loc.address}
