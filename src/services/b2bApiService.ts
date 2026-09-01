@@ -79,7 +79,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v17';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v18';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 export interface SocialUrls {
@@ -89,9 +89,27 @@ export interface SocialUrls {
 }
 
 /**
+ * Bulletproof URL normalizer:
+ * Fixes malformed ERP API protocols (e.g. UPPERCASE 'HTTPS://', missing colons 'https//', duplicate 'https://https//')
+ * and produces a clean, valid URL starting with 'https://'
+ */
+export const cleanUrl = (raw?: string | null): string | null => {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Strips duplicate, malformed, or uppercase http/https prefixes (e.g. HTTPS://, https//, https://https//)
+  let clean = trimmed.replace(/^(https?:\/\/?)+/gi, '').replace(/^(https?)+/gi, '');
+  clean = clean.replace(/^[/:=]+/, '');
+
+  if (!clean) return null;
+  return `https://${clean}`;
+};
+
+/**
  * Bulletproof multi-field URL parser:
  * Inspects all raw URL fields (website, facebook, instagram) returned by the ERP API,
- * standardizes http/https protocols, and categorizes links by domain (Instagram, Facebook, or Website).
+ * standardizes http/https protocols via cleanUrl, and categorizes links by domain (Instagram, Facebook, or Website).
  */
 export const parseSocialUrls = (
   rawWebsite?: string | null,
@@ -99,15 +117,14 @@ export const parseSocialUrls = (
   rawInstagram?: string | null
 ): SocialUrls => {
   const rawList = [rawWebsite, rawFacebook, rawInstagram]
-    .map(u => (u || '').trim())
-    .filter(Boolean);
+    .map(u => cleanUrl(u))
+    .filter((u): u is string => u !== null);
 
   let website: string | null = null;
   let instagram: string | null = null;
   let facebook: string | null = null;
 
-  for (const raw of rawList) {
-    const formatted = (raw.startsWith('http://') || raw.startsWith('https://')) ? raw : `https://${raw}`;
+  for (const formatted of rawList) {
     const lower = formatted.toLowerCase();
 
     if (lower.includes('instagram.com')) {

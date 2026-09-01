@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { LocatorMap } from '../components/LocatorMap';
 import localDoctorsData from '../data/doctors_data.json';
-import { fetchB2BSalesLocations, toTitleCase } from '../services/b2bApiService';
+import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../services/b2bApiService';
 import logoImg from '../assets/logo.png';
 import { 
   Search, 
@@ -998,16 +998,16 @@ export const PublicLocator: React.FC = () => {
 
                     {/* Social Network Chips (Web, IG, FB) INSIDE Top Card, directly below address */}
                     {(() => {
-                      const hasWeb = !!selectedLocation.website;
-                      const hasIg = !!selectedLocation.instagram;
-                      const hasFb = !!selectedLocation.facebook;
-                      if (!hasWeb && !hasIg && !hasFb) return null;
+                      const webUrl = cleanUrl(selectedLocation.website);
+                      const igUrl = cleanUrl(selectedLocation.instagram);
+                      const fbUrl = cleanUrl(selectedLocation.facebook);
+                      if (!webUrl && !igUrl && !fbUrl) return null;
 
                       return (
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginTop: '8px' }}>
-                          {hasWeb && (
+                          {webUrl && (
                             <a
-                              href={selectedLocation.website!}
+                              href={webUrl}
                               target="_blank"
                               rel="noreferrer"
                               style={{
@@ -1030,9 +1030,9 @@ export const PublicLocator: React.FC = () => {
                             </a>
                           )}
 
-                          {hasIg && (
+                          {igUrl && (
                             <a
-                              href={selectedLocation.instagram!}
+                              href={igUrl}
                               target="_blank"
                               rel="noreferrer"
                               style={{
@@ -1055,9 +1055,9 @@ export const PublicLocator: React.FC = () => {
                             </a>
                           )}
 
-                          {hasFb && (
+                          {fbUrl && (
                             <a
-                              href={selectedLocation.facebook!}
+                              href={fbUrl}
                               target="_blank"
                               rel="noreferrer"
                               style={{

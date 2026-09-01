@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { Locator } from './DashboardLayout';
 import { MapPicker } from '../../components/MapPicker';
-import { fetchB2BSalesLocations, toTitleCase } from '../../services/b2bApiService';
+import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../../services/b2bApiService';
 import localDoctorsData from '../../data/doctors_data.json';
 import { 
   ArrowLeft, 
@@ -277,9 +277,9 @@ export const LocationForm: React.FC = () => {
         lng,
         phone: phone || null,
         email: email || null,
-        website: website || null,
-        facebook: facebook || null,
-        instagram: instagram || null,
+        website: cleanUrl(website),
+        facebook: cleanUrl(facebook),
+        instagram: cleanUrl(instagram),
         description: description || null,
         tags,
         custom_fields: customFieldsObj,
