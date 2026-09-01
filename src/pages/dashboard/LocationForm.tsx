@@ -12,7 +12,6 @@ import {
   Upload, 
   Plus, 
   Trash2, 
-  Tag, 
   Info, 
   ToggleLeft, 
   ToggleRight, 
@@ -55,7 +54,6 @@ export const LocationForm: React.FC = () => {
 
   // Tags State
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
 
   // Custom Fields State (List of {key, value})
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -170,22 +168,6 @@ export const LocationForm: React.FC = () => {
       .getPublicUrl(filePath);
 
     return data.publicUrl;
-  };
-
-  // Add tag
-  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const cleaned = tagInput.trim().toLowerCase().replace(/,/g, '');
-      if (cleaned && !tags.includes(cleaned)) {
-        setTags([...tags, cleaned]);
-      }
-      setTagInput('');
-    }
-  };
-
-  const removeTag = (indexToRemove: number) => {
-    setTags(tags.filter((_, i) => i !== indexToRemove));
   };
 
   // Custom Fields Operations
@@ -660,52 +642,6 @@ export const LocationForm: React.FC = () => {
               </button>
             </div>
 
-            {/* Tags Pills */}
-            <div className="form-group" style={{ marginBottom: 0, marginTop: '8px' }}>
-              <label className="form-label">Etiquetas / Categorías</label>
-              <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '6px', 
-                padding: '8px 12px', 
-                border: '1px solid var(--color-dark-border)', 
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-dark-surface)'
-              }}>
-                {tags.map((tag, i) => (
-                  <span key={i} className="tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', margin: 0 }}>
-                    <Tag size={10} />
-                    {tag}
-                    <button 
-                      type="button" 
-                      onClick={() => removeTag(i)}
-                      style={{ border: 'none', background: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontWeight: 'bold' }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                <input 
-                  type="text" 
-                  placeholder={tags.length === 0 ? "Ej: doctor, trujillo (presiona Enter)" : "+ etiqueta..."}
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  style={{ 
-                    border: 'none', 
-                    background: 'none', 
-                    flexGrow: 1, 
-                    color: 'var(--color-dark-text-primary)', 
-                    fontSize: '13px',
-                    padding: 0
-                  }}
-                  className="tag-input-field"
-                />
-              </div>
-              <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px' }}>
-                Escribe una etiqueta y presiona Enter o una coma para agregarla.
-              </span>
-            </div>
           </div>
 
           {/* Form Actions */}
