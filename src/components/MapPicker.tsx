@@ -56,8 +56,14 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout 
 export const MapPicker: React.FC<MapPickerProps> = ({ address, lat, lng, onChange }) => {
   const [center, setCenter] = useState(DEFAULT_CENTER);
   const [zoom, setZoom] = useState(13);
+  const [searchQuery, setSearchQuery] = useState(address || '');
   const [geocoding, setGeocoding] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+
+  // Sync searchQuery when address prop changes externally
+  useEffect(() => {
+    setSearchQuery(address || '');
+  }, [address]);
 
   // Sync center when coordinates are provided
   useEffect(() => {
@@ -69,17 +75,16 @@ export const MapPicker: React.FC<MapPickerProps> = ({ address, lat, lng, onChang
 
   // Geocode address using a resilient dual-service chain (Esri -> Nominatim)
   const handleGeocode = async () => {
-    if (!address.trim()) return;
+    const query = searchQuery.trim() || address.trim();
+    if (!query) return;
     setGeocoding(true);
     setMapError(null);
 
     // 1. Try Esri World Geocoder first (very reliable, no localhost blocks, fast)
     try {
-      const esriUrl = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(address)}&maxLocations=1`;
+      const esriUrl = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(query)}&maxLocations=1`;
       const response = await fetchWithTimeout(esriUrl, {}, 5000);
       const data = await response.json();
-      
-
 
       if (data && data.candidates && data.candidates.length > 0) {
         const candidate = data.candidates[0];
@@ -102,11 +107,9 @@ export const MapPicker: React.FC<MapPickerProps> = ({ address, lat, lng, onChang
 
     // 2. Fallback to Nominatim if Esri fails
     try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
       const response = await fetchWithTimeout(nominatimUrl, {}, 5000);
       const data = await response.json();
-      
-
 
       if (data && data.length > 0) {
         const item = data[0];
@@ -149,17 +152,36 @@ export const MapPicker: React.FC<MapPickerProps> = ({ address, lat, lng, onChang
         <input 
           type="text"
           placeholder="Escribe la dirección y presiona 'Buscar en mapa'..."
-          value={address}
-          disabled={true}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleGeocode();
+            }
+          }}
           className="form-control"
-          style={{ flexGrow: 1, backgroundColor: 'var(--color-dark-bg)', cursor: 'not-allowed' }}
+          style={{ flexGrow: 1 }}
         />
         <button
           type="button"
           onClick={handleGeocode}
-          disabled={geocoding || !address}
-          className="btn btn-secondary"
-          style={{ color: 'white', borderColor: 'var(--color-dark-border)', display: 'flex', alignItems: 'center', gap: '6px' }}
+          disabled={geocoding || !searchQuery.trim()}
+          style={{ 
+            backgroundColor: '#00506E', 
+            color: '#FFFFFF', 
+            padding: '8px 16px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            cursor: geocoding || !searchQuery.trim() ? 'not-allowed' : 'pointer', 
+            fontWeight: 600, 
+            fontSize: '13px',
+            border: 'none', 
+            borderRadius: 'var(--radius-md)', 
+            whiteSpace: 'nowrap',
+            opacity: geocoding || !searchQuery.trim() ? 0.6 : 1
+          }}
         >
           {geocoding ? <div className="spinner" style={{ width: '14px', height: '14px', borderTopColor: '#fff' }}></div> : <Search size={14} />}
           Buscar en Mapa
