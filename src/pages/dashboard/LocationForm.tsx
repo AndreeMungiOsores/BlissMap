@@ -4,6 +4,8 @@ import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { Locator } from './DashboardLayout';
 import { MapPicker } from '../../components/MapPicker';
+import { fetchB2BSalesLocations, toTitleCase } from '../../services/b2bApiService';
+import localDoctorsData from '../../data/doctors_data.json';
 import { 
   ArrowLeft, 
   Save, 
@@ -14,7 +16,8 @@ import {
   Info, 
   ToggleLeft, 
   ToggleRight, 
-  AlertCircle 
+  AlertCircle,
+  RotateCcw
 } from 'lucide-react';
 
 interface CustomField {
@@ -57,6 +60,10 @@ export const LocationForm: React.FC = () => {
   // Custom Fields State (List of {key, value})
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
+  // Override & API Base State
+  const [hasManualOverride, setHasManualOverride] = useState(false);
+  const [apiBaseLocation, setApiBaseLocation] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
@@ -65,37 +72,64 @@ export const LocationForm: React.FC = () => {
   useEffect(() => {
     const fetchLocationDetails = async () => {
       if (!isEdit || !id) return;
+      setFetching(true);
+      setError(null);
       try {
-        const { data, error: fetchErr } = await supabase
-          .from('bm_locations')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const decodedId = decodeURIComponent(id);
 
-        if (fetchErr) throw fetchErr;
+        // 1. Fetch live/cached B2B API locations
+        const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as any);
+        const baseLoc = apiLocations.find(loc => loc.id === decodedId || loc.id === id);
 
-        if (data) {
-          setName(data.name);
-          setAddress(data.address);
-          setLat(data.lat);
-          setLng(data.lng);
-          setPhone(data.phone || '');
-          setEmail(data.email || '');
-          setWebsite(data.website || '');
-          setDescription(data.description || '');
-          setPublished(data.published);
-          setTags(data.tags || []);
-          setImageUrl(data.image_url);
-          setImagePreview(data.image_url);
+        if (baseLoc) {
+          setApiBaseLocation(baseLoc);
+        }
 
-          // Convert custom_fields JSONB back to key-value array
-          if (data.custom_fields) {
-            const fieldsArray = Object.entries(data.custom_fields).map(([key, value]) => ({
+        // 2. Fetch Supabase manual override if saved previously
+        let supabaseLoc: any = null;
+        try {
+          const { data } = await supabase
+            .from('bm_locations')
+            .select('*')
+            .eq('id', decodedId)
+            .maybeSingle();
+
+          if (data) supabaseLoc = data;
+        } catch (dbErr) {
+          console.warn('Supabase fetch notice:', dbErr);
+        }
+
+        // 3. Merge: Supabase manual override takes TOP priority over API base location
+        const mergedData = supabaseLoc ? {
+          ...(baseLoc || {}),
+          ...supabaseLoc,
+          custom_fields: { ...(baseLoc?.custom_fields || {}), ...(supabaseLoc.custom_fields || {}) }
+        } : baseLoc;
+
+        if (mergedData) {
+          setName(toTitleCase(mergedData.name || ''));
+          setAddress(mergedData.address || '');
+          setLat(mergedData.lat || 0);
+          setLng(mergedData.lng || 0);
+          setPhone(mergedData.phone || '');
+          setEmail(mergedData.email || '');
+          setWebsite(mergedData.website || '');
+          setDescription(mergedData.description || '');
+          setPublished(mergedData.published !== false);
+          setTags(mergedData.tags || []);
+          setImageUrl(mergedData.image_url || null);
+          setImagePreview(mergedData.image_url || null);
+          setHasManualOverride(!!supabaseLoc);
+
+          if (mergedData.custom_fields) {
+            const fieldsArray = Object.entries(mergedData.custom_fields).map(([key, value]) => ({
               key,
               value: String(value)
             }));
             setCustomFields(fieldsArray);
           }
+        } else {
+          setError('No se encontró la ubicación solicitada.');
         }
       } catch (err: any) {
         console.error(err);
@@ -169,6 +203,45 @@ export const LocationForm: React.FC = () => {
     setCustomFields(customFields.filter((_, i) => i !== index));
   };
 
+  // Reset to original live API ERP values
+  const handleResetToApi = async () => {
+    if (!id || !apiBaseLocation) return;
+    if (!window.confirm('¿Deseas eliminar las ediciones manuales y restablecer los datos originales de la API ERP?')) return;
+    
+    setLoading(true);
+    try {
+      const decodedId = decodeURIComponent(id);
+      await supabase.from('bm_locations').delete().eq('id', decodedId);
+
+      setName(toTitleCase(apiBaseLocation.name || ''));
+      setAddress(apiBaseLocation.address || '');
+      setLat(apiBaseLocation.lat || 0);
+      setLng(apiBaseLocation.lng || 0);
+      setPhone(apiBaseLocation.phone || '');
+      setEmail(apiBaseLocation.email || '');
+      setWebsite(apiBaseLocation.website || '');
+      setDescription(apiBaseLocation.description || '');
+      setPublished(true);
+      setTags(apiBaseLocation.tags || []);
+      setImageUrl(apiBaseLocation.image_url || null);
+      setImagePreview(apiBaseLocation.image_url || null);
+      setHasManualOverride(false);
+
+      if (apiBaseLocation.custom_fields) {
+        const fieldsArray = Object.entries(apiBaseLocation.custom_fields).map(([key, value]) => ({
+          key,
+          value: String(value)
+        }));
+        setCustomFields(fieldsArray);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError('Error al restablecer los datos de la API.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,8 +274,10 @@ export const LocationForm: React.FC = () => {
         }
       });
 
-      // 3. Upsert Location in Database
+      // 3. Upsert Location in Database with preserved ID (e.g. doc-1 or erp-doc-...)
+      const decodedId = id ? decodeURIComponent(id) : `custom-${Date.now()}`;
       const locationPayload = {
+        id: decodedId,
         locator_id: activeLocator.id,
         name,
         address,
@@ -218,20 +293,11 @@ export const LocationForm: React.FC = () => {
         image_url: finalImageUrl
       };
 
-      if (isEdit && id) {
-        const { error: updateErr } = await supabase
-          .from('bm_locations')
-          .update(locationPayload)
-          .eq('id', id);
+      const { error: upsertErr } = await supabase
+        .from('bm_locations')
+        .upsert(locationPayload, { onConflict: 'id' });
 
-        if (updateErr) throw updateErr;
-      } else {
-        const { error: insertErr } = await supabase
-          .from('bm_locations')
-          .insert(locationPayload);
-
-        if (insertErr) throw insertErr;
-      }
+      if (upsertErr) throw upsertErr;
 
       // Go back to locations list
       navigate('/dashboard/locations');
@@ -262,22 +328,45 @@ export const LocationForm: React.FC = () => {
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       {/* Back Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button 
-          onClick={() => navigate('/dashboard/locations')}
-          className="btn btn-secondary" 
-          style={{ padding: '8px 12px', color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <div>
-          <h1 className="admin-title" style={{ fontSize: '24px' }}>
-            {isEdit ? 'Editar Ubicación' : 'Nueva Ubicación'}
-          </h1>
-          <p className="admin-subtitle" style={{ fontSize: '13px' }}>
-            {isEdit ? 'Edita los datos del punto de tu mapa' : 'Agrega un nuevo punto a tu localizador'}
-          </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            type="button"
+            onClick={() => navigate('/dashboard/locations')}
+            className="btn btn-secondary" 
+            style={{ padding: '8px 12px', color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1 className="admin-title" style={{ fontSize: '24px', margin: 0 }}>
+                {isEdit ? 'Editar Ubicación' : 'Nueva Ubicación'}
+              </h1>
+              {hasManualOverride && (
+                <span className="badge badge-success" style={{ fontSize: '11px', padding: '3px 8px' }}>
+                  Edición Manual (Prevalece sobre API ERP)
+                </span>
+              )}
+            </div>
+            <p className="admin-subtitle" style={{ fontSize: '13px', margin: 0 }}>
+              {isEdit ? 'Edita los datos del punto de tu mapa' : 'Agrega un nuevo punto a tu localizador'}
+            </p>
+          </div>
         </div>
+
+        {hasManualOverride && apiBaseLocation && (
+          <button
+            type="button"
+            onClick={handleResetToApi}
+            className="btn btn-secondary"
+            style={{ fontSize: '13px', gap: '6px', color: '#e2e8f0', borderColor: '#475569' }}
+            title="Restablecer a valores de la API ERP en vivo"
+          >
+            <RotateCcw size={15} />
+            Restablecer a datos de la API
+          </button>
+        )}
       </div>
 
       {error && (

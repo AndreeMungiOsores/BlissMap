@@ -16,6 +16,8 @@ import {
   Package
 } from 'lucide-react';
 
+import { fetchB2BSalesLocations } from '../../services/b2bApiService';
+
 interface ProductItem {
   name: string;
   qty: number;
@@ -55,26 +57,60 @@ export const ManageLocations: React.FC = () => {
     if (!activeLocator) return;
     setLoading(true);
     try {
-      let fetched: LocationItem[] = [];
-      const { data } = await supabase
-        .from('bm_locations')
-        .select('*')
-        .eq('locator_id', activeLocator.id)
-        .order('created_at', { ascending: false });
+      // 1. Fetch live/cached B2B API locations
+      const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as any);
 
-      if (data && data.length > 0) {
-        fetched = (data as LocationItem[]).filter(
-          loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
-        );
+      // 2. Fetch Supabase manual overrides
+      let dbData: any[] = [];
+      try {
+        const { data } = await supabase
+          .from('bm_locations')
+          .select('*')
+          .eq('locator_id', activeLocator.id);
+        if (data) dbData = data;
+      } catch (dbErr) {
+        console.warn('Supabase locations fetch notice:', dbErr);
       }
 
-      if (fetched.length < 50) {
-        fetched = localDoctorsData as LocationItem[];
-      }
-      setLocations(fetched);
+      const dbMap = new Map<string, any>();
+      dbData.forEach(item => {
+        dbMap.set(item.id, item);
+      });
+
+      // 3. Merge: Apply DB manual overrides over API base locations
+      const mergedList: LocationItem[] = apiLocations.map((apiLoc: any) => {
+        const override = dbMap.get(apiLoc.id);
+        if (override) {
+          dbMap.delete(apiLoc.id);
+          return {
+            ...apiLoc,
+            ...override,
+            custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
+            published: override.published !== undefined ? override.published : true
+          };
+        }
+        return {
+          ...apiLoc,
+          published: true
+        } as LocationItem;
+      });
+
+      // Add any newly created custom locations from DB that were not in API
+      dbMap.forEach(customDbLoc => {
+        mergedList.unshift({
+          ...customDbLoc,
+          published: customDbLoc.published !== undefined ? customDbLoc.published : true
+        } as LocationItem);
+      });
+
+      const filtered = mergedList.filter(
+        loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
+      );
+
+      setLocations(filtered);
     } catch (err: any) {
       console.error(err);
-      setLocations(localDoctorsData as LocationItem[]);
+      setLocations(localDoctorsData as any);
     } finally {
       setLoading(false);
     }
