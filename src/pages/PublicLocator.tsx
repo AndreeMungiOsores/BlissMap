@@ -381,23 +381,31 @@ export const PublicLocator: React.FC = () => {
   // An explicit selection is ONLY active when a user clicked a product chip or clicked a brand from suggestions
   const isSelectionActive = selectedProducts.length > 0 || selectedBrand !== null;
 
+  const removeAccents = (str: string | null | undefined): string => {
+    if (!str) return '';
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  };
+
   // Search Query Active State (Requires at least 3 characters for text search)
   const minQueryLen = 3;
-  const queryClean = searchQuery.trim().toLowerCase();
+  const queryClean = removeAccents(searchQuery.trim());
   const isQueryActive = queryClean.length >= minQueryLen;
   const hasActiveProductSearch = isSelectionActive || isQueryActive;
 
-  // Brand suggestions matching query (only when >= 4 chars typed)
+  // Brand suggestions matching query (only when >= 3 chars typed)
   const brandSuggestions = useMemo(() => {
     if (!isQueryActive) return [];
-    return allUniqueBrands.filter(b => b.toLowerCase().includes(queryClean));
+    return allUniqueBrands.filter(b => removeAccents(b).includes(queryClean));
   }, [queryClean, isQueryActive, allUniqueBrands]);
 
-  // Product suggestions matching query or brand (only when >= 4 chars typed)
+  // Product suggestions matching query or brand (only when >= 3 chars typed)
   const productSuggestions = useMemo(() => {
     if (!isQueryActive) return [];
     return allUniqueProducts.filter(
-      p => (p.name.toLowerCase().includes(queryClean) || (p.brand && p.brand.toLowerCase().includes(queryClean))) && !selectedProducts.includes(p.name)
+      p => (removeAccents(p.name).includes(queryClean) || (p.brand && removeAccents(p.brand).includes(queryClean))) && !selectedProducts.includes(p.name)
     ).slice(0, 8);
   }, [queryClean, isQueryActive, allUniqueProducts, selectedProducts]);
 
@@ -487,8 +495,8 @@ export const PublicLocator: React.FC = () => {
                 if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) return true;
                 if (selectedBrand && p.brand && p.brand.toUpperCase() === selectedBrand.toUpperCase()) return true;
                 if (isQueryActive) {
-                  if (p.name.toLowerCase().includes(queryClean)) return true;
-                  if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
+                  if (removeAccents(p.name).includes(queryClean)) return true;
+                  if (p.brand && removeAccents(p.brand).includes(queryClean)) return true;
                 }
                 return false;
               })
@@ -526,13 +534,13 @@ export const PublicLocator: React.FC = () => {
           if (!carriesBrand) return false;
         }
 
-        // 3. Free Text Search Filter (Only active when at least 4 characters typed and no explicit selection)
+        // 3. Free Text Search Filter (Only active when at least 3 characters typed and no explicit selection)
         if (isQueryActive && !isSelectionActive) {
-          const inName = loc.name.toLowerCase().includes(queryClean);
-          const inAddress = loc.address.toLowerCase().includes(queryClean);
-          const inTags = loc.tags?.some(t => t.toLowerCase().includes(queryClean));
-          const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => String(v).toLowerCase().includes(queryClean));
-          const inProducts = loc.products?.some(p => p.name.toLowerCase().includes(queryClean) || (p.brand && p.brand.toLowerCase().includes(queryClean)));
+          const inName = removeAccents(loc.name).includes(queryClean);
+          const inAddress = removeAccents(loc.address).includes(queryClean);
+          const inTags = loc.tags?.some(t => removeAccents(t).includes(queryClean));
+          const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(queryClean));
+          const inProducts = loc.products?.some(p => removeAccents(p.name).includes(queryClean) || (p.brand && removeAccents(p.brand).includes(queryClean)));
           
           if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
             return false;

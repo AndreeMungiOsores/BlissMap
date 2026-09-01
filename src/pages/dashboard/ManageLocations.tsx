@@ -162,16 +162,24 @@ export const ManageLocations: React.FC = () => {
     }
   };
 
-  // Filter locations by Name, Address, Tags, OR Products
+  const removeAccents = (str: string | null | undefined): string => {
+    if (!str) return '';
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  };
+
+  // Filter locations by Name, Address, Tags, OR Products ignoring case and accents
   const filteredLocations = locations.filter(loc => {
-    const searchLower = search.toLowerCase().trim();
-    if (!searchLower) return true;
+    const searchClean = removeAccents(search.trim());
+    if (!searchClean) return true;
     
-    const matchesName = loc.name.toLowerCase().includes(searchLower);
-    const matchesAddress = loc.address.toLowerCase().includes(searchLower);
-    const matchesTags = loc.tags?.some(t => t.toLowerCase().includes(searchLower));
-    const matchesProducts = loc.products?.some(p => p.name.toLowerCase().includes(searchLower));
-    const matchesCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => String(v).toLowerCase().includes(searchLower));
+    const matchesName = removeAccents(loc.name).includes(searchClean);
+    const matchesAddress = removeAccents(loc.address).includes(searchClean);
+    const matchesTags = loc.tags?.some(t => removeAccents(t).includes(searchClean));
+    const matchesProducts = loc.products?.some(p => removeAccents(p.name).includes(searchClean));
+    const matchesCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(searchClean));
     
     return matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom;
   });
