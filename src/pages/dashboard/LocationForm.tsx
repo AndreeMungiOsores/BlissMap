@@ -308,7 +308,7 @@ export const LocationForm: React.FC = () => {
   }
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ width: '100%', maxWidth: '1280px' }}>
       {/* Back Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -370,10 +370,10 @@ export const LocationForm: React.FC = () => {
       )}
 
       {/* Main Form */}
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '32px', alignItems: 'start' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: '24px', alignItems: 'start', width: '100%' }}>
         
         {/* Left Side: General Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
           
           {/* Card 1: Basic details */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -569,7 +569,7 @@ export const LocationForm: React.FC = () => {
         </div>
 
         {/* Right Side: Mapping & Meta */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'sticky', top: '24px', minWidth: 0 }}>
           
           {/* Geolocation Card */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
