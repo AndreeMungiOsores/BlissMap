@@ -20,6 +20,8 @@ export interface LocationItem {
   phone: string | null;
   email: string | null;
   website: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
   lat: number;
   lng: number;
   tags: string[];
@@ -393,6 +395,26 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
         const cleanDoctorAddress = cleanSpanishText(rawAddress);
         const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
 
+        // Separate Website, Facebook, and Instagram URLs (handling Instagram links placed inside facebook field in ERP API)
+        const rawWebsite = (primaryCliente?.website || '').trim();
+        const rawFacebook = (primaryCliente?.facebook || '').trim();
+        const rawInstagram = (primaryCliente?.instagram || '').trim();
+
+        let parsedWebsite: string | null = rawWebsite ? (rawWebsite.startsWith('http') ? rawWebsite : `https://${rawWebsite}`) : null;
+        let parsedFacebook: string | null = null;
+        let parsedInstagram: string | null = rawInstagram ? (rawInstagram.startsWith('http') ? rawInstagram : `https://${rawInstagram}`) : null;
+
+        if (rawFacebook) {
+          const formattedFb = rawFacebook.startsWith('http') ? rawFacebook : `https://${rawFacebook}`;
+          if (formattedFb.toLowerCase().includes('instagram.com')) {
+            if (!parsedInstagram) {
+              parsedInstagram = formattedFb;
+            }
+          } else {
+            parsedFacebook = formattedFb;
+          }
+        }
+
         apiDoctorsList.push({
           id: `erp-doc-${emp.toLowerCase()}-${med.nro_doc_med || med.nro_doc}-${idx}`,
           name: cleanNombreComercial,
@@ -400,7 +422,9 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           address: cleanDoctorAddress,
           phone: phoneNumber,
           email: null,
-          website: primaryCliente?.website || null,
+          website: parsedWebsite,
+          facebook: parsedFacebook,
+          instagram: parsedInstagram,
           lat: coords.lat,
           lng: coords.lng,
           tags: ['ERP B2B', emp, 'Verificado', cleanDoctorName],

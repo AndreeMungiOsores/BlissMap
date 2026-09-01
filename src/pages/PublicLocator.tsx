@@ -18,8 +18,24 @@ import {
   ChevronRight,
   MessageCircle,
   ArrowLeft,
-  Building2
+  Building2,
+  Globe
 } from 'lucide-react';
+
+// Custom SVG Icons for Instagram and Facebook
+const InstagramIcon: React.FC<{ size?: number; color?: string }> = ({ size = 15, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+  </svg>
+);
+
+const FacebookIcon: React.FC<{ size?: number; color?: string }> = ({ size = 15, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+  </svg>
+);
 
 interface ProductItem {
   name: string;
@@ -38,6 +54,8 @@ interface LocationItem {
   phone: string | null;
   email: string | null;
   website: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
   lat: number;
   lng: number;
   tags: string[];
@@ -1140,30 +1158,115 @@ export const PublicLocator: React.FC = () => {
                     whatsappUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(waMessage)}`;
                   }
 
-                  return (
-                    <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '4px' }}>
-                      <button 
-                        type="button"
-                        className="locator-directions-btn" 
-                        onClick={() => setNavTarget({ lat: selectedLocation.lat, lng: selectedLocation.lng, name: selectedLocation.name })}
-                        style={{ flex: 1, marginTop: 0, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
-                      >
-                        <Navigation size={16} />
-                        Cómo llegar
-                      </button>
+                  const hasWeb = !!selectedLocation.website;
+                  const hasIg = !!selectedLocation.instagram;
+                  const hasFb = !!selectedLocation.facebook;
 
-                      {whatsappUrl && (
-                        <a 
-                          href={whatsappUrl} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="locator-whatsapp-btn"
-                          style={{ flex: 1, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
-                          title={`Enviar WhatsApp a ${selectedLocation.name}`}
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                        <button 
+                          type="button"
+                          className="locator-directions-btn" 
+                          onClick={() => setNavTarget({ lat: selectedLocation.lat, lng: selectedLocation.lng, name: selectedLocation.name })}
+                          style={{ flex: 1, marginTop: 0, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
                         >
-                          <MessageCircle size={17} />
-                          WhatsApp
-                        </a>
+                          <Navigation size={16} />
+                          Cómo llegar
+                        </button>
+
+                        {whatsappUrl && (
+                          <a 
+                            href={whatsappUrl} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="locator-whatsapp-btn"
+                            style={{ flex: 1, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
+                            title={`Enviar WhatsApp a ${selectedLocation.name}`}
+                          >
+                            <MessageCircle size={17} />
+                            WhatsApp
+                          </a>
+                        )}
+                      </div>
+
+                      {(hasWeb || hasIg || hasFb) && (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start', flexWrap: 'wrap', paddingTop: '2px' }}>
+                          {hasWeb && (
+                            <a
+                              href={selectedLocation.website!}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                borderRadius: '12px',
+                                backgroundColor: '#F1F5F9',
+                                color: '#00506E',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                border: '1px solid #CBD5E1'
+                              }}
+                              title="Visitar Sitio Web"
+                            >
+                              <Globe size={15} />
+                              Web
+                            </a>
+                          )}
+
+                          {hasIg && (
+                            <a
+                              href={selectedLocation.instagram!}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                borderRadius: '12px',
+                                backgroundColor: 'rgba(225, 48, 108, 0.1)',
+                                color: '#E1306C',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                border: '1px solid rgba(225, 48, 108, 0.25)'
+                              }}
+                              title="Ver en Instagram"
+                            >
+                              <InstagramIcon size={15} />
+                              Instagram
+                            </a>
+                          )}
+
+                          {hasFb && (
+                            <a
+                              href={selectedLocation.facebook!}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                borderRadius: '12px',
+                                backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                                color: '#1877F2',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                border: '1px solid rgba(24, 119, 242, 0.25)'
+                              }}
+                              title="Ver en Facebook"
+                            >
+                              <FacebookIcon size={15} />
+                              Facebook
+                            </a>
+                          )}
+                        </div>
                       )}
                     </div>
                   );

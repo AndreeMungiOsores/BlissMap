@@ -43,6 +43,8 @@ export const LocationForm: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [instagram, setInstagram] = useState('');
   const [description, setDescription] = useState('');
   const [published, setPublished] = useState(true);
   
@@ -112,6 +114,8 @@ export const LocationForm: React.FC = () => {
           setPhone(mergedData.phone || '');
           setEmail(mergedData.email || '');
           setWebsite(mergedData.website || '');
+          setFacebook(mergedData.facebook || '');
+          setInstagram(mergedData.instagram || '');
           setDescription(mergedData.description || '');
           setPublished(mergedData.published !== false);
           setTags(mergedData.tags || []);
@@ -144,6 +148,10 @@ export const LocationForm: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError('La imagen no debe superar los 2MB');
+        return;
+      }
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
@@ -154,8 +162,8 @@ export const LocationForm: React.FC = () => {
     if (!user) throw new Error('Usuario no autenticado.');
     
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${user.id}/${fileName}`;
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `locations/${fileName}`;
 
     const { error: uploadErr } = await supabase.storage
       .from('bm-locator-assets')
@@ -202,6 +210,8 @@ export const LocationForm: React.FC = () => {
       setPhone(apiBaseLocation.phone || '');
       setEmail(apiBaseLocation.email || '');
       setWebsite(apiBaseLocation.website || '');
+      setFacebook(apiBaseLocation.facebook || '');
+      setInstagram(apiBaseLocation.instagram || '');
       setDescription(apiBaseLocation.description || '');
       setPublished(true);
       setTags(apiBaseLocation.tags || []);
@@ -268,6 +278,8 @@ export const LocationForm: React.FC = () => {
         phone: phone || null,
         email: email || null,
         website: website || null,
+        facebook: facebook || null,
+        instagram: instagram || null,
         description: description || null,
         tags,
         custom_fields: customFieldsObj,
@@ -461,15 +473,15 @@ export const LocationForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Card 2: Contact Info */}
+          {/* Card 2: Contact Info & Social Networks */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)' }}>
-              Contacto y Enlaces
+              Contacto y Redes Sociales
             </h3>
 
             <div className="form-row">
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Teléfono</label>
+                <label className="form-label">Teléfono / WhatsApp</label>
                 <input 
                   type="text" 
                   placeholder="Ej: 943856722"
@@ -494,11 +506,34 @@ export const LocationForm: React.FC = () => {
               <label className="form-label">Sitio Web</label>
               <input 
                 type="url" 
-                placeholder="Ej: https://google.com"
+                placeholder="Ej: https://midominio.com"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 className="form-control"
               />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Instagram URL</label>
+                <input 
+                  type="url" 
+                  placeholder="Ej: https://www.instagram.com/micuenta"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  className="form-control"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Facebook URL</label>
+                <input 
+                  type="url" 
+                  placeholder="Ej: https://www.facebook.com/mipagina"
+                  value={facebook}
+                  onChange={(e) => setFacebook(e.target.value)}
+                  className="form-control"
+                />
+              </div>
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
