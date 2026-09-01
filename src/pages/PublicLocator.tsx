@@ -299,7 +299,6 @@ export const PublicLocator: React.FC = () => {
       setError(null);
       try {
         let currentLocator: LocatorData | null = null;
-        let currentLocations: LocationItem[] = [];
 
         const TEST_NAMES = ['daysi timana', 'winston maldonado', 'marjorie villate', 'giuliana peching'];
 
@@ -309,6 +308,7 @@ export const PublicLocator: React.FC = () => {
           .eq('slug', slug)
           .maybeSingle();
 
+        let dbLocations: any[] = [];
         if (locatorData) {
           currentLocator = locatorData;
           const { data: locationsData } = await supabase
@@ -317,19 +317,44 @@ export const PublicLocator: React.FC = () => {
             .eq('locator_id', locatorData.id)
             .eq('published', true);
             
-          if (locationsData && locationsData.length > 0) {
-            const cleanedDbLocs = (locationsData as LocationItem[]).filter(
-              loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
-            );
-            if (cleanedDbLocs.length >= 50) {
-              currentLocations = cleanedDbLocs;
-            }
+          if (locationsData) {
+            dbLocations = locationsData;
           }
         }
 
         // Load live sales data from ERP API with 1-hour cache and fallback
-        const baseFallback = currentLocations.length >= 50 ? currentLocations : (localDoctorsData as LocationItem[]);
-        const { locations: apiLocations } = await fetchB2BSalesLocations(baseFallback);
+        const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
+
+        // MERGE: Map DB manual overrides (image_url, name, address, phone, email, website, instagram, facebook, lat, lng) over API base locations
+        const dbMap = new Map<string, any>();
+        dbLocations.forEach(item => dbMap.set(item.id, item));
+
+        const mergedLocations: LocationItem[] = apiLocations.map((apiLoc: any) => {
+          const override = dbMap.get(apiLoc.id);
+          if (override) {
+            dbMap.delete(apiLoc.id);
+            return {
+              ...apiLoc,
+              ...override,
+              image_url: override.image_url || apiLoc.image_url || null,
+              custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
+              published: override.published !== undefined ? override.published : true
+            };
+          }
+          return apiLoc;
+        });
+
+        // Add any newly created custom locations from DB that were not in API
+        dbMap.forEach(customDbLoc => {
+          mergedLocations.unshift({
+            ...customDbLoc,
+            published: customDbLoc.published !== undefined ? customDbLoc.published : true
+          } as LocationItem);
+        });
+
+        const cleanedLocations = mergedLocations.filter(
+          loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
+        );
 
         currentLocator = currentLocator || {
           id: 'local-medicosbliss',
@@ -345,7 +370,7 @@ export const PublicLocator: React.FC = () => {
         };
 
         setLocator(currentLocator);
-        setLocations(apiLocations);
+        setLocations(cleanedLocations);
       } catch (err: any) {
         console.error(err);
         const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
