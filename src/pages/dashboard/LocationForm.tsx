@@ -10,7 +10,6 @@ import {
   ArrowLeft, 
   Save, 
   Upload, 
-  Plus, 
   Trash2, 
   Info, 
   ToggleLeft, 
@@ -244,9 +243,6 @@ export const LocationForm: React.FC = () => {
   };
 
   // Custom Fields Operations
-  const handleAddCustomField = () => {
-    setCustomFields([...customFields, { key: '', value: '' }]);
-  };
 
   const handleCustomFieldChange = (index: number, field: 'key' | 'value', value: string) => {
     const updated = [...customFields];
@@ -457,11 +453,24 @@ export const LocationForm: React.FC = () => {
           <button
             type="button"
             onClick={handleResetToApi}
-            className="btn btn-secondary"
-            style={{ fontSize: '13px', gap: '6px', color: '#e2e8f0', borderColor: '#475569' }}
+            style={{ 
+              backgroundColor: '#00506E', 
+              color: '#FFFFFF', 
+              padding: '8px 16px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              cursor: 'pointer', 
+              fontWeight: 600, 
+              fontSize: '13px',
+              border: 'none', 
+              borderRadius: 'var(--radius-md)', 
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+            }}
             title="Restablecer a valores de la API ERP en vivo"
           >
-            <RotateCcw size={15} />
+            <RotateCcw size={15} style={{ color: '#FFFFFF' }} />
             Restablecer a datos de la API
           </button>
         )}
@@ -688,17 +697,9 @@ export const LocationForm: React.FC = () => {
 
           {/* Card 3: Custom fields */}
           <div className="panel" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px' }}>
-              <h3 style={{ fontSize: '16px', color: 'var(--color-dark-text-primary)' }}>Campos Personalizados</h3>
-              <button 
-                type="button" 
-                onClick={handleAddCustomField}
-                className="btn btn-secondary" 
-                style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--color-dark-text-primary)', borderColor: 'var(--color-dark-border)' }}
-              >
-                <Plus size={12} /> Agregar Campo
-              </button>
-            </div>
+            <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--color-dark-border)', paddingBottom: '10px', color: 'var(--color-dark-text-primary)' }}>
+              Campos Personalizados
+            </h3>
 
             {customFields.length === 0 ? (
               <p style={{ color: 'var(--color-dark-text-tertiary)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
