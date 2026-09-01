@@ -397,7 +397,11 @@ export const LocationForm: React.FC = () => {
       navigate('/dashboard/locations');
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Error al guardar la ubicación.');
+      if (err.message && err.message.includes('uuid')) {
+        setError('La columna "id" de la tabla bm_locations en Supabase está configurada como UUID. Para permitir guardar comercios de la API ERP, ejecuta esta consulta en el SQL Editor de Supabase: ALTER TABLE bm_locations ALTER COLUMN id TYPE text;');
+      } else {
+        setError(err.message || 'Error al guardar la ubicación.');
+      }
     } finally {
       setLoading(false);
     }
