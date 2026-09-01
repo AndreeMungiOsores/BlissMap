@@ -79,8 +79,48 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v16';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v17';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
+
+export interface SocialUrls {
+  website: string | null;
+  facebook: string | null;
+  instagram: string | null;
+}
+
+/**
+ * Bulletproof multi-field URL parser:
+ * Inspects all raw URL fields (website, facebook, instagram) returned by the ERP API,
+ * standardizes http/https protocols, and categorizes links by domain (Instagram, Facebook, or Website).
+ */
+export const parseSocialUrls = (
+  rawWebsite?: string | null,
+  rawFacebook?: string | null,
+  rawInstagram?: string | null
+): SocialUrls => {
+  const rawList = [rawWebsite, rawFacebook, rawInstagram]
+    .map(u => (u || '').trim())
+    .filter(Boolean);
+
+  let website: string | null = null;
+  let instagram: string | null = null;
+  let facebook: string | null = null;
+
+  for (const raw of rawList) {
+    const formatted = (raw.startsWith('http://') || raw.startsWith('https://')) ? raw : `https://${raw}`;
+    const lower = formatted.toLowerCase();
+
+    if (lower.includes('instagram.com')) {
+      if (!instagram) instagram = formatted;
+    } else if (lower.includes('facebook.com') || lower.includes('fb.com')) {
+      if (!facebook) facebook = formatted;
+    } else {
+      if (!website) website = formatted;
+    }
+  }
+
+  return { website, facebook, instagram };
+};
 
 /**
  * Clean and fix broken Spanish encoding characters (\uFFFD / ?) in Peru doctor addresses & product names
@@ -395,25 +435,12 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
         const cleanDoctorAddress = cleanSpanishText(rawAddress);
         const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
 
-        // Separate Website, Facebook, and Instagram URLs (handling Instagram links placed inside facebook field in ERP API)
-        const rawWebsite = (primaryCliente?.website || '').trim();
-        const rawFacebook = (primaryCliente?.facebook || '').trim();
-        const rawInstagram = (primaryCliente?.instagram || '').trim();
-
-        let parsedWebsite: string | null = rawWebsite ? (rawWebsite.startsWith('http') ? rawWebsite : `https://${rawWebsite}`) : null;
-        let parsedFacebook: string | null = null;
-        let parsedInstagram: string | null = rawInstagram ? (rawInstagram.startsWith('http') ? rawInstagram : `https://${rawInstagram}`) : null;
-
-        if (rawFacebook) {
-          const formattedFb = rawFacebook.startsWith('http') ? rawFacebook : `https://${rawFacebook}`;
-          if (formattedFb.toLowerCase().includes('instagram.com')) {
-            if (!parsedInstagram) {
-              parsedInstagram = formattedFb;
-            }
-          } else {
-            parsedFacebook = formattedFb;
-          }
-        }
+        // Parse and categorize Website, Facebook, and Instagram URLs
+        const { website: parsedWebsite, facebook: parsedFacebook, instagram: parsedInstagram } = parseSocialUrls(
+          primaryCliente?.website,
+          primaryCliente?.facebook,
+          primaryCliente?.instagram
+        );
 
         apiDoctorsList.push({
           id: `erp-doc-${emp.toLowerCase()}-${med.nro_doc_med || med.nro_doc}-${idx}`,

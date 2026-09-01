@@ -1350,6 +1350,13 @@ export const PublicLocator: React.FC = () => {
                             <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {loc.address}
                             </p>
+                            {(loc.website || loc.instagram || loc.facebook) && (
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
+                                {loc.website && <span title="Sitio Web disponible" style={{ color: '#00506E', display: 'inline-flex' }}><Globe size={11} /></span>}
+                                {loc.instagram && <span title="Instagram disponible" style={{ color: '#E1306C', display: 'inline-flex' }}><InstagramIcon size={11} /></span>}
+                                {loc.facebook && <span title="Facebook disponible" style={{ color: '#1877F2', display: 'inline-flex' }}><FacebookIcon size={11} /></span>}
+                              </div>
+                            )}
                           </div>
                         </div>
 
