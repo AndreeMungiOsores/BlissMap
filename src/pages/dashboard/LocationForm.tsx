@@ -179,8 +179,8 @@ export const LocationForm: React.FC = () => {
           setPhone(mergedData.phone || '');
           setEmail(mergedData.email || '');
           setWebsite(mergedData.website || '');
-          setFacebook(mergedData.facebook || '');
-          setInstagram(mergedData.instagram || '');
+          setFacebook(mergedData.facebook || mergedData.custom_fields?.Facebook || '');
+          setInstagram(mergedData.instagram || mergedData.custom_fields?.Instagram || '');
           setDescription(mergedData.description || '');
           setPublished(mergedData.published !== false);
           setTags(mergedData.tags || []);
@@ -333,7 +333,7 @@ export const LocationForm: React.FC = () => {
 
       // 3. Upsert Location in Database with preserved ID (e.g. doc-1 or erp-doc-...)
       const decodedId = id ? decodeURIComponent(id) : `custom-${Date.now()}`;
-      const locationPayload = {
+      const locationPayload: any = {
         id: decodedId,
         locator_id: activeLocator.id,
         name,
@@ -352,9 +352,44 @@ export const LocationForm: React.FC = () => {
         image_url: finalImageUrl
       };
 
-      const { error: upsertErr } = await supabase
+      let { error: upsertErr } = await supabase
         .from('bm_locations')
         .upsert(locationPayload, { onConflict: 'id' });
+
+      // Resilience Fallback: If Supabase table `bm_locations` lacks 'facebook' or 'instagram' columns,
+      // store social URLs inside custom_fields and retry upsert without invalid root column keys.
+      if (upsertErr && (upsertErr.message.includes('facebook') || upsertErr.message.includes('instagram'))) {
+        console.warn('[LocationForm] Supabase table bm_locations is missing social columns. Retrying with custom_fields fallback...', upsertErr);
+
+        const fallbackCustomFields = { ...customFieldsObj };
+        const cleanFb = cleanUrl(facebook);
+        const cleanIg = cleanUrl(instagram);
+        if (cleanFb) fallbackCustomFields['Facebook'] = cleanFb;
+        if (cleanIg) fallbackCustomFields['Instagram'] = cleanIg;
+
+        const fallbackPayload: any = {
+          id: decodedId,
+          locator_id: activeLocator.id,
+          name,
+          address,
+          lat,
+          lng,
+          phone: phone || null,
+          email: email || null,
+          website: cleanUrl(website),
+          description: description || null,
+          tags,
+          custom_fields: fallbackCustomFields,
+          published,
+          image_url: finalImageUrl
+        };
+
+        const { error: retryErr } = await supabase
+          .from('bm_locations')
+          .upsert(fallbackPayload, { onConflict: 'id' });
+
+        upsertErr = retryErr;
+      }
 
       if (upsertErr) throw upsertErr;
 
