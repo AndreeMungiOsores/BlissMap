@@ -16,7 +16,8 @@ import {
   ToggleLeft, 
   ToggleRight, 
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  Search
 } from 'lucide-react';
 
 interface CustomField {
@@ -66,7 +67,71 @@ export const LocationForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
+  const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Geocode address from "Buscar en Mapa" button next to Dirección Completa
+  const handleGeocodeAddress = async () => {
+    if (!address.trim()) return;
+    setGeocoding(true);
+    setError(null);
+
+    const fetchWithTimeout = async (url: string, timeout = 5000) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        return response;
+      } catch (err) {
+        clearTimeout(timer);
+        throw err;
+      }
+    };
+
+    try {
+      // 1. Esri World Geocoder
+      const esriUrl = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(address.trim())}&maxLocations=1`;
+      const resp = await fetchWithTimeout(esriUrl, 5000);
+      const data = await resp.json();
+
+      if (data && data.candidates && data.candidates.length > 0) {
+        const candidate = data.candidates[0];
+        setLat(candidate.location.y);
+        setLng(candidate.location.x);
+        if (candidate.address) {
+          setAddress(candidate.address);
+        }
+        setGeocoding(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Esri geocoding timed out. Trying Nominatim fallback...', err);
+    }
+
+    try {
+      // 2. Nominatim Fallback
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address.trim())}&limit=1`;
+      const resp = await fetchWithTimeout(nominatimUrl, 5000);
+      const data = await resp.json();
+
+      if (data && data.length > 0) {
+        const item = data[0];
+        setLat(parseFloat(item.lat));
+        setLng(parseFloat(item.lon));
+        if (item.display_name) {
+          setAddress(item.display_name);
+        }
+      } else {
+        setError('No se pudo encontrar la ubicación en el mapa. Intenta agregar más detalles (Ciudad, País).');
+      }
+    } catch (err) {
+      console.error('Geocoding error:', err);
+      setError('Error al conectar con el servicio de geolocalización. Ingresa las coordenadas manualmente o ajusta el marcador.');
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   // Fetch location details if editing
   useEffect(() => {
@@ -461,15 +526,48 @@ export const LocationForm: React.FC = () => {
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Dirección Completa</label>
-              <textarea 
-                required
-                rows={2}
-                placeholder="Ej: Los Corales 379, Trujillo 13001, Perú"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="form-control"
-                style={{ resize: 'none' }}
-              />
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ej: León Velarde 406, Yanahuara, Perú"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleGeocodeAddress();
+                    }
+                  }}
+                  className="form-control"
+                  style={{ flexGrow: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={handleGeocodeAddress}
+                  disabled={geocoding || !address.trim()}
+                  style={{ 
+                    backgroundColor: '#00506E', 
+                    color: '#FFFFFF', 
+                    padding: '8px 16px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    cursor: geocoding || !address.trim() ? 'not-allowed' : 'pointer', 
+                    fontWeight: 600, 
+                    fontSize: '13px',
+                    border: 'none', 
+                    borderRadius: 'var(--radius-md)', 
+                    whiteSpace: 'nowrap',
+                    opacity: geocoding || !address.trim() ? 0.6 : 1,
+                    flexShrink: 0
+                  }}
+                  title="Buscar esta dirección en el mapa para actualizar las coordenadas"
+                >
+                  {geocoding ? <div className="spinner" style={{ width: '14px', height: '14px', borderTopColor: '#fff' }}></div> : <Search size={14} />}
+                  Buscar en Mapa
+                </button>
+              </div>
             </div>
           </div>
 
