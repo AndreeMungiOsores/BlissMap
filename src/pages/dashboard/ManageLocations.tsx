@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import type { Locator } from './DashboardLayout';
@@ -37,6 +37,7 @@ interface LocationItem {
   published: boolean;
   products?: ProductItem[];
   created_at?: string;
+  is_manual_override?: boolean;
 }
 
 interface OutletContextType {
@@ -48,6 +49,7 @@ export const ManageLocations: React.FC = () => {
   
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [search, setSearch] = useState('');
+  const [filterMode, setFilterMode] = useState<'all' | 'manual'>('all');
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
 
@@ -85,12 +87,14 @@ export const ManageLocations: React.FC = () => {
           return {
             ...apiLoc,
             ...override,
+            is_manual_override: true,
             custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
             published: override.published !== undefined ? override.published : true
           };
         }
         return {
           ...apiLoc,
+          is_manual_override: false,
           published: true
         } as LocationItem;
       });
@@ -99,6 +103,7 @@ export const ManageLocations: React.FC = () => {
       dbMap.forEach(customDbLoc => {
         mergedList.unshift({
           ...customDbLoc,
+          is_manual_override: true,
           published: customDbLoc.published !== undefined ? customDbLoc.published : true
         } as LocationItem);
       });
@@ -170,8 +175,17 @@ export const ManageLocations: React.FC = () => {
       .toLowerCase();
   };
 
-  // Filter locations by Name, Address, Tags, OR Products ignoring case and accents
+  // Count total manual overrides saved in Supabase
+  const manualCount = useMemo(() => {
+    return locations.filter(loc => loc.is_manual_override).length;
+  }, [locations]);
+
+  // Filter locations by mode (All vs Editados Manualmente) AND search query
   const filteredLocations = locations.filter(loc => {
+    if (filterMode === 'manual' && !loc.is_manual_override) {
+      return false;
+    }
+
     const searchClean = removeAccents(search.trim());
     if (!searchClean) return true;
     
@@ -217,8 +231,8 @@ export const ManageLocations: React.FC = () => {
       </div>
 
       {/* Controls */}
-      <div className="panel" style={{ padding: '16px 24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+      <div className="panel" style={{ padding: '14px 24px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flexGrow: 1, minWidth: '280px', display: 'flex', alignItems: 'center' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', color: 'var(--color-dark-text-tertiary)' }} />
           <input 
             type="text" 
@@ -229,8 +243,52 @@ export const ManageLocations: React.FC = () => {
             style={{ width: '100%', paddingLeft: '40px' }}
           />
         </div>
+
+        {/* Filter Pills */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setFilterMode('all')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: filterMode === 'all' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
+              backgroundColor: filterMode === 'all' ? '#00506E' : 'transparent',
+              color: filterMode === 'all' ? '#FFFFFF' : 'var(--color-dark-text-secondary)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Todos ({locations.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('manual')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: filterMode === 'manual' ? '1.5px solid #1EC8AA' : '1px solid rgba(30, 200, 170, 0.4)',
+              backgroundColor: filterMode === 'manual' ? '#1EC8AA' : 'rgba(30, 200, 170, 0.1)',
+              color: filterMode === 'manual' ? '#FFFFFF' : '#00506E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+            title="Filtrar comercios con ediciones manuales guardadas en Supabase"
+          >
+            <Edit3 size={13} />
+            Editados Manualmente ({manualCount})
+          </button>
+        </div>
         
-        <div style={{ fontSize: '14px', color: 'var(--color-dark-text-secondary)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
           {filteredLocations.length} de {locations.length} médicos
         </div>
       </div>
@@ -287,7 +345,26 @@ export const ManageLocations: React.FC = () => {
                         )}
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)' }}>{loc.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)' }}>{loc.name}</span>
+                          {loc.is_manual_override && (
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#00506E',
+                              backgroundColor: 'rgba(30, 200, 170, 0.15)',
+                              border: '1px solid rgba(30, 200, 170, 0.35)',
+                              padding: '2px 7px',
+                              borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <Edit3 size={10} style={{ color: '#1EC8AA' }} />
+                              Edición Manual
+                            </span>
+                          )}
+                        </div>
                         {loc.custom_fields?.["Razón Social"] && (
                           <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
                             RS: {loc.custom_fields["Razón Social"]}
