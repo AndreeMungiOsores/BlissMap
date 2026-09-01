@@ -995,6 +995,93 @@ export const PublicLocator: React.FC = () => {
                     <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: '1.4', fontWeight: 500 }}>
                       {selectedLocation.address}
                     </p>
+
+                    {/* Social Network Chips (Web, IG, FB) INSIDE Top Card, directly below address */}
+                    {(() => {
+                      const hasWeb = !!selectedLocation.website;
+                      const hasIg = !!selectedLocation.instagram;
+                      const hasFb = !!selectedLocation.facebook;
+                      if (!hasWeb && !hasIg && !hasFb) return null;
+
+                      return (
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginTop: '8px' }}>
+                          {hasWeb && (
+                            <a
+                              href={selectedLocation.website!}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '5px 10px',
+                                borderRadius: '10px',
+                                backgroundColor: '#F1F5F9',
+                                color: '#00506E',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                border: '1px solid #CBD5E1'
+                              }}
+                              title="Visitar Sitio Web"
+                            >
+                              <Globe size={13} />
+                              Web
+                            </a>
+                          )}
+
+                          {hasIg && (
+                            <a
+                              href={selectedLocation.instagram!}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '5px 10px',
+                                borderRadius: '10px',
+                                backgroundColor: 'rgba(225, 48, 108, 0.08)',
+                                color: '#E1306C',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                border: '1px solid rgba(225, 48, 108, 0.25)'
+                              }}
+                              title="Ver en Instagram"
+                            >
+                              <InstagramIcon size={13} />
+                              Instagram
+                            </a>
+                          )}
+
+                          {hasFb && (
+                            <a
+                              href={selectedLocation.facebook!}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '5px 10px',
+                                borderRadius: '10px',
+                                backgroundColor: 'rgba(24, 119, 242, 0.08)',
+                                color: '#1877F2',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                border: '1px solid rgba(24, 119, 242, 0.25)'
+                              }}
+                              title="Ver en Facebook"
+                            >
+                              <FacebookIcon size={13} />
+                              Facebook
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1158,115 +1245,30 @@ export const PublicLocator: React.FC = () => {
                     whatsappUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(waMessage)}`;
                   }
 
-                  const hasWeb = !!selectedLocation.website;
-                  const hasIg = !!selectedLocation.instagram;
-                  const hasFb = !!selectedLocation.facebook;
-
                   return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '4px' }}>
-                      <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                        <button 
-                          type="button"
-                          className="locator-directions-btn" 
-                          onClick={() => setNavTarget({ lat: selectedLocation.lat, lng: selectedLocation.lng, name: selectedLocation.name })}
-                          style={{ flex: 1, marginTop: 0, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
+                    <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '4px' }}>
+                      <button 
+                        type="button"
+                        className="locator-directions-btn" 
+                        onClick={() => setNavTarget({ lat: selectedLocation.lat, lng: selectedLocation.lng, name: selectedLocation.name })}
+                        style={{ flex: 1, marginTop: 0, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
+                      >
+                        <Navigation size={16} />
+                        Cómo llegar
+                      </button>
+
+                      {whatsappUrl && (
+                        <a 
+                          href={whatsappUrl} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="locator-whatsapp-btn"
+                          style={{ flex: 1, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
+                          title={`Enviar WhatsApp a ${selectedLocation.name}`}
                         >
-                          <Navigation size={16} />
-                          Cómo llegar
-                        </button>
-
-                        {whatsappUrl && (
-                          <a 
-                            href={whatsappUrl} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="locator-whatsapp-btn"
-                            style={{ flex: 1, padding: '12px 16px', fontSize: '14px', fontWeight: 800, borderRadius: '14px' }}
-                            title={`Enviar WhatsApp a ${selectedLocation.name}`}
-                          >
-                            <MessageCircle size={17} />
-                            WhatsApp
-                          </a>
-                        )}
-                      </div>
-
-                      {(hasWeb || hasIg || hasFb) && (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start', flexWrap: 'wrap', paddingTop: '2px' }}>
-                          {hasWeb && (
-                            <a
-                              href={selectedLocation.website!}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '8px 14px',
-                                borderRadius: '12px',
-                                backgroundColor: '#F1F5F9',
-                                color: '#00506E',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                textDecoration: 'none',
-                                border: '1px solid #CBD5E1'
-                              }}
-                              title="Visitar Sitio Web"
-                            >
-                              <Globe size={15} />
-                              Web
-                            </a>
-                          )}
-
-                          {hasIg && (
-                            <a
-                              href={selectedLocation.instagram!}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '8px 14px',
-                                borderRadius: '12px',
-                                backgroundColor: 'rgba(225, 48, 108, 0.1)',
-                                color: '#E1306C',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                textDecoration: 'none',
-                                border: '1px solid rgba(225, 48, 108, 0.25)'
-                              }}
-                              title="Ver en Instagram"
-                            >
-                              <InstagramIcon size={15} />
-                              Instagram
-                            </a>
-                          )}
-
-                          {hasFb && (
-                            <a
-                              href={selectedLocation.facebook!}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '8px 14px',
-                                borderRadius: '12px',
-                                backgroundColor: 'rgba(24, 119, 242, 0.1)',
-                                color: '#1877F2',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                textDecoration: 'none',
-                                border: '1px solid rgba(24, 119, 242, 0.25)'
-                              }}
-                              title="Ver en Facebook"
-                            >
-                              <FacebookIcon size={15} />
-                              Facebook
-                            </a>
-                          )}
-                        </div>
+                          <MessageCircle size={17} />
+                          WhatsApp
+                        </a>
                       )}
                     </div>
                   );
