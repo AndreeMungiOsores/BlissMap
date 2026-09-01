@@ -929,7 +929,7 @@ export const PublicLocator: React.FC = () => {
           // -------------------------------------------------------------
           if (selectedLocation) {
             return (
-              <div className="location-detail-view" style={{ padding: '8px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="location-detail-view">
                 
                 {/* Back Button Bar */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>

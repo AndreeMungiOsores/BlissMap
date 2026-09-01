@@ -649,11 +649,22 @@ button, input, select, textarea {
 
 .locator-list {
   flex-grow: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 20px 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.location-detail-view {
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 20px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .locator-card {
