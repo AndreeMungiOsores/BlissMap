@@ -475,14 +475,16 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
         primaryCliente?.razon_social || primaryCliente?.nombre_comercial || ''
       );
 
-      // Stable ID keyed on RUC only (empresa-agnostic) so Supabase overrides always match
+      // Stable ID: empresa-agnostic on multi-empresa clinics but prefixed with canonical first empresa
+      // to preserve backward-compatibility with Supabase records saved under erp-doc-blissfarma-... format.
+      const canonicalEmp = emp.toLowerCase(); // Will be 'blissfarma' for most primaries
       const docNumDigits = (cleanMedDoc || cleanCompanyDoc || primaryCliente?.nro_doc || '').replace(/\D/g, '');
       const nameSlug = cleanNombreComercial
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
-      const stableId = `erp-doc-${docNumDigits}${nameSlug ? '-' + nameSlug : ''}`;
+      const stableId = `erp-doc-${canonicalEmp}-${docNumDigits}${nameSlug ? '-' + nameSlug : ''}`;
 
       const { website: parsedWebsite, facebook: parsedFacebook, instagram: parsedInstagram } = parseSocialUrls(
         primaryCliente?.website,

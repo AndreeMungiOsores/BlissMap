@@ -332,18 +332,25 @@ export const PublicLocator: React.FC = () => {
         const mergedLocations: LocationItem[] = apiLocations.map((apiLoc: any) => {
           let override = dbMap.get(apiLoc.id);
 
-          // Fallback: Match by Document (RUC/DNI) and Name similarity if exact ID missed
+          // Fallback: Match by Document (RUC/DNI) extracted from custom_fields OR from the DB record's id field.
+          // Handles legacy id formats: erp-doc-blissfarma-{ruc}-{idx} and erp-doc-{ruc}-{slug}.
           if (!override) {
-            const apiDocNum = (apiLoc.custom_fields?.['Documento'] || apiLoc.id || '').replace(/\D/g, '');
-            const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const apiDocNum = (apiLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
 
             if (apiDocNum) {
               for (const [dbId, dbItem] of dbMap.entries()) {
-                const dbDocNum = (dbItem.custom_fields?.['Documento'] || dbItem.id || '').replace(/\D/g, '');
+                const dbDocFromFields = (dbItem.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+                const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
+                const dbDocNum = dbDocFromFields || dbDocFromId;
+
+                const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 const dbNameClean = (dbItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
                 if (dbDocNum && dbDocNum === apiDocNum) {
-                  if (apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) || !dbNameClean || !apiNameClean) {
+                  const nameMatch = !apiNameClean || !dbNameClean ||
+                    apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) ||
+                    apiNameClean.length < 4 || dbNameClean.length < 4;
+                  if (nameMatch) {
                     override = dbItem;
                     dbMap.delete(dbId);
                     break;
