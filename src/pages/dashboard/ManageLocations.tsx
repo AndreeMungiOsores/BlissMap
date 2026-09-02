@@ -137,8 +137,23 @@ export const ManageLocations: React.FC = () => {
         } as LocationItem;
       });
 
-      // Add any newly created custom locations from DB that were not in API
-      dbMap.forEach(customDbLoc => {
+      // Build a set of RUCs already represented in mergedList to avoid unshifting DB orphans
+      // that are duplicates of the same clinic saved under a different empresa ID.
+      const mergedRucSet = new Set<string>();
+      mergedList.forEach(loc => {
+        const ruc = (loc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+        if (ruc) mergedRucSet.add(ruc);
+      });
+
+      // Add any truly new custom locations from DB that were not in API and not already covered
+      dbMap.forEach((customDbLoc, dbId) => {
+        const dbDocFromFields = (customDbLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+        const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
+        const dbDocNum = dbDocFromFields || dbDocFromId;
+
+        // Skip if this RUC is already in the merged list — it's a stale duplicate from a legacy empresa ID
+        if (dbDocNum && mergedRucSet.has(dbDocNum)) return;
+
         mergedList.unshift({
           ...customDbLoc,
           is_manual_override: true,

@@ -377,8 +377,20 @@ export const PublicLocator: React.FC = () => {
           return apiLoc;
         });
 
-        // Add any newly created custom locations from DB that were not in API
-        dbMap.forEach(customDbLoc => {
+        // Build a set of RUCs already represented in mergedLocations to avoid duplicate orphan entries
+        const mergedRucSet = new Set<string>();
+        mergedLocations.forEach(loc => {
+          const ruc = (loc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+          if (ruc) mergedRucSet.add(ruc);
+        });
+
+        // Add truly new custom locations from DB not in API and not already covered by RUC
+        dbMap.forEach((customDbLoc, dbId) => {
+          const dbDocFromFields = (customDbLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+          const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
+          const dbDocNum = dbDocFromFields || dbDocFromId;
+          if (dbDocNum && mergedRucSet.has(dbDocNum)) return;
+
           mergedLocations.unshift({
             ...customDbLoc,
             published: customDbLoc.published !== undefined ? customDbLoc.published : true
