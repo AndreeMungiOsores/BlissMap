@@ -87,6 +87,9 @@ export const ManageLocations: React.FC = () => {
           return {
             ...apiLoc,
             ...override,
+            products: (override.products && Array.isArray(override.products) && override.products.length > 0) 
+              ? override.products 
+              : apiLoc.products,
             is_manual_override: true,
             custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
             published: override.published !== undefined ? override.published : true

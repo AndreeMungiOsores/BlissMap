@@ -336,6 +336,9 @@ export const PublicLocator: React.FC = () => {
             return {
               ...apiLoc,
               ...override,
+              products: (override.products && Array.isArray(override.products) && override.products.length > 0) 
+                ? override.products 
+                : apiLoc.products,
               image_url: override.image_url || apiLoc.image_url || null,
               custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
               published: override.published !== undefined ? override.published : true
