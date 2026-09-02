@@ -452,6 +452,11 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
         const cleanDoctorAddress = cleanSpanishText(rawAddress);
         const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
 
+        // Generate stable deterministic ID based on empresa, RUC, and name slug (no random array index)
+        const docNumDigits = (med.nro_doc_med || med.nro_doc || primaryCliente?.nro_doc || '').replace(/\D/g, '');
+        const nameSlug = cleanNombreComercial.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const stableId = `erp-doc-${emp.toLowerCase()}-${docNumDigits}${nameSlug ? '-' + nameSlug : ''}`;
+
         // Parse and categorize Website, Facebook, and Instagram URLs
         const { website: parsedWebsite, facebook: parsedFacebook, instagram: parsedInstagram } = parseSocialUrls(
           primaryCliente?.website,
@@ -460,7 +465,7 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
         );
 
         apiDoctorsList.push({
-          id: `erp-doc-${emp.toLowerCase()}-${med.nro_doc_med || med.nro_doc}-${idx}`,
+          id: stableId,
           name: cleanNombreComercial,
           image_url: null,
           address: cleanDoctorAddress,

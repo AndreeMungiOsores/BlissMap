@@ -330,9 +330,32 @@ export const PublicLocator: React.FC = () => {
         dbLocations.forEach(item => dbMap.set(item.id, item));
 
         const mergedLocations: LocationItem[] = apiLocations.map((apiLoc: any) => {
-          const override = dbMap.get(apiLoc.id);
-          if (override) {
+          let override = dbMap.get(apiLoc.id);
+
+          // Fallback: Match by Document (RUC/DNI) and Name similarity if exact ID missed
+          if (!override) {
+            const apiDocNum = (apiLoc.custom_fields?.['Documento'] || apiLoc.id || '').replace(/\D/g, '');
+            const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (apiDocNum) {
+              for (const [dbId, dbItem] of dbMap.entries()) {
+                const dbDocNum = (dbItem.custom_fields?.['Documento'] || dbItem.id || '').replace(/\D/g, '');
+                const dbNameClean = (dbItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                if (dbDocNum && dbDocNum === apiDocNum) {
+                  if (apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) || !dbNameClean || !apiNameClean) {
+                    override = dbItem;
+                    dbMap.delete(dbId);
+                    break;
+                  }
+                }
+              }
+            }
+          } else {
             dbMap.delete(apiLoc.id);
+          }
+
+          if (override) {
             return {
               ...apiLoc,
               ...override,
