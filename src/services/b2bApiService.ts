@@ -381,64 +381,81 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
     const DEFAULT_LNG = -77.042793;
 
     const apiDoctorsList: LocationItem[] = [];
-
-    // Map each doctor entry directly from ERP API payload v2.0
     const medicos = payload.medicos || [];
-    if (medicos.length > 0) {
-      medicos.forEach((med, idx) => {
-        const emp = (med.empresa || 'BLISSFARMA').toUpperCase();
-        const cleanCompanyDoc = med.nro_doc.replace(/\D/g, '');
-        const cleanMedDoc = (med.nro_doc_med || '').replace(/\D/g, '');
 
-        const compKeyCompany = `${emp}_${cleanCompanyDoc}`;
-        const compKeyMed = `${emp}_${cleanMedDoc}`;
+    // ── PASS 1: Build one entry per unique RUC accumulating products from all empresas ──────────────────
+    // A clinic that buys from both BLISSFARMA and SKINBLISS appears twice in payload.medicos[].
+    // We collapse those into ONE location with all products combined.
 
-        // Primary cliente: ALWAYS from exact RUC / DNI match for that specific empresa
-        const primaryCliente = clientesCompMap.get(compKeyCompany) ||
-          (cleanMedDoc ? clientesCompMap.get(compKeyMed) : undefined) ||
-          clientesDocMap.get(cleanCompanyDoc) ||
-          (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
+    // Keyed by cleanCompanyDoc (RUC digits).
+    const locationByDoc = new Map<string, LocationItem>();
 
-        // Check Excel ReporteClientes overrides first by RUC or DNI
-        const excelOverride = excelOverridesLookup[cleanCompanyDoc] ||
-          (cleanMedDoc ? excelOverridesLookup[cleanMedDoc] : undefined) ||
-          excelOverridesLookup[med.nro_doc];
+    medicos.forEach((med, idx) => {
+      const emp = (med.empresa || 'BLISSFARMA').toUpperCase();
+      const cleanCompanyDoc = med.nro_doc.replace(/\D/g, '');
+      const cleanMedDoc = (med.nro_doc_med || '').replace(/\D/g, '');
 
-        // Secondary phone match: token-based ONLY to find a phone number
-        let phoneNumber = (primaryCliente?.telefono || '').trim() || null;
-        if (!phoneNumber) {
-          const locRawTokens = med.medico.toLowerCase().match(/[a-z0-9]+/g) || [];
-          const locTokens = locRawTokens.filter(t => t.length > 2 && !STOP_WORDS.has(t));
-          
-          let maxCommon = 0;
-          let bestPhoneMatch: B2BCliente | undefined = undefined;
+      const compKeyCompany = `${emp}_${cleanCompanyDoc}`;
+      const compKeyMed = `${emp}_${cleanMedDoc}`;
 
-          for (const item of clientesTokenList) {
-            let commonCount = 0;
-            for (const token of locTokens) {
-              if (item.tokens.has(token)) commonCount++;
-            }
-            if (commonCount >= 2 && commonCount > maxCommon) {
-              maxCommon = commonCount;
-              bestPhoneMatch = item.cliente;
-            }
-          }
-          if (bestPhoneMatch) phoneNumber = (bestPhoneMatch.telefono || '').trim() || null;
+      // Primary cliente for this empresa-doc combo
+      const primaryCliente = clientesCompMap.get(compKeyCompany) ||
+        (cleanMedDoc ? clientesCompMap.get(compKeyMed) : undefined) ||
+        clientesDocMap.get(cleanCompanyDoc) ||
+        (cleanMedDoc ? clientesDocMap.get(cleanMedDoc) : undefined);
+
+      // Excel overrides
+      const excelOverride = excelOverridesLookup[cleanCompanyDoc] ||
+        (cleanMedDoc ? excelOverridesLookup[cleanMedDoc] : undefined) ||
+        excelOverridesLookup[med.nro_doc];
+
+      // Products for this specific empresa-doc pair (then fallback to doc-only)
+      const empProducts: ProductItem[] =
+        detalleCompMap.get(`${emp}_${med.nro_doc}`) ||
+        detalleDocMap.get(med.nro_doc) ||
+        [];
+
+      // If entry already exists for this RUC, just append new products and stop
+      const existing = locationByDoc.get(cleanCompanyDoc);
+      if (existing) {
+        // Merge products: add only products not already present by name
+        const existingNames = new Set(existing.products?.map(p => p.name) || []);
+        const newProds = empProducts.filter(p => !existingNames.has(p.name));
+        if (newProds.length > 0) {
+          existing.products = [...(existing.products || []), ...newProds];
         }
+        return; // Skip creating a second entry for this RUC
+      }
 
-        // Priority for address: Excel DATOS DE ENVÍO > API direcciones_envio > API dirección fiscal
-        const rawAddress = excelOverride?.address ||
-          direccionesCompMap.get(`${emp}_${med.nro_doc}`) ||
-          direccionesDocMap.get(med.nro_doc) ||
-          primaryCliente?.direccion_fiscal ||
-          'Lima, Perú';
+      // ── First time we see this RUC: build the full location entry ──────────────────────────────
+      let phoneNumber = (primaryCliente?.telefono || '').trim() || null;
+      if (!phoneNumber) {
+        const locRawTokens = med.medico.toLowerCase().match(/[a-z0-9]+/g) || [];
+        const locTokens = locRawTokens.filter(t => t.length > 2 && !STOP_WORDS.has(t));
+        let maxCommon = 0;
+        let bestPhoneMatch: B2BCliente | undefined = undefined;
+        for (const item of clientesTokenList) {
+          let commonCount = 0;
+          for (const token of locTokens) {
+            if (item.tokens.has(token)) commonCount++;
+          }
+          if (commonCount >= 2 && commonCount > maxCommon) {
+            maxCommon = commonCount;
+            bestPhoneMatch = item.cliente;
+          }
+        }
+        if (bestPhoneMatch) phoneNumber = (bestPhoneMatch.telefono || '').trim() || null;
+      }
 
-        const products = detalleCompMap.get(`${emp}_${med.nro_doc}`) ||
-          detalleDocMap.get(med.nro_doc) ||
-          [];
+      const rawAddress = excelOverride?.address ||
+        direccionesCompMap.get(`${emp}_${med.nro_doc}`) ||
+        direccionesDocMap.get(med.nro_doc) ||
+        primaryCliente?.direccion_fiscal ||
+        'Lima, Perú';
 
-        // Priority for coordinates: Excel DATOS DE ENVÍO (Latitud/Longitud) > Legacy apiGeocodedCoords > Default
-        const coords = (excelOverride?.lat && excelOverride?.lng) ? { lat: excelOverride.lat, lng: excelOverride.lng } : (
+      const coords = (excelOverride?.lat && excelOverride?.lng)
+        ? { lat: excelOverride.lat, lng: excelOverride.lng }
+        : (
           geocodeLookup[`${emp}_${med.nro_doc}`] ||
           geocodeLookup[med.nro_doc] ||
           geocodeLookup[cleanCompanyDoc] || {
@@ -447,50 +464,62 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
           }
         );
 
-        const cleanNombreComercial = toTitleCase(primaryCliente?.nombre_comercial || primaryCliente?.razon_social || med.medico || 'Centro Dermatológico');
-        const cleanDoctorName = toTitleCase(med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo');
-        const cleanDoctorAddress = cleanSpanishText(rawAddress);
-        const cleanRazonSocial = cleanSpanishText(primaryCliente?.razon_social || primaryCliente?.nombre_comercial || '');
+      const cleanNombreComercial = toTitleCase(
+        primaryCliente?.nombre_comercial || primaryCliente?.razon_social || med.medico || 'Centro Dermatológico'
+      );
+      const cleanDoctorName = toTitleCase(
+        med.medico || primaryCliente?.nombre_comercial || primaryCliente?.razon_social || 'Médico Dermatólogo'
+      );
+      const cleanDoctorAddress = cleanSpanishText(rawAddress);
+      const cleanRazonSocial = cleanSpanishText(
+        primaryCliente?.razon_social || primaryCliente?.nombre_comercial || ''
+      );
 
-        // Generate stable deterministic ID based on empresa, RUC, and name slug (no random array index)
-        const docNumDigits = (med.nro_doc_med || med.nro_doc || primaryCliente?.nro_doc || '').replace(/\D/g, '');
-        const nameSlug = cleanNombreComercial.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        const stableId = `erp-doc-${emp.toLowerCase()}-${docNumDigits}${nameSlug ? '-' + nameSlug : ''}`;
+      // Stable ID keyed on RUC only (empresa-agnostic) so Supabase overrides always match
+      const docNumDigits = (cleanMedDoc || cleanCompanyDoc || primaryCliente?.nro_doc || '').replace(/\D/g, '');
+      const nameSlug = cleanNombreComercial
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const stableId = `erp-doc-${docNumDigits}${nameSlug ? '-' + nameSlug : ''}`;
 
-        // Parse and categorize Website, Facebook, and Instagram URLs
-        const { website: parsedWebsite, facebook: parsedFacebook, instagram: parsedInstagram } = parseSocialUrls(
-          primaryCliente?.website,
-          primaryCliente?.facebook,
-          primaryCliente?.instagram
-        );
+      const { website: parsedWebsite, facebook: parsedFacebook, instagram: parsedInstagram } = parseSocialUrls(
+        primaryCliente?.website,
+        primaryCliente?.facebook,
+        primaryCliente?.instagram
+      );
 
-        apiDoctorsList.push({
-          id: stableId,
-          name: cleanNombreComercial,
-          image_url: null,
-          address: cleanDoctorAddress,
-          phone: phoneNumber,
-          email: null,
-          website: parsedWebsite,
-          facebook: parsedFacebook,
-          instagram: parsedInstagram,
-          lat: coords.lat,
-          lng: coords.lng,
-          tags: ['ERP B2B', emp, 'Verificado', cleanDoctorName],
-          custom_fields: {
-            'Nombre Comercial': cleanNombreComercial,
-            'Médico': cleanDoctorName,
-            'Razón Social': cleanRazonSocial,
-            'Documento': primaryCliente?.nro_doc || med.nro_doc,
-            'Colegiatura': med.colegiatura ? `CMP ${med.colegiatura}` : '',
-            'Empresa': emp
-          },
-          description: null,
-          products: products,
-          empresa: emp
-        });
-      });
-    }
+      const newEntry: LocationItem = {
+        id: stableId,
+        name: cleanNombreComercial,
+        image_url: null,
+        address: cleanDoctorAddress,
+        phone: phoneNumber,
+        email: null,
+        website: parsedWebsite,
+        facebook: parsedFacebook,
+        instagram: parsedInstagram,
+        lat: coords.lat,
+        lng: coords.lng,
+        tags: ['ERP B2B', 'Verificado', cleanDoctorName],
+        custom_fields: {
+          'Nombre Comercial': cleanNombreComercial,
+          'Médico': cleanDoctorName,
+          'Razón Social': cleanRazonSocial,
+          'Documento': primaryCliente?.nro_doc || med.nro_doc,
+          'Colegiatura': med.colegiatura ? `CMP ${med.colegiatura}` : '',
+        },
+        description: null,
+        products: empProducts,
+        empresa: emp
+      };
+
+      locationByDoc.set(cleanCompanyDoc, newEntry);
+    });
+
+    // ── PASS 2: Flatten the map into the final list ─────────────────────────────────────────────
+    apiDoctorsList.push(...Array.from(locationByDoc.values()));
 
     if (apiDoctorsList.length > 0) {
       console.log(`[B2B API Pure] Built ${apiDoctorsList.length} doctors directly from ERP API with expanded phone matching.`);
