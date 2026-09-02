@@ -1502,7 +1502,9 @@
     "lng": -76.99002229999999
   },
   "20603336977": {
-    "address": "JR. BATALLON CALLAO SUR NRO. 146 URB. LAS GARDENIAS, Miraflores, Lima, Lima"
+    "address": "JR. BATALLON CALLAO SUR NRO. 146 URB. LAS GARDENIAS, Miraflores, Lima, Lima",
+    "lat": -12.1245,
+    "lng": -76.9945
   },
   "20603393571": {
     "address": "Avenida Javier Prado Este 1684, San Isidro, Perú",
@@ -2586,7 +2588,9 @@
     "address": "AV. SAN EUGENIO NRO. 905 URB. SANTA CATALINA"
   },
   "20612292354": {
-    "address": "Av. Angamos Oeste 1649 dpto. 403"
+    "address": "Av. Angamos Oeste 1649 dpto. 403",
+    "lat": -12.1128,
+    "lng": -77.0375
   },
   "20612369276": {
     "address": "Avenida Faustino Sánchez Carrión 615, Jesús María, Perú",

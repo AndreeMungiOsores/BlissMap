@@ -79,7 +79,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v19';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v20';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 export interface SocialUrls {
@@ -478,7 +478,7 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
       // Stable ID: empresa-agnostic on multi-empresa clinics but prefixed with canonical first empresa
       // to preserve backward-compatibility with Supabase records saved under erp-doc-blissfarma-... format.
       const canonicalEmp = emp.toLowerCase(); // Will be 'blissfarma' for most primaries
-      const docNumDigits = (cleanMedDoc || cleanCompanyDoc || primaryCliente?.nro_doc || '').replace(/\D/g, '');
+      const docNumDigits = (cleanCompanyDoc || cleanMedDoc || primaryCliente?.nro_doc || '').replace(/\D/g, '');
       const nameSlug = cleanNombreComercial
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
