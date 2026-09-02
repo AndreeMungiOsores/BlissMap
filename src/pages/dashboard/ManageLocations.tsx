@@ -101,8 +101,10 @@ const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => {
     for (let j = i + 1; j < list.length; j++) {
       if (used.has(list[j].id) || list[j].id === list[i].id) continue;
       if (list[i].grupo_economico_ids?.includes(list[j].id) || list[j].grupo_economico_ids?.includes(list[i].id)) continue;
-      if (normalizeAddress(list[j].address) !== addrI) continue;
-      if (nameSimilarity(list[i].name, list[j].name) >= 0.6) {
+      const addrJ = normalizeAddress(list[j].address);
+      // Use address similarity >= 0.75 instead of exact match to handle minor API text variations
+      if (nameSimilarity(addrI, addrJ) < 0.75) continue;
+      if (nameSimilarity(list[i].name, list[j].name) >= 0.55) {
         peers.push(list[j]);
         used.add(list[j].id);
       }
