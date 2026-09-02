@@ -79,7 +79,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v20';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v21';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 export interface SocialUrls {
@@ -235,12 +235,14 @@ export const getDynamicDateRange = () => {
 // Clear stale cache keys from localStorage
 const clearStaleCaches = () => {
   try {
+    const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('blissmap_b2b_api_') && key !== CACHE_KEY) {
-        localStorage.removeItem(key);
+        keysToRemove.push(key);
       }
     }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
   } catch (e) {
     // Ignore cache clear error
   }

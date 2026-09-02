@@ -567,7 +567,7 @@ export const ManageLocations: React.FC = () => {
                     : [loc.custom_fields?.['Documento']].filter(Boolean);
 
                   return (
-                    <tr key={loc.id}>
+                    <tr key={`${loc.id}-${loc.custom_fields?.['Documento'] || ''}`}>
                       <td>
                         {loc.image_url ? (
                           <img src={loc.image_url} alt={loc.name}

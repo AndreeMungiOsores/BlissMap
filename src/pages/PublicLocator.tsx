@@ -1412,7 +1412,7 @@ export const PublicLocator: React.FC = () => {
 
                   return (
                     <div 
-                      key={loc.id} 
+                      key={`${loc.id}-${loc.custom_fields?.['Documento'] || ''}`} 
                       className="locator-card"
                       ref={el => { cardRefs.current[loc.id] = el; }}
                       onClick={() => {

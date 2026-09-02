@@ -183,7 +183,7 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
           {locations.map(loc => {
             return (
               <LeafletMarker
-                key={loc.id}
+                key={`${loc.id}-${loc.custom_fields?.['Documento'] || ''}`}
                 position={[loc.lat, loc.lng]}
                 icon={getLeafletIcon(loc.id)}
                 eventHandlers={{
