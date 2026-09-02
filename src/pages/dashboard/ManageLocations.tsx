@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import type { Locator } from './DashboardLayout';
@@ -13,7 +13,11 @@ import {
   Image as ImageIcon,
   MapPin,
   AlertCircle,
-  Package
+  Package,
+  Link2,
+  Link2Off,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 import { fetchB2BSalesLocations } from '../../services/b2bApiService';
@@ -29,6 +33,8 @@ interface LocationItem {
   name: string;
   image_url: string | null;
   address: string;
+  lat?: number;
+  lng?: number;
   phone: string | null;
   email: string | null;
   website: string | null;
@@ -38,24 +44,101 @@ interface LocationItem {
   products?: ProductItem[];
   created_at?: string;
   is_manual_override?: boolean;
+  grupo_economico_ids?: string[] | null;
+}
+
+interface SuggestedGroup {
+  ids: string[];
+  name: string;
+  address: string;
+  totalProducts: number;
+  rucs: string[];
 }
 
 interface OutletContextType {
   activeLocator: Locator | null;
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const TEST_NAMES = ['daysi timana', 'winston maldonado', 'marjorie villate', 'giuliana peching'];
+
+const removeAccents = (str: string | null | undefined): string => {
+  if (!str) return '';
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
+const normalizeAddress = (addr: string): string =>
+  removeAccents(addr)
+    .replace(/\bav\b\.?/g, 'av').replace(/\bjr\b\.?/g, 'jr').replace(/\bcalle\b/g, 'cl')
+    .replace(/\bnro\b\.?/g, '').replace(/\bnumero\b/g, '')
+    .replace(/[.,#°]/g, ' ').replace(/\s+/g, ' ').trim();
+
+const nameSimilarity = (a: string, b: string): number => {
+  const bigrams = (s: string) => {
+    const set = new Set<string>();
+    for (let i = 0; i < s.length - 1; i++) set.add(s[i] + s[i + 1]);
+    return set;
+  };
+  const ba = bigrams(removeAccents(a));
+  const bb = bigrams(removeAccents(b));
+  if (ba.size === 0 || bb.size === 0) return 0;
+  let intersection = 0;
+  ba.forEach(g => { if (bb.has(g)) intersection++; });
+  return (2 * intersection) / (ba.size + bb.size);
+};
+
+const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => {
+  const groups: SuggestedGroup[] = [];
+  const used = new Set<string>();
+
+  for (let i = 0; i < list.length; i++) {
+    if (used.has(list[i].id)) continue;
+    const addrI = normalizeAddress(list[i].address);
+    if (!addrI || addrI.length < 8) continue;
+    const peers: LocationItem[] = [list[i]];
+
+    for (let j = i + 1; j < list.length; j++) {
+      if (used.has(list[j].id) || list[j].id === list[i].id) continue;
+      if (list[i].grupo_economico_ids?.includes(list[j].id) || list[j].grupo_economico_ids?.includes(list[i].id)) continue;
+      if (normalizeAddress(list[j].address) !== addrI) continue;
+      if (nameSimilarity(list[i].name, list[j].name) >= 0.6) {
+        peers.push(list[j]);
+        used.add(list[j].id);
+      }
+    }
+
+    if (peers.length >= 2) {
+      used.add(list[i].id);
+      const allProducts = peers.flatMap(p => p.products || []);
+      const uniqueProducts = new Map<string, ProductItem>();
+      allProducts.forEach(p => { if (!uniqueProducts.has(p.name)) uniqueProducts.set(p.name, p); });
+      groups.push({
+        ids: peers.map(p => p.id),
+        name: peers[0].name,
+        address: peers[0].address,
+        totalProducts: uniqueProducts.size,
+        rucs: peers.map(p => p.custom_fields?.['Documento'] || '').filter(Boolean),
+      });
+    }
+  }
+  return groups;
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export const ManageLocations: React.FC = () => {
   const { activeLocator } = useOutletContext<OutletContextType>();
-  
+
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'manual'>('all');
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
+  const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
+  const [bannerOpen, setBannerOpen] = useState(true);
 
-  const TEST_NAMES = ['daysi timana', 'winston maldonado', 'marjorie villate', 'giuliana peching'];
-
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     if (!activeLocator) return;
     setLoading(true);
     try {
@@ -126,14 +209,16 @@ export const ManageLocations: React.FC = () => {
               : apiLoc.products,
             is_manual_override: true,
             custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
-            published: override.published !== undefined ? override.published : true
+            published: override.published !== undefined ? override.published : true,
+            grupo_economico_ids: override.grupo_economico_ids || null,
           };
         }
 
         return {
           ...apiLoc,
           is_manual_override: false,
-          published: true
+          published: true,
+          grupo_economico_ids: null,
         } as LocationItem;
       });
 
@@ -157,7 +242,8 @@ export const ManageLocations: React.FC = () => {
         mergedList.unshift({
           ...customDbLoc,
           is_manual_override: true,
-          published: customDbLoc.published !== undefined ? customDbLoc.published : true
+          published: customDbLoc.published !== undefined ? customDbLoc.published : true,
+          grupo_economico_ids: customDbLoc.grupo_economico_ids || null,
         } as LocationItem);
       });
 
@@ -172,47 +258,28 @@ export const ManageLocations: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchLocations();
   }, [activeLocator]);
+
+  useEffect(() => { fetchLocations(); }, [fetchLocations]);
 
   const handleTogglePublish = async (id: string, currentStatus: boolean) => {
     try {
       if (!id.startsWith('doc-')) {
-        await supabase
-          .from('bm_locations')
-          .update({ published: !currentStatus })
-          .eq('id', id);
+        await supabase.from('bm_locations').update({ published: !currentStatus }).eq('id', id);
       }
-      
-      // Update local state
-      setLocations(prev => 
-        prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc)
-      );
+      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc));
     } catch (err: any) {
       console.error(err);
-      setLocations(prev => 
-        prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc)
-      );
+      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc));
     }
   };
 
   const handleDeleteLocation = async (id: string, name: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar la ubicación "${name}"?`)) {
-      return;
-    }
-
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar la ubicación "${name}"?`)) return;
     try {
       if (!id.startsWith('doc-')) {
-        await supabase
-          .from('bm_locations')
-          .delete()
-          .eq('id', id);
+        await supabase.from('bm_locations').delete().eq('id', id);
       }
-      
-      // Update local state
       setLocations(prev => prev.filter(loc => loc.id !== id));
     } catch (err: any) {
       console.error(err);
@@ -220,36 +287,77 @@ export const ManageLocations: React.FC = () => {
     }
   };
 
-  const removeAccents = (str: string | null | undefined): string => {
-    if (!str) return '';
-    return str
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+  const handleUnifyGroup = async (group: SuggestedGroup) => {
+    const members = locations.filter(l => group.ids.includes(l.id));
+    const primary = members.reduce((best, cur) =>
+      (cur.products?.length || 0) >= (best.products?.length || 0) ? cur : best
+    );
+    try {
+      await supabase.from('bm_locations').upsert({
+        id: primary.id,
+        locator_id: activeLocator!.id,
+        name: primary.name,
+        address: primary.address,
+        lat: primary.lat ?? 0,
+        lng: primary.lng ?? 0,
+        image_url: primary.image_url || null,
+        custom_fields: primary.custom_fields || {},
+        published: primary.published !== false,
+        grupo_economico_ids: group.ids,
+      }, { onConflict: 'id' });
+    } catch (err) {
+      console.error('Error unifying group:', err);
+    }
+    await fetchLocations();
   };
 
-  // Count total manual overrides saved in Supabase
-  const manualCount = useMemo(() => {
-    return locations.filter(loc => loc.is_manual_override).length;
+  const handleDissolveGroup = async (primaryId: string) => {
+    if (!window.confirm('¿Deseas separar este grupo económico? Las ubicaciones volverán a mostrarse de forma independiente.')) return;
+    try {
+      await supabase.from('bm_locations').update({ grupo_economico_ids: null }).eq('id', primaryId);
+    } catch (err) {
+      console.error('Error dissolving group:', err);
+    }
+    await fetchLocations();
+  };
+
+  const handleIgnoreGroup = (group: SuggestedGroup) => {
+    const key = [...group.ids].sort().join('|');
+    setIgnoredGroupKeys(prev => new Set([...prev, key]));
+  };
+
+  // ── Derived state ─────────────────────────────────────────────────────────
+
+  const suggestedGroups = useMemo(() => {
+    const raw = detectPossibleGroups(locations);
+    return raw.filter(g => !ignoredGroupKeys.has([...g.ids].sort().join('|')));
+  }, [locations, ignoredGroupKeys]);
+
+  const groupSecondaryIds = useMemo(() => {
+    const secondary = new Set<string>();
+    locations.forEach(loc => {
+      if (loc.grupo_economico_ids && loc.grupo_economico_ids.length > 0) {
+        loc.grupo_economico_ids.forEach(gid => { if (gid !== loc.id) secondary.add(gid); });
+      }
+    });
+    return secondary;
   }, [locations]);
 
-  // Filter locations by mode (All vs Editados Manualmente) AND search query
-  const filteredLocations = locations.filter(loc => {
-    if (filterMode === 'manual' && !loc.is_manual_override) {
-      return false;
-    }
+  // Count total manual overrides saved in Supabase
+  const manualCount = useMemo(() => locations.filter(loc => loc.is_manual_override).length, [locations]);
 
+  const filteredLocations = useMemo(() => locations.filter(loc => {
+    if (groupSecondaryIds.has(loc.id)) return false;
+    if (filterMode === 'manual' && !loc.is_manual_override) return false;
     const searchClean = removeAccents(search.trim());
     if (!searchClean) return true;
-    
     const matchesName = removeAccents(loc.name).includes(searchClean);
     const matchesAddress = removeAccents(loc.address).includes(searchClean);
     const matchesTags = loc.tags?.some(t => removeAccents(t).includes(searchClean));
     const matchesProducts = loc.products?.some(p => removeAccents(p.name).includes(searchClean));
     const matchesCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(searchClean));
-    
     return matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom;
-  });
+  }), [locations, groupSecondaryIds, filterMode, search]);
 
   if (!activeLocator) {
     return (
@@ -314,7 +422,7 @@ export const ManageLocations: React.FC = () => {
               transition: 'all 0.15s ease'
             }}
           >
-            Todos ({locations.length})
+            Todos ({locations.length - groupSecondaryIds.size})
           </button>
 
           <button
@@ -345,6 +453,63 @@ export const ManageLocations: React.FC = () => {
           {filteredLocations.length} de {locations.length} médicos
         </div>
       </div>
+
+      {/* Suggested Groups Banner */}
+      {suggestedGroups.length > 0 && (
+        <div style={{
+          marginBottom: '16px', borderRadius: 'var(--radius-lg)',
+          border: '1px solid rgba(234,179,8,0.4)', backgroundColor: 'rgba(234,179,8,0.06)', overflow: 'hidden'
+        }}>
+          <button type="button" onClick={() => setBannerOpen(o => !o)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 20px', background: 'none', border: 'none', cursor: 'pointer',
+            color: '#ca8a04', fontWeight: 700, fontSize: '13px', gap: '10px'
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link2 size={15} />
+              Posibles grupos económicos detectados ({suggestedGroups.length}) — misma dirección, nombre similar
+            </span>
+            {bannerOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </button>
+          {bannerOpen && (
+            <div style={{ padding: '0 20px 16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {suggestedGroups.map(group => (
+                <div key={group.ids.join('|')} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
+                  gap: '10px', padding: '12px 16px',
+                  backgroundColor: 'var(--color-dark-surface)', borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-dark-border)'
+                }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-dark-text-primary)' }}>
+                      {group.name} <span style={{ color: 'var(--color-dark-text-tertiary)', fontWeight: 400 }}>×{group.ids.length}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>{group.address}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
+                      RUCs: {group.rucs.join(' • ')} &nbsp;·&nbsp; {group.totalProducts} productos combinados
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => handleIgnoreGroup(group)} style={{
+                      padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 600,
+                      border: '1px solid var(--color-dark-border)', background: 'transparent',
+                      color: 'var(--color-dark-text-secondary)', cursor: 'pointer'
+                    }}>Ignorar</button>
+                    <button type="button" onClick={() => handleUnifyGroup(group)} style={{
+                      padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 700,
+                      border: 'none', backgroundColor: '#00506E', color: '#fff', cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}>
+                      <Link2 size={12} />
+                      Unificar como Grupo
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Locations Table */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
@@ -380,17 +545,31 @@ export const ManageLocations: React.FC = () => {
               </thead>
               <tbody>
                 {filteredLocations.slice(0, 100).map(loc => {
-                  const productCount = loc.products?.length || 0;
+                  const isGroup = !!(loc.grupo_economico_ids && loc.grupo_economico_ids.length > 0);
+                  // Merge products from all group members if this is a primary group entry
+                  const groupMemberProds = isGroup
+                    ? locations
+                        .filter(l => loc.grupo_economico_ids!.includes(l.id) && l.id !== loc.id)
+                        .flatMap(l => l.products || [])
+                    : [];
+                  const allGroupProds = [...(loc.products || []), ...groupMemberProds];
+                  const dedupedProds = Array.from(new Map(allGroupProds.map(p => [p.name, p])).values());
+                  const productCount = dedupedProds.length;
+
+                  // Collect all RUCs for the group
+                  const groupRucs = isGroup
+                    ? [loc.custom_fields?.['Documento'], ...locations
+                        .filter(l => loc.grupo_economico_ids!.includes(l.id) && l.id !== loc.id)
+                        .map(l => l.custom_fields?.['Documento'])]
+                        .filter(Boolean)
+                    : [loc.custom_fields?.['Documento']].filter(Boolean);
 
                   return (
                     <tr key={loc.id}>
                       <td>
                         {loc.image_url ? (
-                          <img 
-                            src={loc.image_url} 
-                            alt={loc.name} 
-                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)' }}
-                          />
+                          <img src={loc.image_url} alt={loc.name}
+                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)' }} />
                         ) : (
                           <div style={{ width: '48px', height: '48px', backgroundColor: 'var(--color-dark-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-dark-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-dark-text-tertiary)' }}>
                             <ImageIcon size={18} />
@@ -402,30 +581,35 @@ export const ManageLocations: React.FC = () => {
                           <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)' }}>{loc.name}</span>
                           {loc.is_manual_override && (
                             <span style={{
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              color: '#00506E',
-                              backgroundColor: 'rgba(30, 200, 170, 0.15)',
-                              border: '1px solid rgba(30, 200, 170, 0.35)',
-                              padding: '2px 7px',
-                              borderRadius: 'var(--radius-full)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px'
+                              fontSize: '10px', fontWeight: 700, color: '#00506E',
+                              backgroundColor: 'rgba(30, 200, 170, 0.15)', border: '1px solid rgba(30, 200, 170, 0.35)',
+                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
                             }}>
                               <Edit3 size={10} style={{ color: '#1EC8AA' }} />
                               Edición Manual
                             </span>
                           )}
+                          {isGroup && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: 700, color: '#7c3aed',
+                              backgroundColor: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)',
+                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              <Link2 size={10} />
+                              Grupo Económico
+                            </span>
+                          )}
                         </div>
-                        {loc.custom_fields?.["Razón Social"] && (
+                        {loc.custom_fields?.['Razón Social'] && (
                           <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
-                            RS: {loc.custom_fields["Razón Social"]}
+                            RS: {loc.custom_fields['Razón Social']}
                           </div>
                         )}
-                        {loc.custom_fields?.["Documento"] && (
+                        {groupRucs.length > 0 && (
                           <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)' }}>
-                            {loc.custom_fields["Documento"]}
+                            {groupRucs.join(' | ')}
                           </div>
                         )}
                       </td>
@@ -440,7 +624,7 @@ export const ManageLocations: React.FC = () => {
                               {productCount} {productCount === 1 ? 'producto' : 'productos'}
                             </span>
                             <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {loc.products?.slice(0, 2).map(p => p.name).join(', ')}
+                              {dedupedProds.slice(0, 2).map(p => p.name).join(', ')}
                               {productCount > 2 && '...'}
                             </div>
                           </div>
@@ -449,8 +633,7 @@ export const ManageLocations: React.FC = () => {
                         )}
                       </td>
                       <td>
-                        <button 
-                          onClick={() => handleTogglePublish(loc.id, loc.published)}
+                        <button onClick={() => handleTogglePublish(loc.id, loc.published)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
                           title={loc.published ? 'Cambiar a borrador' : 'Publicar'}
                         >
@@ -469,9 +652,18 @@ export const ManageLocations: React.FC = () => {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'end' }}>
-                          <Link 
-                            to={`/dashboard/locations/${loc.id}/edit`} 
-                            className="btn-icon" 
+                          {isGroup && (
+                            <button type="button" className="btn-icon"
+                              onClick={() => handleDissolveGroup(loc.id)}
+                              style={{ color: '#7c3aed' }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = '#a855f7'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = '#7c3aed'}
+                              title="Desunir grupo económico"
+                            >
+                              <Link2Off size={16} />
+                            </button>
+                          )}
+                          <Link to={`/dashboard/locations/${loc.id}/edit`} className="btn-icon"
                             style={{ color: 'var(--color-dark-text-secondary)' }}
                             onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
                             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}
@@ -479,9 +671,7 @@ export const ManageLocations: React.FC = () => {
                           >
                             <Edit3 size={16} />
                           </Link>
-                          <button 
-                            className="btn-icon" 
-                            onClick={() => handleDeleteLocation(loc.id, loc.name)}
+                          <button className="btn-icon" onClick={() => handleDeleteLocation(loc.id, loc.name)}
                             style={{ color: 'var(--color-dark-text-secondary)' }}
                             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
                             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-dark-text-secondary)'}

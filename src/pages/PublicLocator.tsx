@@ -63,6 +63,7 @@ interface LocationItem {
   description: string | null;
   products?: ProductItem[];
   distance?: number; // calculated locally
+  grupo_economico_ids?: string[] | null;
 }
 
 interface LocatorData {
@@ -397,8 +398,29 @@ export const PublicLocator: React.FC = () => {
           } as LocationItem);
         });
 
+        // ── Grupo Económico: merge products and hide secondary members on public map ────
+        const groupSecondaryIdsPublic = new Set<string>();
+        mergedLocations.forEach(loc => {
+          if (!loc.grupo_economico_ids || loc.grupo_economico_ids.length === 0) return;
+          // This location is the primary — collect its members
+          const memberLocs = mergedLocations.filter(
+            m => loc.grupo_economico_ids!.includes(m.id) && m.id !== loc.id
+          );
+          // Merge all products (deduplicated by name)
+          const allProds = [...(loc.products || []), ...memberLocs.flatMap(m => m.products || [])];
+          const dedupedProds = Array.from(new Map(allProds.map(p => [p.name, p])).values());
+          loc.products = dedupedProds;
+          // Combine RUCs in Documento field
+          const allRucs = [loc.custom_fields?.['Documento'], ...memberLocs.map(m => m.custom_fields?.['Documento'])]
+            .filter(Boolean).join(' | ');
+          if (allRucs) loc.custom_fields = { ...(loc.custom_fields || {}), 'Documento': allRucs };
+          // Mark secondary members for exclusion
+          memberLocs.forEach(m => groupSecondaryIdsPublic.add(m.id));
+        });
+
         const cleanedLocations = mergedLocations.filter(
-          loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
+          loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn)) &&
+                 !groupSecondaryIdsPublic.has(loc.id)
         );
 
         currentLocator = currentLocator || {
