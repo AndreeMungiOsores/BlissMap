@@ -79,7 +79,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v18';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v19';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 export interface SocialUrls {
