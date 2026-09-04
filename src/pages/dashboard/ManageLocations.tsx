@@ -17,7 +17,12 @@ import {
   Link2,
   Link2Off,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye,
+  EyeOff,
+  Check,
+  Tag,
+  SlidersHorizontal
 } from 'lucide-react';
 
 import { fetchB2BSalesLocations } from '../../services/b2bApiService';
@@ -58,6 +63,7 @@ interface SuggestedGroup {
 
 interface OutletContextType {
   activeLocator: Locator | null;
+  fetchLocators?: () => Promise<void>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -131,7 +137,7 @@ const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const ManageLocations: React.FC = () => {
-  const { activeLocator } = useOutletContext<OutletContextType>();
+  const { activeLocator, fetchLocators } = useOutletContext<OutletContextType>();
 
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [search, setSearch] = useState('');
@@ -140,6 +146,24 @@ export const ManageLocations: React.FC = () => {
   const [error] = useState<string | null>(null);
   const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
   const [bannerOpen, setBannerOpen] = useState(true);
+
+  // Brand Visibility Section State
+  const [brandVisibilityOpen, setBrandVisibilityOpen] = useState(false);
+  const [hiddenBrands, setHiddenBrands] = useState<Set<string>>(new Set());
+  const [savingBrands, setSavingBrands] = useState(false);
+  const [brandSaveSuccess, setBrandSaveSuccess] = useState(false);
+
+  // Sync hiddenBrands with activeLocator or localStorage fallback
+  useEffect(() => {
+    if (activeLocator) {
+      const storedLocal = localStorage.getItem(`bm_hidden_brands_${activeLocator.id}`);
+      const initialHidden: string[] = activeLocator.hidden_brands && Array.isArray(activeLocator.hidden_brands)
+        ? activeLocator.hidden_brands
+        : (storedLocal ? JSON.parse(storedLocal) : []);
+      
+      setHiddenBrands(new Set(initialHidden.map(b => b.toUpperCase())));
+    }
+  }, [activeLocator]);
 
   const fetchLocations = useCallback(async () => {
     if (!activeLocator) return;
@@ -365,6 +389,85 @@ export const ManageLocations: React.FC = () => {
     return matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom;
   }), [locations, groupSecondaryIds, filterMode, search]);
 
+  // Extract unique brands with product counts across the full dataset
+  const brandStats = useMemo(() => {
+    const map = new Map<string, { brand: string; count: number }>();
+    locations.forEach(loc => {
+      loc.products?.forEach(p => {
+        if (p.brand && p.brand.trim()) {
+          const raw = p.brand.trim();
+          const upper = raw.toUpperCase();
+          const existing = map.get(upper);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            map.set(upper, { brand: raw, count: 1 });
+          }
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [locations]);
+
+  const toggleBrandVisibility = (brandName: string) => {
+    const key = brandName.toUpperCase();
+    setHiddenBrands(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+    setBrandSaveSuccess(false);
+  };
+
+  const handleSelectAllBrands = () => {
+    setHiddenBrands(new Set());
+    setBrandSaveSuccess(false);
+  };
+
+  const handleDeselectAllBrands = () => {
+    const allKeys = new Set(brandStats.map(b => b.brand.toUpperCase()));
+    setHiddenBrands(allKeys);
+    setBrandSaveSuccess(false);
+  };
+
+  const handleSaveBrandVisibility = async () => {
+    if (!activeLocator) return;
+    setSavingBrands(true);
+    setBrandSaveSuccess(false);
+    const hiddenArray = Array.from(hiddenBrands);
+
+    // 1. Instant fallback via localStorage
+    try {
+      localStorage.setItem(`bm_hidden_brands_${activeLocator.id}`, JSON.stringify(hiddenArray));
+    } catch (e) {
+      console.warn('localStorage save warning:', e);
+    }
+
+    // 2. Persist to Supabase
+    try {
+      const { error: sbError } = await supabase
+        .from('bm_locators')
+        .update({ hidden_brands: hiddenArray })
+        .eq('id', activeLocator.id);
+
+      if (sbError) {
+        console.warn('Supabase update notice (requires ALTER TABLE bm_locators):', sbError);
+      } else if (fetchLocators) {
+        await fetchLocators();
+      }
+    } catch (err) {
+      console.warn('Supabase update exception:', err);
+    } finally {
+      setSavingBrands(false);
+      setBrandSaveSuccess(true);
+      setTimeout(() => setBrandSaveSuccess(false), 3500);
+    }
+  };
+
   if (!activeLocator) {
     return (
       <div style={{
@@ -412,7 +515,7 @@ export const ManageLocations: React.FC = () => {
         </div>
 
         {/* Filter Pills */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => setFilterMode('all')}
@@ -453,12 +556,264 @@ export const ManageLocations: React.FC = () => {
             <Edit3 size={13} />
             Editados Manualmente ({manualCount})
           </button>
+
+          <button
+            type="button"
+            onClick={() => setBrandVisibilityOpen(prev => !prev)}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: brandVisibilityOpen ? '1.5px solid #1EC8AA' : '1px solid rgba(30, 200, 170, 0.4)',
+              backgroundColor: brandVisibilityOpen ? '#1EC8AA' : 'rgba(30, 200, 170, 0.08)',
+              color: brandVisibilityOpen ? '#FFFFFF' : '#00506E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+            aria-expanded={brandVisibilityOpen}
+            title="Configurar qué marcas se muestran u ocultan en el mapa público"
+          >
+            <Tag size={13} />
+            Visibilidad de Marcas ({brandStats.length - hiddenBrands.size}/{brandStats.length})
+            {brandVisibilityOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
         </div>
         
-        <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 'auto' }}>
           {filteredLocations.length} de {locations.length} médicos
         </div>
       </div>
+
+      {/* Brand Visibility Section */}
+      {brandVisibilityOpen && (
+        <section 
+          aria-label="Gestión de Visibilidad de Marcas en el Mapa"
+          style={{
+            marginBottom: '20px',
+            borderRadius: 'var(--radius-lg)',
+            border: '1.5px solid rgba(30, 200, 170, 0.4)',
+            backgroundColor: 'var(--color-dark-surface)',
+            boxShadow: '0 4px 20px -2px rgba(0,0,0,0.06)',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            padding: '16px 22px',
+            borderBottom: '1px solid var(--color-dark-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            backgroundColor: 'rgba(30, 200, 170, 0.04)'
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <SlidersHorizontal size={17} style={{ color: '#1EC8AA' }} />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--color-dark-text-primary)' }}>
+                  Visibilidad de Marcas en el Mapa Público
+                </h3>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  backgroundColor: hiddenBrands.size === 0 ? 'rgba(30, 200, 170, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+                  color: hiddenBrands.size === 0 ? '#1EC8AA' : '#ef4444',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)'
+                }}>
+                  {brandStats.length - hiddenBrands.size} de {brandStats.length} marcas activas
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+                Selecciona qué marcas se exhibirán a los clientes en el mapa público y su buscador. Los comercios y productos de las marcas desactivadas no serán visibles en la web pública.
+              </p>
+            </div>
+
+            {/* Quick Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={handleSelectAllBrands}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  border: '1px solid var(--color-dark-border)',
+                  backgroundColor: 'transparent',
+                  color: 'var(--color-dark-text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Marcar todas las marcas para que se muestren en el mapa"
+              >
+                Marcar todas
+              </button>
+              <button
+                type="button"
+                onClick={handleDeselectAllBrands}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  border: '1px solid var(--color-dark-border)',
+                  backgroundColor: 'transparent',
+                  color: 'var(--color-dark-text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Desmarcar todas las marcas"
+              >
+                Desmarcar todas
+              </button>
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div style={{
+            padding: '20px 22px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+            gap: '12px'
+          }}>
+            {brandStats.map(item => {
+              const isHidden = hiddenBrands.has(item.brand.toUpperCase());
+              const isVisible = !isHidden;
+
+              return (
+                <div
+                  key={item.brand}
+                  onClick={() => toggleBrandVisibility(item.brand)}
+                  role="checkbox"
+                  aria-checked={isVisible}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      toggleBrandVisibility(item.brand);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    border: `1.5px solid ${isVisible ? '#1EC8AA' : 'var(--color-dark-border)'}`,
+                    backgroundColor: isVisible ? 'rgba(30, 200, 170, 0.05)' : 'var(--color-dark-bg)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    userSelect: 'none'
+                  }}
+                  title={isVisible ? `Hacer clic para ocultar ${item.brand} del mapa` : `Hacer clic para mostrar ${item.brand} en el mapa`}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Tag size={13} style={{ color: isVisible ? '#1EC8AA' : 'var(--color-dark-text-tertiary)', flexShrink: 0 }} />
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: isVisible ? 'var(--color-dark-text-primary)' : 'var(--color-dark-text-tertiary)',
+                        textDecoration: isVisible ? 'none' : 'line-through',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {item.brand}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)' }}>
+                      {item.count} {item.count === 1 ? 'producto' : 'productos'}
+                    </span>
+                  </div>
+
+                  {/* Toggle Checkbox Badge */}
+                  <div style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: 'var(--radius-full)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isVisible ? '#1EC8AA' : 'transparent',
+                    border: `1.5px solid ${isVisible ? '#1EC8AA' : 'var(--color-dark-border)'}`,
+                    color: isVisible ? '#FFFFFF' : 'var(--color-dark-text-tertiary)',
+                    flexShrink: 0,
+                    marginLeft: '8px',
+                    transition: 'all 0.15s ease'
+                  }}>
+                    {isVisible ? <Check size={15} strokeWidth={3} /> : <EyeOff size={13} />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer with Save Action and Status */}
+          <div style={{
+            padding: '14px 22px',
+            borderTop: '1px solid var(--color-dark-border)',
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+              <span>
+                {hiddenBrands.size === 0
+                  ? '✅ Todas las marcas están visibles en el mapa público.'
+                  : `👁️ ${hiddenBrands.size} ${hiddenBrands.size === 1 ? 'marca oculta' : 'marcas ocultas'} en el mapa público.`}
+              </span>
+              {brandSaveSuccess && (
+                <span style={{ color: '#1EC8AA', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Check size={14} /> ¡Visibilidad guardada!
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveBrandVisibility}
+              disabled={savingBrands}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 20px',
+                fontSize: '13px',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: '#00506E',
+                border: 'none',
+                color: '#FFFFFF',
+                cursor: savingBrands ? 'not-allowed' : 'pointer',
+                opacity: savingBrands ? 0.7 : 1,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {savingBrands ? (
+                <>
+                  <div className="spinner" style={{ width: '14px', height: '14px' }} />
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <Eye size={15} />
+                  <span>Guardar Visibilidad en el Mapa</span>
+                </>
+              )}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Suggested Groups Banner */}
       {suggestedGroups.length > 0 && (

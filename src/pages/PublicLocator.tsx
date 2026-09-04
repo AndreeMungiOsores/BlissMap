@@ -77,6 +77,7 @@ interface LocatorData {
   marker_image_url: string | null;
   search_placeholder: string;
   distance_unit: string;
+  hidden_brands?: string[] | null;
 }
 
 export type MobileSheetState = 'collapsed' | 'half' | 'full';
@@ -418,10 +419,29 @@ export const PublicLocator: React.FC = () => {
           memberLocs.forEach(m => groupSecondaryIdsPublic.add(m.id));
         });
 
-        const cleanedLocations = mergedLocations.filter(
-          loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn)) &&
-                 !groupSecondaryIdsPublic.has(loc.id)
-        );
+        // ── Brand Visibility Filter: Hide products and locations of excluded brands ────
+        const locId = currentLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
+        const storedHidden = localStorage.getItem(`bm_hidden_brands_${locId}`);
+        const hiddenList: string[] = (currentLocator?.hidden_brands && Array.isArray(currentLocator.hidden_brands))
+          ? currentLocator.hidden_brands
+          : (storedHidden ? JSON.parse(storedHidden) : []);
+
+        const hiddenBrandsSet = new Set<string>(hiddenList.map(b => b.toUpperCase()));
+
+        const cleanedLocations = mergedLocations
+          .map(loc => {
+            if (hiddenBrandsSet.size > 0 && loc.products && loc.products.length > 0) {
+              const visibleProds = loc.products.filter(p => !p.brand || !hiddenBrandsSet.has(p.brand.toUpperCase()));
+              return { ...loc, products: visibleProds };
+            }
+            return loc;
+          })
+          .filter(loc => {
+            if (TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))) return false;
+            if (groupSecondaryIdsPublic.has(loc.id)) return false;
+            if (hiddenBrandsSet.size > 0 && (!loc.products || loc.products.length === 0)) return false;
+            return true;
+          });
 
         currentLocator = currentLocator || {
           id: 'local-medicosbliss',

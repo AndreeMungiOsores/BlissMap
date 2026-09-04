@@ -26,6 +26,7 @@ export interface Locator {
   marker_image_url: string | null;
   search_placeholder: string;
   distance_unit: string;
+  hidden_brands?: string[] | null;
 }
 
 const DEFAULT_LOCAL_LOCATOR: Locator = {
@@ -38,7 +39,8 @@ const DEFAULT_LOCAL_LOCATOR: Locator = {
   marker_color: '#3B82F6',
   marker_image_url: null,
   search_placeholder: 'Buscar por médico, dirección o producto...',
-  distance_unit: 'km'
+  distance_unit: 'km',
+  hidden_brands: []
 };
 
 export const DashboardLayout: React.FC = () => {
