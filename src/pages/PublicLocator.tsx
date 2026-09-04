@@ -524,6 +524,26 @@ export const PublicLocator: React.FC = () => {
       .toLowerCase();
   };
 
+  const productMatchesQuery = (product: ProductItem, qClean: string): boolean => {
+    if (!qClean) return true;
+    const cleanName = removeAccents(product.name);
+    const cleanBrand = removeAccents(product.brand || '');
+    const combined = `${cleanBrand} ${cleanName}`.trim();
+
+    // 1. Direct substring match in name, brand or combined
+    if (cleanName.includes(qClean) || (cleanBrand && cleanBrand.includes(qClean)) || combined.includes(qClean)) {
+      return true;
+    }
+
+    // 2. Token-based matching: every word in query must be present in combined brand + name
+    const tokens = qClean.split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length > 1) {
+      return tokens.every(token => combined.includes(token));
+    }
+
+    return false;
+  };
+
   // Search Query Active State (Requires at least 3 characters for text search)
   const minQueryLen = 3;
   const queryClean = removeAccents(searchQuery.trim());
@@ -540,7 +560,7 @@ export const PublicLocator: React.FC = () => {
   const productSuggestions = useMemo(() => {
     if (!isQueryActive) return [];
     return allUniqueProducts.filter(
-      p => (removeAccents(p.name).includes(queryClean) || (p.brand && removeAccents(p.brand).includes(queryClean))) && !selectedProducts.includes(p.name)
+      p => productMatchesQuery(p, queryClean) && !selectedProducts.includes(p.name)
     ).slice(0, 8);
   }, [queryClean, isQueryActive, allUniqueProducts, selectedProducts]);
 
@@ -630,8 +650,7 @@ export const PublicLocator: React.FC = () => {
                 if (selectedProducts.length > 0 && selectedProducts.includes(p.name)) return true;
                 if (selectedBrand && p.brand && p.brand.toUpperCase() === selectedBrand.toUpperCase()) return true;
                 if (isQueryActive) {
-                  if (removeAccents(p.name).includes(queryClean)) return true;
-                  if (p.brand && removeAccents(p.brand).includes(queryClean)) return true;
+                  if (productMatchesQuery(p, queryClean)) return true;
                 }
                 return false;
               })
@@ -675,10 +694,24 @@ export const PublicLocator: React.FC = () => {
           const inAddress = removeAccents(loc.address).includes(queryClean);
           const inTags = loc.tags?.some(t => removeAccents(t).includes(queryClean));
           const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(queryClean));
-          const inProducts = loc.products?.some(p => removeAccents(p.name).includes(queryClean) || (p.brand && removeAccents(p.brand).includes(queryClean)));
+          const inProducts = loc.products?.some(p => productMatchesQuery(p, queryClean));
           
           if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
-            return false;
+            const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
+            if (tokens.length > 1) {
+              const allLocText = removeAccents([
+                loc.name,
+                loc.address,
+                ...(loc.tags || []),
+                ...Object.values(loc.custom_fields || {}),
+                ...(loc.products || []).map(p => `${p.brand || ''} ${p.name}`)
+              ].join(' '));
+
+              const allTokensMatch = tokens.every(token => allLocText.includes(token));
+              if (!allTokensMatch) return false;
+            } else {
+              return false;
+            }
           }
         }
 
@@ -1214,6 +1247,9 @@ export const PublicLocator: React.FC = () => {
                     if (selectedBrand) {
                       return prod.brand?.toLowerCase() === selectedBrand.toLowerCase();
                     }
+                    if (isQueryActive) {
+                      return productMatchesQuery(prod, queryClean);
+                    }
                     return true;
                   });
 
@@ -1426,8 +1462,7 @@ export const PublicLocator: React.FC = () => {
                           return true;
                         }
                         if (isQueryActive) {
-                          if (p.name.toLowerCase().includes(queryClean)) return true;
-                          if (p.brand && p.brand.toLowerCase().includes(queryClean)) return true;
+                          if (productMatchesQuery(p, queryClean)) return true;
                         }
                         return false;
                       }).sort((a, b) => getProbabilityInfo(b.last_date).score - getProbabilityInfo(a.last_date).score)

@@ -381,12 +381,35 @@ export const ManageLocations: React.FC = () => {
     const matchesName = removeAccents(loc.name).includes(searchClean);
     const matchesAddress = removeAccents(loc.address).includes(searchClean);
     const matchesTags = loc.tags?.some(t => removeAccents(t).includes(searchClean));
-    const matchesProducts = loc.products?.some(p => 
-      removeAccents(p.name).includes(searchClean) || 
-      (p.brand && removeAccents(p.brand).includes(searchClean))
-    );
+    const matchesProducts = loc.products?.some(p => {
+      const cleanName = removeAccents(p.name);
+      const cleanBrand = removeAccents(p.brand || '');
+      const combined = `${cleanBrand} ${cleanName}`.trim();
+      if (cleanName.includes(searchClean) || (cleanBrand && cleanBrand.includes(searchClean)) || combined.includes(searchClean)) {
+        return true;
+      }
+      const tokens = searchClean.split(/\s+/).filter(t => t.length > 0);
+      if (tokens.length > 1) {
+        return tokens.every(token => combined.includes(token));
+      }
+      return false;
+    });
     const matchesCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(searchClean));
-    return matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom;
+    if (matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom) {
+      return true;
+    }
+    const tokens = searchClean.split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length > 1) {
+      const allLocText = removeAccents([
+        loc.name,
+        loc.address,
+        ...(loc.tags || []),
+        ...Object.values(loc.custom_fields || {}),
+        ...(loc.products || []).map(p => `${p.brand || ''} ${p.name}`)
+      ].join(' '));
+      return tokens.every(token => allLocText.includes(token));
+    }
+    return false;
   }), [locations, groupSecondaryIds, filterMode, search]);
 
   // Extract unique brands with product counts across the full dataset
