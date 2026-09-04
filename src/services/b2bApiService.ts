@@ -64,6 +64,7 @@ export interface B2BVentaDetalle {
   nro_doc: string;
   sku: string;
   producto: string;
+  marca?: string;
   cantidad: number;
   ultima_compra: string;
 }
@@ -79,7 +80,7 @@ export interface B2BApiResponse {
 const API_BASE_URL = '/api/b2b-erp';
 const API_DIRECT_URL = 'https://blisscorp.niuxpro.com/e/action/33_json/14_vtab2bprd/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY = 'blissmap_b2b_api_v2_v21';
+const CACHE_KEY = 'blissmap_b2b_api_v2_v22';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora de vigencia en caché
 
 export interface SocialUrls {
@@ -358,12 +359,13 @@ export const fetchB2BSalesLocations = async (fallbackLocations: LocationItem[]):
       const cleanNameKey = cleanProductName.toLowerCase().replace(/\s+/g, '').replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e').replace(/[íìïî]/g, 'i').replace(/[óòöô]/g, 'o').replace(/[úùüû]/g, 'u');
       const imgUrl = bySkuMap[skuStr] || byNameMap[cleanNameKey] || undefined;
 
+      const apiMarca = (item.marca || '').trim();
       const productObj: ProductItem = {
         name: cleanProductName,
         qty: Number(item.cantidad) || 1,
         last_date: item.ultima_compra,
         sku: item.sku,
-        brand: detectBrand(cleanProductName),
+        brand: apiMarca || detectBrand(cleanProductName),
         image_url: imgUrl,
         empresa: emp
       };

@@ -466,13 +466,18 @@ export const PublicLocator: React.FC = () => {
 
   // Extract all unique brands across dataset
   const allUniqueBrands = useMemo(() => {
-    const set = new Set<string>();
+    const brandMap = new Map<string, string>();
     locations.forEach(loc => {
       loc.products?.forEach(p => {
-        if (p.brand) set.add(p.brand.toUpperCase());
+        if (p.brand && p.brand.trim()) {
+          const upper = p.brand.trim().toUpperCase();
+          if (!brandMap.has(upper)) {
+            brandMap.set(upper, p.brand.trim());
+          }
+        }
       });
     });
-    return Array.from(set).sort();
+    return Array.from(brandMap.values()).sort((a, b) => a.localeCompare(b));
   }, [locations]);
 
   // Extract all unique products across all locations

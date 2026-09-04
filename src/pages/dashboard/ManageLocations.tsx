@@ -26,6 +26,7 @@ interface ProductItem {
   name: string;
   qty: number;
   last_date?: string;
+  brand?: string;
 }
 
 interface LocationItem {
@@ -356,7 +357,10 @@ export const ManageLocations: React.FC = () => {
     const matchesName = removeAccents(loc.name).includes(searchClean);
     const matchesAddress = removeAccents(loc.address).includes(searchClean);
     const matchesTags = loc.tags?.some(t => removeAccents(t).includes(searchClean));
-    const matchesProducts = loc.products?.some(p => removeAccents(p.name).includes(searchClean));
+    const matchesProducts = loc.products?.some(p => 
+      removeAccents(p.name).includes(searchClean) || 
+      (p.brand && removeAccents(p.brand).includes(searchClean))
+    );
     const matchesCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(searchClean));
     return matchesName || matchesAddress || matchesTags || matchesProducts || matchesCustom;
   }), [locations, groupSecondaryIds, filterMode, search]);
