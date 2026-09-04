@@ -652,9 +652,6 @@ export const ManageLocations: React.FC = () => {
                   {brandStats.length - hiddenBrands.size} de {brandStats.length} marcas activas
                 </span>
               </div>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
-                Selecciona qué marcas se exhibirán a los clientes en el mapa público y su buscador. Los comercios y productos de las marcas desactivadas no serán visibles en la web pública.
-              </p>
             </div>
 
             {/* Quick Actions */}
@@ -790,11 +787,11 @@ export const ManageLocations: React.FC = () => {
             gap: '12px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
-              <span>
-                {hiddenBrands.size === 0
-                  ? '✅ Todas las marcas están visibles en el mapa público.'
-                  : `👁️ ${hiddenBrands.size} ${hiddenBrands.size === 1 ? 'marca oculta' : 'marcas ocultas'} en el mapa público.`}
-              </span>
+              {hiddenBrands.size > 0 && (
+                <span>
+                  👁️ {hiddenBrands.size} {hiddenBrands.size === 1 ? 'marca oculta' : 'marcas ocultas'} en el mapa público.
+                </span>
+              )}
               {brandSaveSuccess && (
                 <span style={{ color: '#1EC8AA', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <Check size={14} /> ¡Visibilidad guardada!
