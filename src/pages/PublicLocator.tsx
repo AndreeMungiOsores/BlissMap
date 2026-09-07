@@ -445,8 +445,8 @@ export const PublicLocator: React.FC = () => {
           });
 
         currentLocator = currentLocator || {
-          id: 'local-medicosbliss',
-          name: 'MedicosBliss',
+          id: slug === 'blissfarma' ? 'local-blissfarma' : 'local-medicosbliss',
+          name: slug === 'blissfarma' ? 'Blissfarma' : (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'MedicosBliss'),
           slug: slug || 'medicosbliss',
           map_style: 'default',
           accent_color: '#1EC8AA',
@@ -463,8 +463,8 @@ export const PublicLocator: React.FC = () => {
         console.error(err);
         const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
         setLocator({
-          id: 'local-medicosbliss',
-          name: 'MedicosBliss',
+          id: slug === 'blissfarma' ? 'local-blissfarma' : 'local-medicosbliss',
+          name: slug === 'blissfarma' ? 'Blissfarma' : (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'MedicosBliss'),
           slug: slug || 'medicosbliss',
           map_style: 'default',
           accent_color: '#1EC8AA',
