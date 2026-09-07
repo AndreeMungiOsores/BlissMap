@@ -141,20 +141,22 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Footer */}
-        <div style={{
-          textAlign: 'center',
-          marginTop: '28px',
-          fontSize: '14px',
-          color: '#64748B',
-          borderTop: '1px solid #E5DFD5',
-          paddingTop: '20px'
-        }}>
-          ¿No tienes una cuenta?{' '}
-          <Link to="/register" style={{ color: '#1EC8AA', fontWeight: 600 }}>
-            Regístrate ahora
-          </Link>
-        </div>
+        {/* Footer: Registro público inactivo y oculto (preservado sin borrar para futura reactivación) */}
+        {false && (
+          <div style={{
+            textAlign: 'center',
+            marginTop: '28px',
+            fontSize: '14px',
+            color: '#64748B',
+            borderTop: '1px solid #E5DFD5',
+            paddingTop: '20px'
+          }}>
+            ¿No tienes una cuenta?{' '}
+            <Link to="/register" style={{ color: '#1EC8AA', fontWeight: 600 }}>
+              Regístrate ahora
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
