@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../supabaseClient';
@@ -45,6 +45,20 @@ const DEFAULT_LOCAL_LOCATOR: Locator = {
   hidden_brands: []
 };
 
+const DEFAULT_BLISSFARMA_LOCATOR: Locator = {
+  id: 'local-blissfarma',
+  name: 'Blissfarma',
+  slug: 'blissfarma',
+  map_style: 'default',
+  accent_color: '#1EC8AA',
+  marker_type: 'standard',
+  marker_color: '#1EC8AA',
+  marker_image_url: null,
+  search_placeholder: 'Buscar por médico, dirección o producto...',
+  distance_unit: 'km',
+  hidden_brands: []
+};
+
 export const DashboardLayout: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -54,6 +68,7 @@ export const DashboardLayout: React.FC = () => {
   const [activeLocator, setActiveLocator] = useState<Locator | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const provisioningRef = useRef(false);
 
   const fetchLocators = async () => {
     try {
@@ -72,6 +87,80 @@ export const DashboardLayout: React.FC = () => {
         fetched = [DEFAULT_LOCAL_LOCATOR];
       }
 
+      // Auto-ensure Blissfarma exists as an independent locator clone
+      const hasBlissfarma = fetched.some(l => l.slug === 'blissfarma');
+      if (!hasBlissfarma) {
+        if (user && !provisioningRef.current) {
+          provisioningRef.current = true;
+          const medicosbliss = fetched.find(l => l.slug === 'medicosbliss') || fetched[0];
+          try {
+            const { data: newLoc, error: newLocErr } = await supabase
+              .from('bm_locators')
+              .insert({
+                profile_id: user.id,
+                name: 'Blissfarma',
+                slug: 'blissfarma',
+                map_style: medicosbliss.map_style || 'default',
+                accent_color: medicosbliss.accent_color || '#1EC8AA',
+                marker_type: medicosbliss.marker_type || 'standard',
+                marker_color: medicosbliss.marker_color || '#1EC8AA',
+                marker_image_url: medicosbliss.marker_image_url || null,
+                search_placeholder: medicosbliss.search_placeholder || 'Buscar por médico, dirección o producto...',
+                distance_unit: medicosbliss.distance_unit || 'km',
+                hidden_brands: medicosbliss.hidden_brands ? [...medicosbliss.hidden_brands] : []
+              })
+              .select()
+              .single();
+
+            if (!newLocErr && newLoc) {
+              fetched.push(newLoc as Locator);
+
+              // Clone custom locations independently in background
+              (async () => {
+                try {
+                  const { data: srcLocs } = await supabase
+                    .from('bm_locations')
+                    .select('*')
+                    .eq('locator_id', medicosbliss.id);
+
+                  if (srcLocs && srcLocs.length > 0) {
+                    const cloned = srcLocs.map(loc => {
+                      const { id: _oldId, created_at: _oldCreatedAt, ...rest } = loc;
+                      return {
+                        ...rest,
+                        id: crypto.randomUUID(),
+                        locator_id: newLoc.id,
+                        created_at: new Date().toISOString()
+                      };
+                    });
+
+                    for (let i = 0; i < cloned.length; i += 40) {
+                      await supabase.from('bm_locations').insert(cloned.slice(i, i + 40));
+                    }
+                  }
+
+                  const srcHidden = localStorage.getItem(`bm_hidden_brands_${medicosbliss.id}`);
+                  if (srcHidden) {
+                    localStorage.setItem(`bm_hidden_brands_${newLoc.id}`, srcHidden);
+                  }
+                } catch (cloneErr) {
+                  console.warn('Error cloning locations for Blissfarma:', cloneErr);
+                }
+              })();
+            } else {
+              fetched.push(DEFAULT_BLISSFARMA_LOCATOR);
+            }
+          } catch (err) {
+            console.warn('Auto-provisioning Blissfarma fallback:', err);
+            fetched.push(DEFAULT_BLISSFARMA_LOCATOR);
+          } finally {
+            provisioningRef.current = false;
+          }
+        } else {
+          fetched.push(DEFAULT_BLISSFARMA_LOCATOR);
+        }
+      }
+
       setLocators(fetched);
       
       const storedId = localStorage.getItem('bm_active_locator_id');
@@ -84,7 +173,7 @@ export const DashboardLayout: React.FC = () => {
       }
     } catch (err) {
       console.error('Error fetching locators:', err);
-      setLocators([DEFAULT_LOCAL_LOCATOR]);
+      setLocators([DEFAULT_LOCAL_LOCATOR, DEFAULT_BLISSFARMA_LOCATOR]);
       setActiveLocator(DEFAULT_LOCAL_LOCATOR);
     } finally {
       setLoading(false);
