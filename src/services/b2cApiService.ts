@@ -29,7 +29,7 @@ import productImagesMap from '../data/product_images_map.json';
 const B2C_API_BASE = '/api/b2c-erp';
 const B2C_API_DIRECT = 'https://blisscorp.niuxpro.com/e/action/33_json/16_vtab2cmed/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY_B2C = 'blissmap_b2c_api_v1';
+const CACHE_KEY_B2C = 'blissmap_b2c_api_v2';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /** Default Lima coordinates for entities without a valid address. */
