@@ -23,13 +23,16 @@ import { toTitleCase, cleanSpanishText, getDynamicDateRange } from './b2bApiServ
 import type { LocationItem, ProductItem } from './b2bApiService';
 import { nameSimilarity } from '../utils/stringUtils';
 import productImagesMap from '../data/product_images_map.json';
+import apiGeocodedCoords from '../data/api_geocoded_coords.json';
+import excelGeocodedOverrides from '../data/excel_geocoded_overrides.json';
+import localDoctorsData from '../data/doctors_data.json';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const B2C_API_BASE = '/api/b2c-erp';
 const B2C_API_DIRECT = 'https://blisscorp.niuxpro.com/e/action/33_json/16_vtab2cmed/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY_B2C = 'blissmap_b2c_api_v2';
+const CACHE_KEY_B2C = 'blissmap_b2c_api_v3';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /** Default Lima coordinates for entities without a valid address. */
@@ -115,6 +118,156 @@ const buildProduct = (
     image_url: imgUrl,
     empresa: d.empresa,
   };
+};
+
+// ─── Geocoded reference indexing & resolution ─────────────────────────────────
+
+interface GeocodedReference {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  doc: string;
+}
+
+/**
+ * Builds a unified lookup list of known coordinates from B2B datasets:
+ * - doctors_data.json
+ * - excel_geocoded_overrides.json
+ * - api_geocoded_coords.json
+ */
+const buildKnownGeocodedIndex = (): GeocodedReference[] => {
+  const index: GeocodedReference[] = [];
+
+  // 1. Doctors data base
+  if (Array.isArray(localDoctorsData)) {
+    for (const d of localDoctorsData as LocationItem[]) {
+      if (d.lat && d.lng && (d.lat !== DEFAULT_LAT || d.lng !== DEFAULT_LNG)) {
+        index.push({
+          name: d.name || '',
+          address: d.address || '',
+          lat: d.lat,
+          lng: d.lng,
+          doc: (d.custom_fields?.['Documento'] || '').replace(/\D/g, '')
+        });
+      }
+    }
+  }
+
+  // 2. Excel geocoded overrides
+  const excelMap = excelGeocodedOverrides as Record<string, { address?: string; lat?: number; lng?: number }>;
+  for (const [doc, val] of Object.entries(excelMap)) {
+    if (val && val.lat && val.lng) {
+      index.push({
+        name: '',
+        address: val.address || '',
+        lat: val.lat,
+        lng: val.lng,
+        doc: doc.replace(/\D/g, '')
+      });
+    }
+  }
+
+  // 3. API geocoded coords
+  const apiMap = apiGeocodedCoords as Record<string, { lat: number; lng: number }>;
+  for (const [doc, coords] of Object.entries(apiMap)) {
+    if (coords && coords.lat && coords.lng) {
+      index.push({
+        name: '',
+        address: '',
+        lat: coords.lat,
+        lng: coords.lng,
+        doc: doc.replace(/\D/g, '')
+      });
+    }
+  }
+
+  return index;
+};
+
+/**
+ * Resolves coordinates for a B2C medical center by comparing against known B2B coordinates
+ * using name and address bigram similarity.
+ */
+const resolveCenterCoordinates = (
+  centroName: string,
+  direccionCentro: string,
+  knownIndex: GeocodedReference[]
+): { lat: number; lng: number } | null => {
+  let bestMatch: GeocodedReference | null = null;
+  let bestScore = 0;
+
+  for (const item of knownIndex) {
+    if (item.name) {
+      const simName = nameSimilarity(centroName, item.name);
+      if (simName > bestScore) {
+        bestScore = simName;
+        bestMatch = item;
+      }
+    }
+    if (direccionCentro && item.address) {
+      const simAddr = nameSimilarity(direccionCentro, item.address);
+      if (simAddr > 0.78 && simAddr > bestScore) {
+        bestScore = simAddr;
+        bestMatch = item;
+      }
+    }
+  }
+
+  if (bestScore >= 0.70 && bestMatch) {
+    return { lat: bestMatch.lat, lng: bestMatch.lng };
+  }
+  return null;
+};
+
+/**
+ * Resolves coordinates for a B2C doctor:
+ * 1. If center coordinates exist, doctor inherits them (workplace location).
+ * 2. If doctor document (DNI/RUC) matches an exact document in knownIndex.
+ * 3. If doctor name matches a known doctor with high similarity (>= 0.75).
+ */
+const resolveDoctorCoordinates = (
+  medicoName: string,
+  nroDocMed: string,
+  centroCoords: { lat: number; lng: number } | null,
+  knownIndex: GeocodedReference[]
+): { lat: number; lng: number } | null => {
+  // 1. Inherit from center of work if available
+  if (centroCoords) {
+    return centroCoords;
+  }
+
+  const cleanDoc = (nroDocMed || '').replace(/\D/g, '');
+  // 2. Exact match by document number (DNI / RUC)
+  if (cleanDoc.length >= 8) {
+    for (const item of knownIndex) {
+      if (item.doc && item.doc === cleanDoc) {
+        return { lat: item.lat, lng: item.lng };
+      }
+    }
+  }
+
+  // 3. Match by doctor name similarity
+  if (medicoName) {
+    let bestMatch: GeocodedReference | null = null;
+    let bestScore = 0;
+
+    for (const item of knownIndex) {
+      if (item.name) {
+        const sim = nameSimilarity(medicoName, item.name);
+        if (sim > bestScore) {
+          bestScore = sim;
+          bestMatch = item;
+        }
+      }
+    }
+
+    if (bestScore >= 0.75 && bestMatch) {
+      return { lat: bestMatch.lat, lng: bestMatch.lng };
+    }
+  }
+
+  return null;
 };
 
 // ─── Main fetch function ──────────────────────────────────────────────────────
@@ -210,12 +363,53 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     productsByCmp.set(cmp, existing);
   });
 
-  // ── 4. Build doctors ──────────────────────────────────────────────────────
-  // One LocationItem per unique CMP. A CMP may appear in multiple empresas;
-  // we collapse them by taking the first occurrence's contact data and summing pacientes.
+  // ── 4. Build known geocoded index and pre-resolve centers ─────────────────
+  const knownIndex = buildKnownGeocodedIndex();
+
+  // PASS A: Group all CMPs by normalized centro name to resolve center coordinates first
+  interface CentroGroup {
+    rawCentro: B2CCentro;
+    cmps: string[];
+  }
+  const centroGroupsByKey = new Map<string, CentroGroup>();
+  const centerCoordsByKey = new Map<string, { lat: number; lng: number }>();
+
+  rawCentros.forEach(c => {
+    const cmp = (c.cmp || '').trim();
+    const centroName = (c.centro || '').trim();
+    if (!cmp || !centroName) return;
+
+    // Only include centers whose associated doctor has BlissFarma products
+    const products = productsByCmp.get(cmp);
+    if (!products || products.length === 0) return;
+
+    const key = toSlug(centroName);
+    const existing = centroGroupsByKey.get(key);
+    if (existing) {
+      if (!existing.cmps.includes(cmp)) {
+        existing.cmps.push(cmp);
+      }
+    } else {
+      centroGroupsByKey.set(key, { rawCentro: c, cmps: [cmp] });
+    }
+  });
+
+  // Resolve coordinates for each unique center
+  centroGroupsByKey.forEach((group, key) => {
+    const name = (group.rawCentro.centro || '').trim();
+    const dir = (group.rawCentro.direccion_centro || '').trim();
+    const resolved = resolveCenterCoordinates(name, dir, knownIndex);
+    if (resolved) {
+      centerCoordsByKey.set(key, resolved);
+    }
+  });
+
+  // ── 5. Build doctors ──────────────────────────────────────────────────────
+  // One LocationItem per unique CMP. Doctors inherit coordinates from their center
+  // or match against known B2B doctors by document / name similarity.
   const doctorsByCmp = new Map<string, LocationItem>();
 
-  // First pass: resolve centros per CMP for address fallback
+  // Map centros per CMP for address fallback and coordinate inheritance
   const centrosByCmp = new Map<string, B2CCentro[]>();
   rawCentros.forEach(c => {
     const cmp = (c.cmp || '').trim();
@@ -249,7 +443,20 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     const centroAddress = centros.find(c => c.direccion_centro?.trim())?.direccion_centro || '';
     const rawAddress = (med.direccion || '').trim() || centroAddress;
     const address = cleanSpanishText(rawAddress) || 'Lima, Perú';
-    const hasExactLocation = rawAddress.length > 5;
+
+    // Resolve coordinates: first check center, then doctor document/name
+    const firstCentroKey = centros.length > 0 ? toSlug((centros[0].centro || '').trim()) : '';
+    const centroCoords = firstCentroKey ? (centerCoordsByKey.get(firstCentroKey) || null) : null;
+    const resolvedDoctorCoords = resolveDoctorCoordinates(
+      med.medico || '',
+      med.nro_doc_med || '',
+      centroCoords,
+      knownIndex
+    );
+
+    const hasExactCoords = resolvedDoctorCoords !== null;
+    const lat = hasExactCoords ? resolvedDoctorCoords.lat : (DEFAULT_LAT + idx * 0.0005);
+    const lng = hasExactCoords ? resolvedDoctorCoords.lng : (DEFAULT_LNG + idx * 0.0005);
 
     const cleanName = toTitleCase(med.medico || `Médico CMP ${cmp}`);
     const fotoUrl = (med.foto_url || '').trim() || null;
@@ -264,12 +471,12 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
       website: null,
       facebook: null,
       instagram: null,
-      lat: DEFAULT_LAT + idx * 0.0005,
-      lng: DEFAULT_LNG + idx * 0.0005,
+      lat,
+      lng,
       tags: [
         'Médico',
         'BlissFarma B2C',
-        ...(hasExactLocation ? [] : ['Sin ubicación exacta']),
+        ...(hasExactCoords ? [] : ['Sin ubicación exacta']),
       ],
       custom_fields: {
         'CMP': cmp,
@@ -284,36 +491,8 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     doctorsByCmp.set(cmp, locationItem);
   });
 
-  // ── 5. Build centers ──────────────────────────────────────────────────────
-  // PASS A: Group all CMPs (and their raw centro records) by normalized centro name.
-  // A centro that appears with N different CMPs has N associated doctors.
-  interface CentroGroup {
-    rawCentro: B2CCentro; // Use the first record for address/name
-    cmps: string[];       // All CMPs associated to this centro
-  }
-  const centroGroupsByKey = new Map<string, CentroGroup>();
-
-  rawCentros.forEach(c => {
-    const cmp = (c.cmp || '').trim();
-    const centroName = (c.centro || '').trim();
-    if (!cmp || !centroName) return;
-
-    // Only include centers whose associated doctor has BlissFarma products
-    const products = productsByCmp.get(cmp);
-    if (!products || products.length === 0) return;
-
-    const key = toSlug(centroName);
-    const existing = centroGroupsByKey.get(key);
-    if (existing) {
-      if (!existing.cmps.includes(cmp)) {
-        existing.cmps.push(cmp);
-      }
-    } else {
-      centroGroupsByKey.set(key, { rawCentro: c, cmps: [cmp] });
-    }
-  });
-
-  // PASS B: Build one LocationItem per unique centro.
+  // ── 6. Build centers ──────────────────────────────────────────────────────
+  // PASS B: Build one LocationItem per unique centro with resolved coordinates.
   // Merge products from all associated doctors and attach them as linked_entities.
   const centersByKey = new Map<string, LocationItem>();
   let centerIdx = 0;
@@ -323,7 +502,12 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     const centroName = (rawCentro.centro || '').trim();
 
     const address = cleanSpanishText((rawCentro.direccion_centro || '').trim()) || 'Lima, Perú';
-    const hasExactLocation = (rawCentro.direccion_centro || '').trim().length > 5;
+
+    // Coordinates: use resolved coordinates if found, else fallback with dispersion
+    const resolvedCenterCoords = centerCoordsByKey.get(key) || null;
+    const hasExactCoords = resolvedCenterCoords !== null;
+    const lat = hasExactCoords ? resolvedCenterCoords.lat : (DEFAULT_LAT + centerIdx * 0.0008);
+    const lng = hasExactCoords ? resolvedCenterCoords.lng : (DEFAULT_LNG + centerIdx * 0.0008);
 
     // Collect all linked doctor LocationItems (only those already built)
     const linkedDoctors: LocationItem[] = cmps
@@ -358,12 +542,12 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
       website: null,
       facebook: null,
       instagram: null,
-      lat: DEFAULT_LAT + centerIdx * 0.0008,
-      lng: DEFAULT_LNG + centerIdx * 0.0008,
+      lat,
+      lng,
       tags: [
         'Centro Médico',
         'BlissFarma B2C',
-        ...(hasExactLocation ? [] : ['Sin ubicación exacta']),
+        ...(hasExactCoords ? [] : ['Sin ubicación exacta']),
       ],
       custom_fields: {
         'Médicos': doctorNamesDisplay,
