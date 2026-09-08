@@ -30,6 +30,8 @@ export interface LocationItem {
   products?: ProductItem[];
   distance?: number;
   empresa?: string;
+  /** Sub-entities linked to this location (e.g., doctors inside a medical center). */
+  linked_entities?: LocationItem[];
 }
 
 export interface B2BCliente {

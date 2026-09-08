@@ -65,6 +65,8 @@ interface LocationItem {
   products?: ProductItem[];
   distance?: number; // calculated locally
   grupo_economico_ids?: string[] | null;
+  /** Doctors or sub-locations linked to this location (centers only). */
+  linked_entities?: LocationItem[];
 }
 
 interface LocatorData {
@@ -1484,6 +1486,109 @@ export const PublicLocator: React.FC = () => {
                     </div>
                   );
                 })()}
+
+                {/* Médicos en este centro — only for center entities with linked doctors */}
+                {selectedLocation.custom_fields?.['entity_type'] === 'center' &&
+                  selectedLocation.linked_entities &&
+                  selectedLocation.linked_entities.length > 0 && (
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#00506E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        🩺 MÉDICOS EN ESTE CENTRO ({selectedLocation.linked_entities.length})
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedLocation.linked_entities.map((doc) => (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onClick={() => setSelectedLocationId(doc.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px 12px',
+                            borderRadius: '14px',
+                            border: '1.5px solid #E2E8F0',
+                            backgroundColor: '#F8FAFC',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(30, 200, 170, 0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(30, 200, 170, 0.4)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F8FAFC';
+                            e.currentTarget.style.borderColor = '#E2E8F0';
+                          }}
+                        >
+                          {/* Doctor avatar / photo */}
+                          {doc.image_url ? (
+                            <img
+                              src={doc.image_url}
+                              alt={doc.name}
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px',
+                                objectFit: 'cover',
+                                flexShrink: 0,
+                                border: '1.5px solid #E2E8F0',
+                              }}
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '10px',
+                              backgroundColor: 'rgba(30, 200, 170, 0.12)',
+                              border: '1.5px solid rgba(30, 200, 170, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#00506E',
+                              flexShrink: 0,
+                              fontSize: '18px',
+                            }}>
+                              🩺
+                            </div>
+                          )}
+
+                          {/* Doctor info */}
+                          <div style={{ flexGrow: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#00506E', lineHeight: '1.3', marginBottom: '2px' }}>
+                              {doc.name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
+                              {doc.custom_fields?.['CMP'] ? `CMP ${doc.custom_fields['CMP']}` : ''}
+                              {doc.products && doc.products.length > 0
+                                ? `${doc.custom_fields?.['CMP'] ? ' · ' : ''}${doc.products.length} producto${doc.products.length !== 1 ? 's' : ''}`
+                                : ''
+                              }
+                            </div>
+                          </div>
+
+                          {/* Arrow indicator */}
+                          <ChevronRight size={16} style={{ color: '#1EC8AA', flexShrink: 0 }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Primary Action Buttons: Cómo llegar + WhatsApp */}
                 {(() => {

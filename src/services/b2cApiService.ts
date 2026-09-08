@@ -285,31 +285,71 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
   });
 
   // ── 5. Build centers ──────────────────────────────────────────────────────
-  // One LocationItem per unique (centro name) associated with a CMP that has BF products.
-  const centersByKey = new Map<string, LocationItem>();
-  let centerIdx = 0;
+  // PASS A: Group all CMPs (and their raw centro records) by normalized centro name.
+  // A centro that appears with N different CMPs has N associated doctors.
+  interface CentroGroup {
+    rawCentro: B2CCentro; // Use the first record for address/name
+    cmps: string[];       // All CMPs associated to this centro
+  }
+  const centroGroupsByKey = new Map<string, CentroGroup>();
 
   rawCentros.forEach(c => {
     const cmp = (c.cmp || '').trim();
     const centroName = (c.centro || '').trim();
     if (!cmp || !centroName) return;
 
-    // Only include centers whose doctor has BlissFarma products
+    // Only include centers whose associated doctor has BlissFarma products
     const products = productsByCmp.get(cmp);
     if (!products || products.length === 0) return;
 
     const key = toSlug(centroName);
-    if (centersByKey.has(key)) return; // Already added this centro
+    const existing = centroGroupsByKey.get(key);
+    if (existing) {
+      if (!existing.cmps.includes(cmp)) {
+        existing.cmps.push(cmp);
+      }
+    } else {
+      centroGroupsByKey.set(key, { rawCentro: c, cmps: [cmp] });
+    }
+  });
 
-    const address = cleanSpanishText((c.direccion_centro || '').trim()) || 'Lima, Perú';
-    const hasExactLocation = (c.direccion_centro || '').trim().length > 5;
+  // PASS B: Build one LocationItem per unique centro.
+  // Merge products from all associated doctors and attach them as linked_entities.
+  const centersByKey = new Map<string, LocationItem>();
+  let centerIdx = 0;
 
-    // Find the doctor to get their name for the custom_fields
-    const doctor = doctorsByCmp.get(cmp);
-    const doctorName = doctor?.name || '';
+  centroGroupsByKey.forEach((group, key) => {
+    const { rawCentro, cmps } = group;
+    const centroName = (rawCentro.centro || '').trim();
+
+    const address = cleanSpanishText((rawCentro.direccion_centro || '').trim()) || 'Lima, Perú';
+    const hasExactLocation = (rawCentro.direccion_centro || '').trim().length > 5;
+
+    // Collect all linked doctor LocationItems (only those already built)
+    const linkedDoctors: LocationItem[] = cmps
+      .map(cmp => doctorsByCmp.get(cmp))
+      .filter((d): d is LocationItem => d !== undefined);
+
+    // Merge and deduplicate products from all linked doctors
+    const allProducts: ProductItem[] = [];
+    const seenProductNames = new Set<string>();
+    linkedDoctors.forEach(doc => {
+      (doc.products || []).forEach(p => {
+        if (!seenProductNames.has(p.name)) {
+          seenProductNames.add(p.name);
+          allProducts.push(p);
+        }
+      });
+    });
+
+    // Doctor names joined for display (up to 3, then "y N más")
+    const doctorNames = linkedDoctors.map(d => d.name);
+    const doctorNamesDisplay = doctorNames.length <= 3
+      ? doctorNames.join(', ')
+      : `${doctorNames.slice(0, 3).join(', ')} y ${doctorNames.length - 3} más`;
 
     const locationItem: LocationItem = {
-      id: `b2c-center-${cmp}-${key}`,
+      id: `b2c-center-${key}`,
       name: toTitleCase(centroName),
       image_url: null,
       address,
@@ -326,13 +366,13 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
         ...(hasExactLocation ? [] : ['Sin ubicación exacta']),
       ],
       custom_fields: {
-        'Médico': doctorName,
-        'CMP': cmp,
+        'Médicos': doctorNamesDisplay,
         'Documento': '',
         'entity_type': 'center',
       },
       description: null,
-      products,
+      products: allProducts,
+      linked_entities: linkedDoctors,
     };
 
     centersByKey.set(key, locationItem);
