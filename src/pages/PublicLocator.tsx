@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient';
 import { LocatorMap } from '../components/LocatorMap';
 import localDoctorsData from '../data/doctors_data.json';
 import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../services/b2bApiService';
+import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../services/b2cApiService';
 import logoImg from '../assets/logo.png';
 import { 
   Search, 
@@ -184,6 +185,10 @@ export const PublicLocator: React.FC = () => {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(30);
 
+  // Blissfarma entity type filter: 'all' | 'doctor' | 'center'
+  // Only used when slug === 'blissfarma'. Doctors come from B2C medicos[]; centers from centros_trabajo[].
+  const [entityFilter, setEntityFilter] = useState<'all' | 'doctor' | 'center'>('all');
+
   // Navigation Selector Modal State
   const [navTarget, setNavTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
@@ -324,6 +329,57 @@ export const PublicLocator: React.FC = () => {
             dbLocations = locationsData;
           }
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // BLISSFARMA: Mix B2C (doctors + centers) + B2B filtered to BlissFarma
+        // ─────────────────────────────────────────────────────────────────────
+        if (slug === 'blissfarma') {
+          // Fetch B2C and B2B in parallel
+          const [b2cResult, b2bResult] = await Promise.all([
+            fetchB2CLocations(),
+            fetchB2BSalesLocations(localDoctorsData as LocationItem[])
+          ]);
+
+          // Filter B2B to only entries that carry BlissFarma products
+          const b2bFiltered = filterBlissfarmaOnly(b2bResult.locations);
+
+          // Remove B2B entries substantially duplicated in B2C
+          const b2bDeduped = deduplicateB2BAgainstB2C(
+            [...b2cResult.doctors, ...b2cResult.centers],
+            b2bFiltered
+          );
+
+          // Build the merged Blissfarma location list:
+          // Doctors first, then centers, then B2B remainders
+          const blissfarmaLocations: LocationItem[] = [
+            ...b2cResult.doctors,
+            ...b2cResult.centers,
+            ...b2bDeduped
+          ].filter(loc =>
+            !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
+          );
+
+          currentLocator = currentLocator || {
+            id: 'local-blissfarma',
+            name: 'Blissfarma',
+            slug: 'blissfarma',
+            map_style: 'default',
+            accent_color: '#1EC8AA',
+            marker_type: 'standard',
+            marker_color: '#1EC8AA',
+            marker_image_url: null,
+            search_placeholder: 'Escribe producto, médico o centro...',
+            distance_unit: 'km'
+          };
+
+          setLocator(currentLocator);
+          setLocations(blissfarmaLocations);
+          return;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ALL OTHER SLUGS (medicosbliss, etc.): existing B2B logic unchanged
+        // ─────────────────────────────────────────────────────────────────────
 
         // Load live sales data from ERP API with 1-hour cache and fallback
         const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
@@ -677,6 +733,12 @@ export const PublicLocator: React.FC = () => {
         return { ...loc, maxProbScore, latestMatchingDate };
       })
       .filter(loc => {
+        // 0. Entity type filter (Blissfarma only): 'doctor' | 'center' | 'all'
+        if (entityFilter !== 'all') {
+          const entityType = loc.custom_fields?.['entity_type'];
+          if (entityType !== entityFilter) return false;
+        }
+
         // 1. Multi-product tags filter
         if (selectedProducts.length > 0) {
           const carriesProduct = loc.products?.some(p => selectedProducts.includes(p.name));
@@ -737,7 +799,7 @@ export const PublicLocator: React.FC = () => {
         }
         return a.name.localeCompare(b.name);
       });
-  }, [locations, selectedProducts, selectedBrand, queryClean, isQueryActive, isSelectionActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit]);
+  }, [locations, selectedProducts, selectedBrand, queryClean, isQueryActive, isSelectionActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit, entityFilter]);
 
   const visibleLocations = processedLocations.slice(0, visibleLimit);
 
@@ -1071,11 +1133,56 @@ export const PublicLocator: React.FC = () => {
             </button>
           </div>
 
+          {/* Entity Type Switch — visible only on Blissfarma map */}
+          {slug === 'blissfarma' && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '4px', backgroundColor: '#f1f5f9', borderRadius: '10px', padding: '3px' }}>
+              {(
+                [
+                  { key: 'all', label: 'Todos' },
+                  { key: 'doctor', label: '🩺 Médicos' },
+                  { key: 'center', label: '🏥 Centros' },
+                ] as { key: 'all' | 'doctor' | 'center'; label: string }[]
+              ).map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={entityFilter === opt.key}
+                  onClick={() => setEntityFilter(opt.key)}
+                  style={{
+                    flex: 1,
+                    padding: '6px 4px',
+                    borderRadius: '7px',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    backgroundColor: entityFilter === opt.key ? '#ffffff' : 'transparent',
+                    color: entityFilter === opt.key ? '#00506E' : '#64748b',
+                    boxShadow: entityFilter === opt.key ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Result Info (Hidden on Mobile) */}
           <div className="locator-results-info mobile-hide" style={{ marginTop: '6px' }}>
-            {processedLocations.length === 0 ? 'No se encontraron médicos' : (
-              `${processedLocations.length} ${processedLocations.length === 1 ? 'médico encontrado' : 'médicos encontrados'}`
-            )}
+            {processedLocations.length === 0
+              ? (slug === 'blissfarma' ? 'No se encontraron resultados' : 'No se encontraron médicos')
+              : slug === 'blissfarma'
+                ? `${processedLocations.length} ${
+                    entityFilter === 'doctor'
+                      ? processedLocations.length === 1 ? 'médico encontrado' : 'médicos encontrados'
+                      : entityFilter === 'center'
+                        ? processedLocations.length === 1 ? 'centro encontrado' : 'centros encontrados'
+                        : processedLocations.length === 1 ? 'resultado encontrado' : 'resultados encontrados'
+                  }`
+                : `${processedLocations.length} ${processedLocations.length === 1 ? 'médico encontrado' : 'médicos encontrados'}`
+            }
           </div>
         </div>
 

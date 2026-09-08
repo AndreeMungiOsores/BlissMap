@@ -11,6 +11,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api\/b2b-erp/, '/e/action/33_json/14_vtab2bprd/receive')
+      },
+      '/api/b2c-erp': {
+        target: 'https://blisscorp.niuxpro.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/b2c-erp/, '/e/action/33_json/16_vtab2cmed/receive')
       }
     }
   }
