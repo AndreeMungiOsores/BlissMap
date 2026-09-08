@@ -27,6 +27,8 @@ import {
 
 import { fetchB2BSalesLocations } from '../../services/b2bApiService';
 import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../../services/b2cApiService';
+import apiGeocodedCoords from '../../data/api_geocoded_coords.json';
+import excelGeocodedOverrides from '../../data/excel_geocoded_overrides.json';
 
 interface ProductItem {
   name: string;
@@ -74,6 +76,33 @@ const TEST_NAMES = ['daysi timana', 'winston maldonado', 'marjorie villate', 'gi
 const removeAccents = (str: string | null | undefined): string => {
   if (!str) return '';
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
+export const isWithoutCoordinates = (loc: LocationItem): boolean => {
+  if (!loc.lat || !loc.lng || loc.lat === 0 || loc.lng === 0) return true;
+  if (loc.tags?.includes('Sin ubicación exacta')) return true;
+  if (!loc.is_manual_override) {
+    const cleanDoc = (loc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+    const excelMap = excelGeocodedOverrides as Record<string, any>;
+    const apiMap = apiGeocodedCoords as Record<string, any>;
+    const hasRealGeocoded = cleanDoc && (excelMap[cleanDoc] || apiMap[cleanDoc]);
+    if (!hasRealGeocoded) {
+      const dLat = Math.abs(loc.lat - (-12.046374));
+      const dLng = Math.abs(loc.lng - (-77.042793));
+      if (Math.abs(dLat - dLng) < 0.0001 && dLat < 0.8) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+export const isWithoutTextAddress = (loc: LocationItem): boolean => {
+  if (!loc.address) return true;
+  const clean = removeAccents(loc.address.trim());
+  if (clean.length <= 5) return true;
+  if (clean === 'lima peru' || clean === 'lima, peru' || clean === 'lima') return true;
+  return false;
 };
 
 const normalizeAddress = (addr: string): string =>
@@ -144,6 +173,8 @@ export const ManageLocations: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'manual'>('all');
   const [entityFilter, setEntityFilter] = useState<'all' | 'doctor' | 'center'>('all');
+  const [filterNoCoords, setFilterNoCoords] = useState(false);
+  const [filterNoAddress, setFilterNoAddress] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
   const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
@@ -155,7 +186,7 @@ export const ManageLocations: React.FC = () => {
   const [savingBrands, setSavingBrands] = useState(false);
   const [brandSaveSuccess, setBrandSaveSuccess] = useState(false);
 
-  // Sync hiddenBrands and reset entityFilter with activeLocator
+  // Sync hiddenBrands and reset filters with activeLocator
   useEffect(() => {
     if (activeLocator) {
       const storedLocal = localStorage.getItem(`bm_hidden_brands_${activeLocator.id}`);
@@ -165,6 +196,8 @@ export const ManageLocations: React.FC = () => {
       
       setHiddenBrands(new Set(initialHidden.map(b => b.toUpperCase())));
       setEntityFilter('all');
+      setFilterNoCoords(false);
+      setFilterNoAddress(false);
     }
   }, [activeLocator]);
 
@@ -394,6 +427,7 @@ export const ManageLocations: React.FC = () => {
   const manualCount = useMemo(() => locations.filter(loc => loc.is_manual_override).length, [locations]);
 
   // Counts by entity type for Blissfarma
+  // Counts by entity type for Blissfarma
   const entityCounts = useMemo(() => {
     let doctors = 0;
     let centers = 0;
@@ -406,6 +440,18 @@ export const ManageLocations: React.FC = () => {
     return { doctors, centers, all: locations.length - groupSecondaryIds.size };
   }, [locations, groupSecondaryIds]);
 
+  // Counts for missing coordinates and missing text address across active locator
+  const geoStats = useMemo(() => {
+    let noCoords = 0;
+    let noAddr = 0;
+    locations.forEach(loc => {
+      if (groupSecondaryIds.has(loc.id)) return;
+      if (isWithoutCoordinates(loc)) noCoords++;
+      if (isWithoutTextAddress(loc)) noAddr++;
+    });
+    return { noCoords, noAddr };
+  }, [locations, groupSecondaryIds]);
+
   const filteredLocations = useMemo(() => locations.filter(loc => {
     if (groupSecondaryIds.has(loc.id)) return false;
     if (filterMode === 'manual' && !loc.is_manual_override) return false;
@@ -415,6 +461,12 @@ export const ManageLocations: React.FC = () => {
       const locEntityType = loc.custom_fields?.['entity_type'];
       if (locEntityType !== entityFilter) return false;
     }
+
+    // Filter points without coordinates
+    if (filterNoCoords && !isWithoutCoordinates(loc)) return false;
+
+    // Filter points without written text address
+    if (filterNoAddress && !isWithoutTextAddress(loc)) return false;
 
     const searchClean = removeAccents(search.trim());
     if (!searchClean) return true;
@@ -450,7 +502,7 @@ export const ManageLocations: React.FC = () => {
       return tokens.every(token => allLocText.includes(token));
     }
     return false;
-  }), [locations, groupSecondaryIds, filterMode, entityFilter, search, activeLocator?.slug]);
+  }), [locations, groupSecondaryIds, filterMode, entityFilter, filterNoCoords, filterNoAddress, search, activeLocator?.slug]);
 
   // Extract unique brands with product counts across the full dataset
   const brandStats = useMemo(() => {
@@ -721,6 +773,74 @@ export const ManageLocations: React.FC = () => {
             Visibilidad de Marcas ({brandStats.length - hiddenBrands.size}/{brandStats.length})
             {brandVisibilityOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
+
+          {/* Global Checkbox Filter: Sin Coordenadas */}
+          <label 
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 13px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              userSelect: 'none',
+              border: filterNoCoords ? '1.5px solid #E11D48' : '1px solid var(--color-dark-border)',
+              backgroundColor: filterNoCoords ? 'rgba(225, 29, 72, 0.08)' : 'transparent',
+              color: filterNoCoords ? '#E11D48' : 'var(--color-dark-text-secondary)',
+              transition: 'all 0.15s ease'
+            }}
+            title="Filtrar comercios y médicos que no tienen coordenadas geocodificadas reales"
+          >
+            <input
+              type="checkbox"
+              checked={filterNoCoords}
+              onChange={(e) => setFilterNoCoords(e.target.checked)}
+              style={{
+                accentColor: '#E11D48',
+                cursor: 'pointer',
+                width: '14px',
+                height: '14px'
+              }}
+              aria-label="Filtrar ubicaciones sin coordenadas"
+            />
+            <span>Sin coordenadas ({geoStats.noCoords})</span>
+          </label>
+
+          {/* Global Checkbox Filter: Sin Dirección (Texto) */}
+          <label 
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 13px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              userSelect: 'none',
+              border: filterNoAddress ? '1.5px solid #D97706' : '1px solid var(--color-dark-border)',
+              backgroundColor: filterNoAddress ? 'rgba(217, 119, 6, 0.08)' : 'transparent',
+              color: filterNoAddress ? '#D97706' : 'var(--color-dark-text-secondary)',
+              transition: 'all 0.15s ease'
+            }}
+            title="Filtrar comercios y médicos que no tienen dirección escrita o con dirección por defecto"
+          >
+            <input
+              type="checkbox"
+              checked={filterNoAddress}
+              onChange={(e) => setFilterNoAddress(e.target.checked)}
+              style={{
+                accentColor: '#D97706',
+                cursor: 'pointer',
+                width: '14px',
+                height: '14px'
+              }}
+              aria-label="Filtrar ubicaciones sin dirección escrita en texto"
+            />
+            <span>Sin dirección (texto) ({geoStats.noAddr})</span>
+          </label>
         </div>
         
         <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 'auto' }}>
@@ -1117,6 +1237,26 @@ export const ManageLocations: React.FC = () => {
                             }}>
                               <Link2 size={10} />
                               Grupo Económico
+                            </span>
+                          )}
+                          {isWithoutCoordinates(loc) && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: 700, color: '#e11d48',
+                              backgroundColor: 'rgba(225, 29, 72, 0.1)', border: '1px solid rgba(225, 29, 72, 0.25)',
+                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex', alignItems: 'center', gap: '3px'
+                            }} title="Ubicación sin coordenadas geocodificadas exactas">
+                              📍 Sin coordenadas
+                            </span>
+                          )}
+                          {isWithoutTextAddress(loc) && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: 700, color: '#d97706',
+                              backgroundColor: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.25)',
+                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex', alignItems: 'center', gap: '3px'
+                            }} title="Ubicación sin dirección escrita en texto">
+                              📝 Sin dirección
                             </span>
                           )}
                         </div>
