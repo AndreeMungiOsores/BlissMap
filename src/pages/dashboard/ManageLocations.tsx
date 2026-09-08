@@ -746,7 +746,7 @@ export const ManageLocations: React.FC = () => {
             title="Filtrar comercios con ediciones manuales guardadas en Supabase"
           >
             <Edit3 size={13} />
-            Editados Manualmente ({manualCount})
+            Editados ({manualCount})
           </button>
 
           <button
@@ -770,7 +770,7 @@ export const ManageLocations: React.FC = () => {
             title="Configurar qué marcas se muestran u ocultan en el mapa público"
           >
             <Tag size={13} />
-            Visibilidad de Marcas ({brandStats.length - hiddenBrands.size}/{brandStats.length})
+            Ver Marca ({brandStats.length - hiddenBrands.size}/{brandStats.length})
             {brandVisibilityOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
 
