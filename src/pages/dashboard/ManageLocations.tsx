@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 import { fetchB2BSalesLocations } from '../../services/b2bApiService';
+import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../../services/b2cApiService';
 
 interface ProductItem {
   name: string;
@@ -46,7 +47,7 @@ interface LocationItem {
   website: string | null;
   tags: string[];
   custom_fields: Record<string, string>;
-  published: boolean;
+  published?: boolean;
   products?: ProductItem[];
   created_at?: string;
   is_manual_override?: boolean;
@@ -142,6 +143,7 @@ export const ManageLocations: React.FC = () => {
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'manual'>('all');
+  const [entityFilter, setEntityFilter] = useState<'all' | 'doctor' | 'center'>('all');
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
   const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
@@ -153,7 +155,7 @@ export const ManageLocations: React.FC = () => {
   const [savingBrands, setSavingBrands] = useState(false);
   const [brandSaveSuccess, setBrandSaveSuccess] = useState(false);
 
-  // Sync hiddenBrands with activeLocator or localStorage fallback
+  // Sync hiddenBrands and reset entityFilter with activeLocator
   useEffect(() => {
     if (activeLocator) {
       const storedLocal = localStorage.getItem(`bm_hidden_brands_${activeLocator.id}`);
@@ -162,6 +164,7 @@ export const ManageLocations: React.FC = () => {
         : (storedLocal ? JSON.parse(storedLocal) : []);
       
       setHiddenBrands(new Set(initialHidden.map(b => b.toUpperCase())));
+      setEntityFilter('all');
     }
   }, [activeLocator]);
 
@@ -169,8 +172,24 @@ export const ManageLocations: React.FC = () => {
     if (!activeLocator) return;
     setLoading(true);
     try {
-      // 1. Fetch live/cached B2B API locations
-      const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as any);
+      // 1. Fetch live/cached API locations (B2B for default locators, or B2C+B2B mix for Blissfarma)
+      let apiLocations: LocationItem[] = [];
+
+      if (activeLocator.slug === 'blissfarma') {
+        const [b2cResult, b2bResult] = await Promise.all([
+          fetchB2CLocations(),
+          fetchB2BSalesLocations(localDoctorsData as any)
+        ]);
+        const b2bFiltered = filterBlissfarmaOnly(b2bResult.locations);
+        const b2bDeduped = deduplicateB2BAgainstB2C(
+          [...b2cResult.doctors, ...b2cResult.centers],
+          b2bFiltered
+        );
+        apiLocations = [...b2cResult.doctors, ...b2cResult.centers, ...b2bDeduped];
+      } else {
+        const b2bRes = await fetchB2BSalesLocations(localDoctorsData as any);
+        apiLocations = b2bRes.locations;
+      }
 
       // 2. Fetch Supabase manual overrides
       let dbData: any[] = [];
@@ -289,15 +308,16 @@ export const ManageLocations: React.FC = () => {
 
   useEffect(() => { fetchLocations(); }, [fetchLocations]);
 
-  const handleTogglePublish = async (id: string, currentStatus: boolean) => {
+  const handleTogglePublish = async (id: string, currentStatus?: boolean) => {
+    const newStatus = !(currentStatus ?? true);
     try {
-      if (!id.startsWith('doc-')) {
-        await supabase.from('bm_locations').update({ published: !currentStatus }).eq('id', id);
+      if (!id.startsWith('doc-') && !id.startsWith('b2c-')) {
+        await supabase.from('bm_locations').update({ published: newStatus }).eq('id', id);
       }
-      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc));
+      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc));
     } catch (err: any) {
       console.error(err);
-      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: !currentStatus } : loc));
+      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc));
     }
   };
 
@@ -373,9 +393,29 @@ export const ManageLocations: React.FC = () => {
   // Count total manual overrides saved in Supabase
   const manualCount = useMemo(() => locations.filter(loc => loc.is_manual_override).length, [locations]);
 
+  // Counts by entity type for Blissfarma
+  const entityCounts = useMemo(() => {
+    let doctors = 0;
+    let centers = 0;
+    locations.forEach(loc => {
+      if (groupSecondaryIds.has(loc.id)) return;
+      const type = loc.custom_fields?.['entity_type'];
+      if (type === 'doctor') doctors++;
+      else if (type === 'center') centers++;
+    });
+    return { doctors, centers, all: locations.length - groupSecondaryIds.size };
+  }, [locations, groupSecondaryIds]);
+
   const filteredLocations = useMemo(() => locations.filter(loc => {
     if (groupSecondaryIds.has(loc.id)) return false;
     if (filterMode === 'manual' && !loc.is_manual_override) return false;
+
+    // Entity type filter for Blissfarma locator (all | doctor | center)
+    if (activeLocator?.slug === 'blissfarma' && entityFilter !== 'all') {
+      const locEntityType = loc.custom_fields?.['entity_type'];
+      if (locEntityType !== entityFilter) return false;
+    }
+
     const searchClean = removeAccents(search.trim());
     if (!searchClean) return true;
     const matchesName = removeAccents(loc.name).includes(searchClean);
@@ -410,7 +450,7 @@ export const ManageLocations: React.FC = () => {
       return tokens.every(token => allLocText.includes(token));
     }
     return false;
-  }), [locations, groupSecondaryIds, filterMode, search]);
+  }), [locations, groupSecondaryIds, filterMode, entityFilter, search, activeLocator?.slug]);
 
   // Extract unique brands with product counts across the full dataset
   const brandStats = useMemo(() => {
@@ -539,27 +579,104 @@ export const ManageLocations: React.FC = () => {
 
         {/* Filter Pills */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            style={{
-              padding: '7px 14px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              border: filterMode === 'all' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
-              backgroundColor: filterMode === 'all' ? '#00506E' : 'transparent',
-              color: filterMode === 'all' ? '#FFFFFF' : 'var(--color-dark-text-secondary)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Todos ({locations.length - groupSecondaryIds.size})
-          </button>
+          {activeLocator.slug === 'blissfarma' ? (
+            /* Entity Filter for Blissfarma: Todos / Médicos / Centros */
+            <div 
+              role="radiogroup" 
+              aria-label="Filtrar por tipo de entidad en Blissfarma"
+              style={{ 
+                display: 'inline-flex', 
+                gap: '4px', 
+                backgroundColor: 'var(--color-dark-surface, #F1F5F9)', 
+                borderRadius: 'var(--radius-full)', 
+                padding: '3px',
+                border: '1px solid var(--color-dark-border, #E2E8F0)'
+              }}
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={entityFilter === 'all'}
+                onClick={() => setEntityFilter('all')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: entityFilter === 'all' ? '#00506E' : 'transparent',
+                  color: entityFilter === 'all' ? '#FFFFFF' : 'var(--color-dark-text-secondary)',
+                  boxShadow: entityFilter === 'all' ? '0 2px 6px rgba(0, 80, 110, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Todos ({entityCounts.all})
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={entityFilter === 'doctor'}
+                onClick={() => setEntityFilter('doctor')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: entityFilter === 'doctor' ? '#00506E' : 'transparent',
+                  color: entityFilter === 'doctor' ? '#FFFFFF' : 'var(--color-dark-text-secondary)',
+                  boxShadow: entityFilter === 'doctor' ? '0 2px 6px rgba(0, 80, 110, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                🩺 Médicos ({entityCounts.doctors})
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={entityFilter === 'center'}
+                onClick={() => setEntityFilter('center')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: entityFilter === 'center' ? '#00506E' : 'transparent',
+                  color: entityFilter === 'center' ? '#FFFFFF' : 'var(--color-dark-text-secondary)',
+                  boxShadow: entityFilter === 'center' ? '0 2px 6px rgba(0, 80, 110, 0.25)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                🏥 Centros ({entityCounts.centers})
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFilterMode('all')}
+              style={{
+                padding: '7px 14px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: filterMode === 'all' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
+                backgroundColor: filterMode === 'all' ? '#00506E' : 'transparent',
+                color: filterMode === 'all' ? '#FFFFFF' : 'var(--color-dark-text-secondary)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Todos ({locations.length - groupSecondaryIds.size})
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={() => setFilterMode('manual')}
+            onClick={() => setFilterMode(prev => prev === 'manual' ? 'all' : 'manual')}
             style={{
               padding: '7px 14px',
               borderRadius: 'var(--radius-full)',
@@ -607,7 +724,7 @@ export const ManageLocations: React.FC = () => {
         </div>
         
         <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-          {filteredLocations.length} de {locations.length} médicos
+          {filteredLocations.length} de {locations.length} {activeLocator.slug === 'blissfarma' ? (entityFilter === 'doctor' ? 'médicos' : entityFilter === 'center' ? 'centros' : 'ubicaciones') : 'médicos'}
         </div>
       </div>
 
@@ -960,6 +1077,26 @@ export const ManageLocations: React.FC = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)' }}>{loc.name}</span>
+                          {loc.custom_fields?.['entity_type'] === 'doctor' && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: 700, color: '#0369a1',
+                              backgroundColor: 'rgba(2, 132, 199, 0.1)', border: '1px solid rgba(2, 132, 199, 0.25)',
+                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex', alignItems: 'center', gap: '3px'
+                            }}>
+                              🩺 Médico
+                            </span>
+                          )}
+                          {loc.custom_fields?.['entity_type'] === 'center' && (
+                            <span style={{
+                              fontSize: '10px', fontWeight: 700, color: '#0f766e',
+                              backgroundColor: 'rgba(15, 118, 110, 0.1)', border: '1px solid rgba(15, 118, 110, 0.25)',
+                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex', alignItems: 'center', gap: '3px'
+                            }}>
+                              🏥 Centro
+                            </span>
+                          )}
                           {loc.is_manual_override && (
                             <span style={{
                               fontSize: '10px', fontWeight: 700, color: '#00506E',
@@ -983,6 +1120,16 @@ export const ManageLocations: React.FC = () => {
                             </span>
                           )}
                         </div>
+                        {loc.custom_fields?.['CMP'] && (
+                          <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
+                            CMP: {loc.custom_fields['CMP']}
+                          </div>
+                        )}
+                        {loc.custom_fields?.['Médicos'] && (
+                          <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
+                            Médicos: {loc.custom_fields['Médicos']}
+                          </div>
+                        )}
                         {loc.custom_fields?.['Razón Social'] && (
                           <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
                             RS: {loc.custom_fields['Razón Social']}
