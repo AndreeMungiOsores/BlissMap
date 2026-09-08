@@ -62,7 +62,7 @@ const FitMapBounds: React.FC<{ locations: LocationItem[]; selectedLocation: Loca
   const map = useMap();
 
   useEffect(() => {
-    if (selectedLocation) {
+    if (selectedLocation && selectedLocation.lat && selectedLocation.lng && (selectedLocation.lat !== 0 || selectedLocation.lng !== 0)) {
       map.setView([selectedLocation.lat, selectedLocation.lng], 18, { animate: true });
 
       // On mobile the map is full-screen (100vh) with a bottom sheet overlaid on top.
@@ -81,8 +81,11 @@ const FitMapBounds: React.FC<{ locations: LocationItem[]; selectedLocation: Loca
         }
       });
     } else if (locations.length > 0) {
-      const bounds = L.latLngBounds(locations.map(loc => [loc.lat, loc.lng]));
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      const validLocs = locations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0));
+      if (validLocs.length > 0) {
+        const bounds = L.latLngBounds(validLocs.map(loc => [loc.lat, loc.lng]));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      }
     }
   }, [locations, selectedLocation, map]);
 
@@ -190,6 +193,7 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
           disableClusteringAtZoom={17}
         >
           {locations.map(loc => {
+            if (!loc.lat || !loc.lng || (loc.lat === 0 && loc.lng === 0)) return null;
             return (
               <LeafletMarker
                 key={`${loc.id}-${loc.custom_fields?.['Documento'] || ''}`}

@@ -26,16 +26,17 @@ import productImagesMap from '../data/product_images_map.json';
 import apiGeocodedCoords from '../data/api_geocoded_coords.json';
 import excelGeocodedOverrides from '../data/excel_geocoded_overrides.json';
 import localDoctorsData from '../data/doctors_data.json';
+import localB2CData from '../data/b2c_data.json';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const B2C_API_BASE = '/api/b2c-erp';
 const B2C_API_DIRECT = 'https://blisscorp.niuxpro.com/e/action/33_json/16_vtab2cmed/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY_B2C = 'blissmap_b2c_api_v3';
+const CACHE_KEY_B2C = 'blissmap_b2c_api_v4';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-/** Default Lima coordinates for entities without a valid address. */
+/** Default Lima coordinates for placeholder filtering. */
 const DEFAULT_LAT = -12.046374;
 const DEFAULT_LNG = -77.042793;
 
@@ -334,8 +335,8 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
 
     if (payload.status !== 'OK') throw new Error(`API status: ${payload.status}`);
   } catch (err) {
-    console.error('[B2C API] Fetch failed:', err);
-    return { doctors: [], centers: [], source: 'empty' };
+    console.warn('[B2C API] Fetch failed, falling back to bundled data:', err);
+    payload = localB2CData as unknown as B2CApiResponse;
   }
 
   const rawMedicos = payload.medicos || [];
@@ -419,7 +420,7 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     centrosByCmp.set(cmp, list);
   });
 
-  rawMedicos.forEach((med, idx) => {
+  rawMedicos.forEach((med) => {
     const cmp = (med.cmp || '').trim();
     if (!cmp) return;
 
@@ -455,8 +456,8 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     );
 
     const hasExactCoords = resolvedDoctorCoords !== null;
-    const lat = hasExactCoords ? resolvedDoctorCoords.lat : (DEFAULT_LAT + idx * 0.0005);
-    const lng = hasExactCoords ? resolvedDoctorCoords.lng : (DEFAULT_LNG + idx * 0.0005);
+    const lat = hasExactCoords ? resolvedDoctorCoords.lat : 0;
+    const lng = hasExactCoords ? resolvedDoctorCoords.lng : 0;
 
     const cleanName = toTitleCase(med.medico || `Médico CMP ${cmp}`);
     const fotoUrl = (med.foto_url || '').trim() || null;
@@ -495,7 +496,6 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
   // PASS B: Build one LocationItem per unique centro with resolved coordinates.
   // Merge products from all associated doctors and attach them as linked_entities.
   const centersByKey = new Map<string, LocationItem>();
-  let centerIdx = 0;
 
   centroGroupsByKey.forEach((group, key) => {
     const { rawCentro, cmps } = group;
@@ -503,11 +503,11 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
 
     const address = cleanSpanishText((rawCentro.direccion_centro || '').trim()) || 'Lima, Perú';
 
-    // Coordinates: use resolved coordinates if found, else fallback with dispersion
+    // Coordinates: use resolved coordinates if found, else 0 (unmapped)
     const resolvedCenterCoords = centerCoordsByKey.get(key) || null;
     const hasExactCoords = resolvedCenterCoords !== null;
-    const lat = hasExactCoords ? resolvedCenterCoords.lat : (DEFAULT_LAT + centerIdx * 0.0008);
-    const lng = hasExactCoords ? resolvedCenterCoords.lng : (DEFAULT_LNG + centerIdx * 0.0008);
+    const lat = hasExactCoords ? resolvedCenterCoords.lat : 0;
+    const lng = hasExactCoords ? resolvedCenterCoords.lng : 0;
 
     // Collect all linked doctor LocationItems (only those already built)
     const linkedDoctors: LocationItem[] = cmps
@@ -560,7 +560,6 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     };
 
     centersByKey.set(key, locationItem);
-    centerIdx++;
   });
 
   const doctors = Array.from(doctorsByCmp.values());

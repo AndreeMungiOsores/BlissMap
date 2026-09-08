@@ -1778,7 +1778,11 @@ export const PublicLocator: React.FC = () => {
       {/* Map Panel */}
       <div className="locator-map-container">
         <LocatorMap 
-          locations={isSelectionActive ? processedLocations : []}
+          locations={isSelectionActive ? (
+            locator.slug === 'blissfarma'
+              ? processedLocations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0) && !loc.tags?.includes('Sin ubicación exacta'))
+              : processedLocations
+          ) : []}
           selectedLocationId={selectedLocationId}
           onSelectLocation={(locId) => {
             setSelectedLocationId(locId);

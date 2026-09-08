@@ -78,9 +78,16 @@ const removeAccents = (str: string | null | undefined): string => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 };
 
-export const isWithoutCoordinates = (loc: LocationItem): boolean => {
+export const isWithoutCoordinates = (loc: LocationItem, isBlissfarma?: boolean): boolean => {
   if (!loc.lat || !loc.lng || loc.lat === 0 || loc.lng === 0) return true;
   if (loc.tags?.includes('Sin ubicación exacta')) return true;
+  if (isBlissfarma) {
+    const dLat = Math.abs(loc.lat - (-12.046374));
+    const dLng = Math.abs(loc.lng - (-77.042793));
+    if (Math.abs(dLat - dLng) < 0.0001 && dLat < 0.8) {
+      return true;
+    }
+  }
   if (!loc.is_manual_override) {
     const cleanDoc = (loc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
     const excelMap = excelGeocodedOverrides as Record<string, any>;
@@ -444,26 +451,29 @@ export const ManageLocations: React.FC = () => {
   const geoStats = useMemo(() => {
     let noCoords = 0;
     let noAddr = 0;
+    const isBliss = activeLocator?.slug === 'blissfarma';
     locations.forEach(loc => {
       if (groupSecondaryIds.has(loc.id)) return;
-      if (isWithoutCoordinates(loc)) noCoords++;
+      if (isWithoutCoordinates(loc, isBliss)) noCoords++;
       if (isWithoutTextAddress(loc)) noAddr++;
     });
     return { noCoords, noAddr };
-  }, [locations, groupSecondaryIds]);
+  }, [locations, groupSecondaryIds, activeLocator?.slug]);
 
-  const filteredLocations = useMemo(() => locations.filter(loc => {
-    if (groupSecondaryIds.has(loc.id)) return false;
-    if (filterMode === 'manual' && !loc.is_manual_override) return false;
+  const filteredLocations = useMemo(() => {
+    const isBliss = activeLocator?.slug === 'blissfarma';
+    return locations.filter(loc => {
+      if (groupSecondaryIds.has(loc.id)) return false;
+      if (filterMode === 'manual' && !loc.is_manual_override) return false;
 
-    // Entity type filter for Blissfarma locator (all | doctor | center)
-    if (activeLocator?.slug === 'blissfarma' && entityFilter !== 'all') {
-      const locEntityType = loc.custom_fields?.['entity_type'];
-      if (locEntityType !== entityFilter) return false;
-    }
+      // Entity type filter for Blissfarma locator (all | doctor | center)
+      if (isBliss && entityFilter !== 'all') {
+        const locEntityType = loc.custom_fields?.['entity_type'];
+        if (locEntityType !== entityFilter) return false;
+      }
 
-    // Filter points without coordinates
-    if (filterNoCoords && !isWithoutCoordinates(loc)) return false;
+      // Filter points without coordinates
+      if (filterNoCoords && !isWithoutCoordinates(loc, isBliss)) return false;
 
     // Filter points without written text address
     if (filterNoAddress && !isWithoutTextAddress(loc)) return false;
@@ -502,7 +512,8 @@ export const ManageLocations: React.FC = () => {
       return tokens.every(token => allLocText.includes(token));
     }
     return false;
-  }), [locations, groupSecondaryIds, filterMode, entityFilter, filterNoCoords, filterNoAddress, search, activeLocator?.slug]);
+    });
+  }, [locations, groupSecondaryIds, filterMode, entityFilter, filterNoCoords, filterNoAddress, search, activeLocator?.slug]);
 
   // Extract unique brands with product counts across the full dataset
   const brandStats = useMemo(() => {
@@ -1239,7 +1250,7 @@ export const ManageLocations: React.FC = () => {
                               Grupo Económico
                             </span>
                           )}
-                          {isWithoutCoordinates(loc) && (
+                          {isWithoutCoordinates(loc, activeLocator?.slug === 'blissfarma') && (
                             <span style={{
                               fontSize: '10px', fontWeight: 700, color: '#e11d48',
                               backgroundColor: 'rgba(225, 29, 72, 0.1)', border: '1px solid rgba(225, 29, 72, 0.25)',
