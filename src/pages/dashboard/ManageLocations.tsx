@@ -1250,26 +1250,6 @@ export const ManageLocations: React.FC = () => {
                               Grupo Económico
                             </span>
                           )}
-                          {isWithoutCoordinates(loc, activeLocator?.slug === 'blissfarma') && (
-                            <span style={{
-                              fontSize: '10px', fontWeight: 700, color: '#e11d48',
-                              backgroundColor: 'rgba(225, 29, 72, 0.1)', border: '1px solid rgba(225, 29, 72, 0.25)',
-                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
-                              display: 'inline-flex', alignItems: 'center', gap: '3px'
-                            }} title="Ubicación sin coordenadas geocodificadas exactas">
-                              📍 Sin coordenadas
-                            </span>
-                          )}
-                          {isWithoutTextAddress(loc) && (
-                            <span style={{
-                              fontSize: '10px', fontWeight: 700, color: '#d97706',
-                              backgroundColor: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.25)',
-                              padding: '2px 7px', borderRadius: 'var(--radius-full)',
-                              display: 'inline-flex', alignItems: 'center', gap: '3px'
-                            }} title="Ubicación sin dirección escrita en texto">
-                              📝 Sin dirección
-                            </span>
-                          )}
                         </div>
                         {loc.custom_fields?.['CMP'] && (
                           <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
