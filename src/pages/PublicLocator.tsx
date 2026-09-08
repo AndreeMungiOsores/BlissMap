@@ -75,6 +75,7 @@ interface LocatorData {
   marker_type: string;
   marker_color: string;
   marker_image_url: string | null;
+  marker_scale?: number | null;
   search_placeholder: string;
   distance_unit: string;
   hidden_brands?: string[] | null;
@@ -739,6 +740,16 @@ export const PublicLocator: React.FC = () => {
   }, [locations, selectedProducts, selectedBrand, queryClean, isQueryActive, isSelectionActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit]);
 
   const visibleLocations = processedLocations.slice(0, visibleLimit);
+
+  // Compute marker scale with localStorage fallback
+  const effectiveMarkerScale = useMemo(() => {
+    if (!locator) return 1.0;
+    const fromLocal = Number(localStorage.getItem(`bm_marker_scale_${locator.id}`))
+      || Number(localStorage.getItem(`bm_marker_scale_${locator.slug}`));
+    if (fromLocal && fromLocal > 0) return fromLocal;
+    if (typeof locator.marker_scale === 'number' && locator.marker_scale > 0) return locator.marker_scale;
+    return 1.0;
+  }, [locator]);
 
   if (loading) {
     return (
@@ -1564,6 +1575,7 @@ export const PublicLocator: React.FC = () => {
           markerType={locator.marker_type}
           markerColor={locator.marker_color}
           markerImageUrl={locator.marker_image_url}
+          markerScale={effectiveMarkerScale}
         />
       </div>
 

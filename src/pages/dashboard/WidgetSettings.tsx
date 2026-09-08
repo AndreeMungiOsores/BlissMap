@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { Locator } from './DashboardLayout';
+import { LocatorMap } from '../../components/LocatorMap';
 import { 
   Save, 
   Upload, 
@@ -11,7 +12,8 @@ import {
   MapPin, 
   Eye, 
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Search
 } from 'lucide-react';
 
 interface OutletContextType {
@@ -31,6 +33,7 @@ export const WidgetSettings: React.FC = () => {
   const [markerType, setMarkerType] = useState('standard');
   const [markerColor, setMarkerColor] = useState('#3B82F6');
   const [markerImageUrl, setMarkerImageUrl] = useState<string | null>(null);
+  const [markerScale, setMarkerScale] = useState<number>(1.0);
   
   // Custom marker file upload state
   const [markerFile, setMarkerFile] = useState<File | null>(null);
@@ -40,7 +43,7 @@ export const WidgetSettings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0); // Used to force refresh the preview iframe
+  const [previewKey, setPreviewKey] = useState(0); // Used to force refresh the preview map
 
   // Sync state with active locator
   useEffect(() => {
@@ -53,6 +56,12 @@ export const WidgetSettings: React.FC = () => {
       setMarkerColor(activeLocator.marker_color);
       setMarkerImageUrl(activeLocator.marker_image_url);
       setMarkerPreview(activeLocator.marker_image_url);
+
+      const savedScale = Number(localStorage.getItem(`bm_marker_scale_${activeLocator.id}`))
+        || Number(localStorage.getItem(`bm_marker_scale_${activeLocator.slug}`))
+        || (typeof activeLocator.marker_scale === 'number' ? activeLocator.marker_scale : 1.0);
+      setMarkerScale(savedScale);
+
       setError(null);
       setSuccess(false);
     }
@@ -104,25 +113,42 @@ export const WidgetSettings: React.FC = () => {
         setUploadingMarker(false);
       }
 
+      // Persist marker_scale in localStorage immediately
+      localStorage.setItem(`bm_marker_scale_${activeLocator.id}`, String(markerScale));
+      localStorage.setItem(`bm_marker_scale_${activeLocator.slug}`, String(markerScale));
+
+      const baseUpdate = {
+        map_style: mapStyle,
+        accent_color: accentColor,
+        search_placeholder: searchPlaceholder,
+        distance_unit: distanceUnit,
+        marker_type: markerType,
+        marker_color: markerColor,
+        marker_image_url: markerType === 'custom' ? finalMarkerUrl : null
+      };
+
       const { error: updateErr } = await supabase
         .from('bm_locators')
         .update({
-          map_style: mapStyle,
-          accent_color: accentColor,
-          search_placeholder: searchPlaceholder,
-          distance_unit: distanceUnit,
-          marker_type: markerType,
-          marker_color: markerColor,
-          marker_image_url: markerType === 'custom' ? finalMarkerUrl : null
+          ...baseUpdate,
+          marker_scale: markerScale
         })
         .eq('id', activeLocator.id);
 
-      if (updateErr) throw updateErr;
+      if (updateErr) {
+        // Fallback update without marker_scale if column not yet present in Supabase table
+        const { error: fallbackErr } = await supabase
+          .from('bm_locators')
+          .update(baseUpdate)
+          .eq('id', activeLocator.id);
+
+        if (fallbackErr) throw fallbackErr;
+      }
 
       setSuccess(true);
       await fetchLocators();
       
-      // Refresh preview iframe
+      // Refresh preview map
       setPreviewKey(prev => prev + 1);
     } catch (err: any) {
       console.error(err);
@@ -132,6 +158,21 @@ export const WidgetSettings: React.FC = () => {
     }
   };
 
+  const previewLocationItem = useMemo(() => [{
+    id: 'preview-sample-pin',
+    name: activeLocator?.name || 'Ubicación de Muestra',
+    image_url: null,
+    address: 'Av. José Pardo 991, Miraflores, Lima',
+    phone: '+51 987 654 321',
+    email: null,
+    website: null,
+    lat: -12.1215,
+    lng: -77.0298,
+    tags: ['Muestra'],
+    custom_fields: {},
+    description: null
+  }], [activeLocator?.name]);
+
   if (!activeLocator) {
     return (
       <div style={{ color: 'white', textAlign: 'center', padding: '40px' }}>
@@ -139,8 +180,6 @@ export const WidgetSettings: React.FC = () => {
       </div>
     );
   }
-
-  const previewUrl = `${window.location.origin}/l/${activeLocator.slug}?preview=true`;
 
   return (
     <div>
@@ -491,6 +530,56 @@ export const WidgetSettings: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* Marker Scale Slider Control */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label htmlFor="marker-scale-slider" className="form-label" style={{ marginBottom: 0 }}>
+                  Tamaño del Marcador
+                </label>
+                <span 
+                  style={{ 
+                    fontSize: '12px', 
+                    fontWeight: 700, 
+                    color: '#00506E',
+                    backgroundColor: 'rgba(30, 200, 170, 0.12)',
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(30, 200, 170, 0.3)'
+                  }}
+                  aria-live="polite"
+                >
+                  {markerScale.toFixed(1)}x {markerScale === 1.0 ? '(Original)' : markerScale === 3.0 ? '(Máx x3)' : ''}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', fontWeight: 600 }}>1.0x</span>
+                <input 
+                  id="marker-scale-slider"
+                  type="range"
+                  min="1.0"
+                  max="3.0"
+                  step="0.1"
+                  value={markerScale}
+                  onChange={(e) => setMarkerScale(parseFloat(e.target.value))}
+                  style={{
+                    flexGrow: 1,
+                    accentColor: '#1EC8AA',
+                    cursor: 'pointer',
+                    height: '6px'
+                  }}
+                  aria-label="Tamaño del marcador en el mapa"
+                  aria-valuemin={1.0}
+                  aria-valuemax={3.0}
+                  aria-valuenow={markerScale}
+                  aria-valuetext={`${markerScale.toFixed(1)} veces el tamaño original`}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', fontWeight: 600 }}>3.0x</span>
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px', display: 'block' }}>
+                Ajusta el tamaño del icono desde 1x (original) hasta 3x.
+              </span>
+            </div>
           </div>
 
           <button 
@@ -510,7 +599,7 @@ export const WidgetSettings: React.FC = () => {
 
         {/* Right Side: Interactive Preview */}
         <div className="customizer-preview-container">
-          <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-dark-text-primary)' }}>
               <Eye size={16} /> Vista Previa del Widget
             </h3>
@@ -519,22 +608,51 @@ export const WidgetSettings: React.FC = () => {
               className="btn-icon" 
               style={{ color: 'var(--color-dark-text-secondary)' }}
               title="Recargar vista previa"
+              aria-label="Recargar mapa de vista previa"
             >
               <RefreshCw size={14} />
             </button>
           </div>
           
-          <div className="customizer-preview-frame">
-            <iframe 
-              key={previewKey}
-              src={previewUrl}
-              title="BlissMap Widget Live Preview"
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                backgroundColor: '#ffffff'
-              }}
+          <div className="customizer-preview-frame" style={{ position: 'relative', width: '100%', height: '600px' }}>
+            {/* Search Header Overlay to accurately mirror public widget */}
+            <div style={{
+              position: 'absolute',
+              top: '16px',
+              left: '16px',
+              right: '16px',
+              zIndex: 1000,
+              pointerEvents: 'none'
+            }}>
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '14px',
+                padding: '12px 18px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                border: '1.5px solid #E2E8F0'
+              }}>
+                <Search size={18} style={{ color: '#00506E' }} />
+                <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
+                  {searchPlaceholder || 'Escribe producto, marca o médico...'}
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Leaflet Map faithfully rendering 1 sample pin with zoom responsiveness */}
+            <LocatorMap 
+              key={`preview-map-${mapStyle}-${previewKey}`}
+              locations={previewLocationItem}
+              selectedLocationId="preview-sample-pin"
+              onSelectLocation={() => {}}
+              mapStyle={mapStyle}
+              markerType={markerType}
+              markerColor={markerColor}
+              markerImageUrl={markerType === 'custom' ? (markerPreview || markerImageUrl) : null}
+              markerScale={markerScale}
+              zoomControl={true}
             />
           </div>
         </div>

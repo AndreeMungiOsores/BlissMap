@@ -35,6 +35,8 @@ interface LocatorMapProps {
   markerType: string;
   markerColor: string;
   markerImageUrl: string | null;
+  markerScale?: number;
+  zoomControl?: boolean;
 }
 
 // Custom Cluster Icon generator with gradient colors and size scaling
@@ -94,7 +96,9 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   mapStyle,
   markerType,
   markerColor,
-  markerImageUrl
+  markerImageUrl,
+  markerScale = 1.0,
+  zoomControl = false
 }) => {
   const selectedLocation = locations.find(loc => loc.id === selectedLocationId) || null;
 
@@ -102,22 +106,26 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   const getLeafletIcon = (locId: string) => {
     const isActive = locId === selectedLocationId;
     const finalColor = markerColor;
+    const currentScale = Math.min(Math.max(Number(markerScale) || 1.0, 0.5), 3.0);
 
     if (markerType === 'custom' && markerImageUrl) {
+      const baseSize = isActive ? 40 : 32;
+      const w = Math.round(baseSize * currentScale);
+      const h = Math.round(baseSize * currentScale);
       return L.icon({
         iconUrl: markerImageUrl,
-        iconSize: isActive ? [40, 40] : [32, 32],
-        iconAnchor: isActive ? [20, 40] : [16, 32],
-        popupAnchor: [0, -32]
+        iconSize: [w, h],
+        iconAnchor: [Math.round(w / 2), h],
+        popupAnchor: [0, -h]
       });
     }
 
     // Dynamic colored pin SVG
-    const scale = isActive ? 1.6 : 1.0;
-    const width = 34 * scale;
-    const height = 34 * scale;
-    const anchorX = 17 * scale;
-    const anchorY = 34 * scale;
+    const activeFactor = isActive ? 1.6 : 1.0;
+    const width = Math.round(34 * activeFactor * currentScale);
+    const height = Math.round(34 * activeFactor * currentScale);
+    const anchorX = Math.round(17 * activeFactor * currentScale);
+    const anchorY = Math.round(34 * activeFactor * currentScale);
 
     const svgPin = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${width}" height="${height}" class="custom-leaflet-marker" style="filter: ${isActive ? `drop-shadow(0 0 6px ${finalColor}) drop-shadow(0 3px 8px rgba(0,0,0,0.45))` : 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))'}"><path d="M12 2C7.58 2 4 5.58 4 10c0 5.25 8 12 8 12s8-6.75 8-12c0-4.42-3.58-8-8-8z" fill="${finalColor}" stroke="#ffffff" stroke-width="${isActive ? 2.5 : 1.5}"/><circle cx="12" cy="10" r="3.5" fill="#FFFFFF"/></svg>`;
 
@@ -161,7 +169,8 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
         center={[-12.046374, -77.042793]} // default Lima, Peru
         zoom={12}
         style={{ width: '100%', height: '100%' }}
-        zoomControl={false}
+        zoomControl={zoomControl}
+        scrollWheelZoom={true}
       >
         <FitMapBounds locations={locations} selectedLocation={selectedLocation} />
         

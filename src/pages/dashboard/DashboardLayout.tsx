@@ -24,6 +24,7 @@ export interface Locator {
   marker_type: string;
   marker_color: string;
   marker_image_url: string | null;
+  marker_scale?: number | null;
   search_placeholder: string;
   distance_unit: string;
   hidden_brands?: string[] | null;
@@ -38,6 +39,7 @@ const DEFAULT_LOCAL_LOCATOR: Locator = {
   marker_type: 'standard',
   marker_color: '#3B82F6',
   marker_image_url: null,
+  marker_scale: 1.0,
   search_placeholder: 'Buscar por médico, dirección o producto...',
   distance_unit: 'km',
   hidden_brands: []
