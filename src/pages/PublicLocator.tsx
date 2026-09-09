@@ -109,7 +109,7 @@ export const getProbabilityInfo = (lastDateStr?: string): ProbabilityInfo => {
     };
   }
 
-  const refDate = new Date('2026-07-30').getTime();
+  const refDate = Date.now();
   const purchaseDate = new Date(lastDateStr).getTime();
   const diffMs = Math.max(0, refDate - purchaseDate);
   const diffDays = diffMs / (1000 * 3600 * 24);
@@ -696,6 +696,9 @@ export const PublicLocator: React.FC = () => {
   // Process, filter, and sort locations (Memoized for high performance)
   const processedLocations = useMemo(() => {
     const unit = locator?.distance_unit || 'km';
+    const isBlissfarma = slug === 'blissfarma';
+    // Blissfarma: solo mostrar entidades con compra en los últimos 6 meses
+    const sixMonthsAgo = isBlissfarma ? Date.now() - (180 * 24 * 60 * 60 * 1000) : 0;
 
     return locations
       .map(loc => {
@@ -735,6 +738,13 @@ export const PublicLocator: React.FC = () => {
         return { ...loc, maxProbScore, latestMatchingDate };
       })
       .filter(loc => {
+        // 0-bis. Blissfarma: excluir entidades sin compra en los últimos 6 meses
+        if (isBlissfarma) {
+          if (!loc.latestMatchingDate) return false;
+          const lastPurchase = new Date(loc.latestMatchingDate).getTime();
+          if (lastPurchase < sixMonthsAgo) return false;
+        }
+
         // 0. Entity type filter (Blissfarma only): 'doctor' | 'center' | 'all'
         if (entityFilter !== 'all') {
           const entityType = loc.custom_fields?.['entity_type'];
@@ -757,25 +767,39 @@ export const PublicLocator: React.FC = () => {
         if (isQueryActive && !isSelectionActive) {
           const inName = removeAccents(loc.name).includes(queryClean);
           const inAddress = removeAccents(loc.address).includes(queryClean);
-          const inTags = loc.tags?.some(t => removeAccents(t).includes(queryClean));
-          const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(queryClean));
-          const inProducts = loc.products?.some(p => productMatchesQuery(p, queryClean));
-          
-          if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
-            const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
-            if (tokens.length > 1) {
-              const allLocText = removeAccents([
-                loc.name,
-                loc.address,
-                ...(loc.tags || []),
-                ...Object.values(loc.custom_fields || {}),
-                ...(loc.products || []).map(p => `${p.brand || ''} ${p.name}`)
-              ].join(' '));
 
-              const allTokensMatch = tokens.every(token => allLocText.includes(token));
-              if (!allTokensMatch) return false;
-            } else {
-              return false;
+          if (isBlissfarma) {
+            // Blissfarma: solo buscar por nombre de persona/centro y dirección
+            if (!inName && !inAddress) {
+              const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
+              if (tokens.length > 1) {
+                const locText = removeAccents(`${loc.name} ${loc.address}`);
+                if (!tokens.every(token => locText.includes(token))) return false;
+              } else {
+                return false;
+              }
+            }
+          } else {
+            const inTags = loc.tags?.some(t => removeAccents(t).includes(queryClean));
+            const inCustom = loc.custom_fields && Object.values(loc.custom_fields).some(v => removeAccents(String(v)).includes(queryClean));
+            const inProducts = loc.products?.some(p => productMatchesQuery(p, queryClean));
+
+            if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
+              const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
+              if (tokens.length > 1) {
+                const allLocText = removeAccents([
+                  loc.name,
+                  loc.address,
+                  ...(loc.tags || []),
+                  ...Object.values(loc.custom_fields || {}),
+                  ...(loc.products || []).map(p => `${p.brand || ''} ${p.name}`)
+                ].join(' '));
+
+                const allTokensMatch = tokens.every(token => allLocText.includes(token));
+                if (!allTokensMatch) return false;
+              } else {
+                return false;
+              }
             }
           }
         }
@@ -801,7 +825,7 @@ export const PublicLocator: React.FC = () => {
         }
         return a.name.localeCompare(b.name);
       });
-  }, [locations, selectedProducts, selectedBrand, queryClean, isQueryActive, isSelectionActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit, entityFilter]);
+  }, [locations, selectedProducts, selectedBrand, queryClean, isQueryActive, isSelectionActive, hasActiveProductSearch, radius, userCoords, locator?.distance_unit, entityFilter, slug]);
 
   const visibleLocations = processedLocations.slice(0, visibleLimit);
 
@@ -1355,8 +1379,8 @@ export const PublicLocator: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Products List Section with Enlarged Photos */}
-                {(() => {
+                {/* Products List Section with Enlarged Photos — hidden for Blissfarma */}
+                {slug !== 'blissfarma' && (() => {
                   const allProds = selectedLocation.products || [];
                   if (allProds.length === 0) return null;
 
