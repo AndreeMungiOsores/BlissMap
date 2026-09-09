@@ -1023,7 +1023,7 @@ export const PublicLocator: React.FC = () => {
 
               <input 
                 type="text" 
-                placeholder={isSelectionActive ? "Agregar filtro..." : "Escribe producto, marca o médico..."}
+                placeholder={isSelectionActive ? "Agregar filtro..." : slug === 'blissfarma' ? "Buscar por médico, centro o dirección..." : "Escribe producto, marca o médico..."}
                 value={searchQuery}
                 onFocus={() => setIsDropdownOpen(true)}
                 onChange={(e) => {
@@ -1035,7 +1035,7 @@ export const PublicLocator: React.FC = () => {
             </div>
 
             {/* Suggestions Dropdown (Brands & Products) */}
-            {isDropdownOpen && isQueryActive && (brandSuggestions.length > 0 || productSuggestions.length > 0) && (
+            {isDropdownOpen && isQueryActive && slug !== 'blissfarma' && (brandSuggestions.length > 0 || productSuggestions.length > 0) && (
               <div style={{
                 position: 'absolute',
                 top: 'calc(100% + 4px)',
