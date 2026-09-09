@@ -37,6 +37,7 @@ interface LocatorMapProps {
   markerImageUrl: string | null;
   markerScale?: number;
   zoomControl?: boolean;
+  initialCenterToLima?: boolean;
 }
 
 // Custom Cluster Icon generator with gradient colors and size scaling
@@ -58,8 +59,13 @@ const createCustomClusterIcon = (cluster: any) => {
 };
 
 // Leaflet center updater and bounds adjuster helper
-const FitMapBounds: React.FC<{ locations: LocationItem[]; selectedLocation: LocationItem | null }> = ({ locations, selectedLocation }) => {
+const FitMapBounds: React.FC<{
+  locations: LocationItem[];
+  selectedLocation: LocationItem | null;
+  initialCenterToLima?: boolean;
+}> = ({ locations, selectedLocation, initialCenterToLima }) => {
   const map = useMap();
+  const hasInitializedRef = React.useRef(false);
 
   useEffect(() => {
     if (selectedLocation && selectedLocation.lat && selectedLocation.lng && (selectedLocation.lat !== 0 || selectedLocation.lng !== 0)) {
@@ -81,13 +87,18 @@ const FitMapBounds: React.FC<{ locations: LocationItem[]; selectedLocation: Loca
         }
       });
     } else if (locations.length > 0) {
+      if (initialCenterToLima && !hasInitializedRef.current) {
+        hasInitializedRef.current = true;
+        map.setView([-12.07, -77.03], 11, { animate: false });
+        return;
+      }
       const validLocs = locations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0));
       if (validLocs.length > 0) {
         const bounds = L.latLngBounds(validLocs.map(loc => [loc.lat, loc.lng]));
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
       }
     }
-  }, [locations, selectedLocation, map]);
+  }, [locations, selectedLocation, map, initialCenterToLima]);
 
   return null;
 };
@@ -101,7 +112,8 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   markerColor,
   markerImageUrl,
   markerScale = 1.0,
-  zoomControl = false
+  zoomControl = false,
+  initialCenterToLima = false
 }) => {
   const selectedLocation = locations.find(loc => loc.id === selectedLocationId) || null;
 
@@ -169,13 +181,13 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <MapContainer
-        center={[-12.046374, -77.042793]} // default Lima, Peru
-        zoom={12}
+        center={initialCenterToLima ? [-12.07, -77.03] : [-12.046374, -77.042793]} // default Lima, Peru
+        zoom={initialCenterToLima ? 11 : 12}
         style={{ width: '100%', height: '100%' }}
         zoomControl={zoomControl}
         scrollWheelZoom={true}
       >
-        <FitMapBounds locations={locations} selectedLocation={selectedLocation} />
+        <FitMapBounds locations={locations} selectedLocation={selectedLocation} initialCenterToLima={initialCenterToLima} />
         
         <TileLayer
           attribution={getAttribution()}

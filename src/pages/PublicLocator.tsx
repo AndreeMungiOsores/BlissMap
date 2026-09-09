@@ -917,6 +917,24 @@ export const PublicLocator: React.FC = () => {
 
   const visibleLocations = processedLocations.slice(0, visibleLimit);
 
+  // Suggestions of Doctors & Centers for Blissfarma search autocomplete
+  const entitySuggestions = useMemo(() => {
+    if (slug !== 'blissfarma' || !isQueryActive) return [];
+    return processedLocations
+      .filter(loc => {
+        const inName = removeAccents(loc.name).includes(queryClean);
+        const inAddress = normalizeAddress(loc.address).includes(queryClean);
+        if (inName || inAddress) return true;
+        const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
+        if (tokens.length > 1) {
+          const locText = `${removeAccents(loc.name)} ${normalizeAddress(loc.address)}`;
+          return tokens.every(token => locText.includes(token));
+        }
+        return false;
+      })
+      .slice(0, 8);
+  }, [slug, isQueryActive, processedLocations, queryClean]);
+
   // Compute marker scale with localStorage fallback
   const effectiveMarkerScale = useMemo(() => {
     if (!locator) return 1.0;
@@ -1121,6 +1139,117 @@ export const PublicLocator: React.FC = () => {
                 className="locator-search-input"
               />
             </div>
+
+            {/* Suggestions Dropdown for Blissfarma: Médicos y Centros */}
+            {isDropdownOpen && isQueryActive && slug === 'blissfarma' && entitySuggestions.length > 0 && (
+              <div 
+                role="listbox"
+                aria-label="Médicos y centros sugeridos"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                  zIndex: 1000,
+                  maxHeight: '320px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div style={{ padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#00506E', textTransform: 'uppercase', backgroundColor: '#FAF8F5', borderBottom: '1px solid #f1f5f9' }}>
+                  🩺 Médicos y Centros sugeridos ({entitySuggestions.length})
+                </div>
+                {entitySuggestions.map(loc => {
+                  const isCenter = loc.custom_fields?.['entity_type'] === 'center';
+                  return (
+                    <div
+                      key={loc.id}
+                      role="option"
+                      aria-selected={selectedLocationId === loc.id}
+                      tabIndex={0}
+                      onClick={() => {
+                        setSelectedLocationId(loc.id);
+                        setIsDropdownOpen(false);
+                        if (mobileSheetState === 'collapsed') {
+                          setMobileSheetState('half');
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedLocationId(loc.id);
+                          setIsDropdownOpen(false);
+                          if (mobileSheetState === 'collapsed') {
+                            setMobileSheetState('half');
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        fontSize: '13px',
+                        color: '#1e293b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        borderBottom: '1px solid #f8fafc',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 200, 170, 0.08)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexGrow: 1 }}>
+                        {loc.image_url ? (
+                          <img
+                            src={loc.image_url}
+                            alt=""
+                            style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            backgroundColor: isCenter ? 'rgba(0, 80, 110, 0.08)' : 'rgba(30, 200, 170, 0.12)',
+                            color: isCenter ? '#00506E' : '#1EC8AA',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {isCenter ? <Building2 size={16} /> : <MapPin size={16} />}
+                          </div>
+                        )}
+                        <div style={{ minWidth: 0, flexGrow: 1 }}>
+                          <div style={{ fontWeight: 700, color: '#00506E', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {loc.name}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {loc.address}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        backgroundColor: isCenter ? 'rgba(0, 80, 110, 0.08)' : 'rgba(30, 200, 170, 0.12)',
+                        color: '#00506E',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}>
+                        {isCenter ? '🏥 Centro' : '🩺 Médico'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Suggestions Dropdown (Brands & Products) */}
             {isDropdownOpen && isQueryActive && slug !== 'blissfarma' && (brandSuggestions.length > 0 || productSuggestions.length > 0) && (
@@ -1904,6 +2033,7 @@ export const PublicLocator: React.FC = () => {
           markerColor={locator.marker_color}
           markerImageUrl={locator.marker_image_url}
           markerScale={effectiveMarkerScale}
+          initialCenterToLima={locator.slug === 'blissfarma'}
         />
       </div>
 
