@@ -583,6 +583,21 @@ export const PublicLocator: React.FC = () => {
       .toLowerCase();
   };
 
+  // Expande abreviaciones viales comunes para que el buscador sea equivalente
+  // entre forma corta y larga: "jr" == "jiron", "av" == "avenida", etc.
+  const normalizeStreetAbbr = (str: string): string => {
+    return str
+      .replace(/\bjron?\b\.?/g, 'jiron')
+      .replace(/\bav\.?\b/g, 'avenida')
+      .replace(/\bavda\.?\b/g, 'avenida')
+      .replace(/\bpje\.?\b/g, 'pasaje')
+      .replace(/\bpsje\.?\b/g, 'pasaje')
+      .replace(/\bcal\.?\b/g, 'calle')
+      .replace(/\burb\.?\b/g, 'urbanizacion')
+      .replace(/\bmz\.?\b/g, 'manzana')
+      .replace(/\blt\.?\b/g, 'lote');
+  };
+
   const productMatchesQuery = (product: ProductItem, qClean: string): boolean => {
     if (!qClean) return true;
     const cleanName = removeAccents(product.name);
@@ -605,9 +620,13 @@ export const PublicLocator: React.FC = () => {
 
   // Search Query Active State (Requires at least 3 characters for text search)
   const minQueryLen = 3;
-  const queryClean = removeAccents(searchQuery.trim());
+  const queryClean = normalizeStreetAbbr(removeAccents(searchQuery.trim()));
   const isQueryActive = queryClean.length >= minQueryLen;
   const hasActiveProductSearch = isSelectionActive || isQueryActive;
+
+  // Helper: normaliza una dirección de la misma forma que el query para comparación equivalente
+  const normalizeAddress = (addr: string | null | undefined): string =>
+    normalizeStreetAbbr(removeAccents(addr));
 
   // Brand suggestions matching query (only when >= 3 chars typed)
   const brandSuggestions = useMemo(() => {
@@ -766,14 +785,14 @@ export const PublicLocator: React.FC = () => {
         // 3. Free Text Search Filter (Only active when at least 3 characters typed and no explicit selection)
         if (isQueryActive && !isSelectionActive) {
           const inName = removeAccents(loc.name).includes(queryClean);
-          const inAddress = removeAccents(loc.address).includes(queryClean);
+          const inAddress = normalizeAddress(loc.address).includes(queryClean);
 
           if (isBlissfarma) {
             // Blissfarma: solo buscar por nombre de persona/centro y dirección
             if (!inName && !inAddress) {
               const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
               if (tokens.length > 1) {
-                const locText = removeAccents(`${loc.name} ${loc.address}`);
+                const locText = `${removeAccents(loc.name)} ${normalizeAddress(loc.address)}`;
                 if (!tokens.every(token => locText.includes(token))) return false;
               } else {
                 return false;
@@ -787,13 +806,13 @@ export const PublicLocator: React.FC = () => {
             if (!inName && !inAddress && !inTags && !inCustom && !inProducts) {
               const tokens = queryClean.split(/\s+/).filter(t => t.length > 0);
               if (tokens.length > 1) {
-                const allLocText = removeAccents([
-                  loc.name,
-                  loc.address,
-                  ...(loc.tags || []),
-                  ...Object.values(loc.custom_fields || {}),
-                  ...(loc.products || []).map(p => `${p.brand || ''} ${p.name}`)
-                ].join(' '));
+                const allLocText = [
+                  removeAccents(loc.name),
+                  normalizeAddress(loc.address),
+                  ...(loc.tags || []).map(t => removeAccents(t)),
+                  ...Object.values(loc.custom_fields || {}).map(v => removeAccents(String(v))),
+                  ...(loc.products || []).map(p => removeAccents(`${p.brand || ''} ${p.name}`))
+                ].join(' ');
 
                 const allTokensMatch = tokens.every(token => allLocText.includes(token));
                 if (!allTokensMatch) return false;
