@@ -716,8 +716,6 @@ export const PublicLocator: React.FC = () => {
   const processedLocations = useMemo(() => {
     const unit = locator?.distance_unit || 'km';
     const isBlissfarma = slug === 'blissfarma';
-    // Blissfarma: solo mostrar entidades con compra en los últimos 6 meses
-    const sixMonthsAgo = isBlissfarma ? Date.now() - (180 * 24 * 60 * 60 * 1000) : 0;
 
     return locations
       .map(loc => {
@@ -757,13 +755,6 @@ export const PublicLocator: React.FC = () => {
         return { ...loc, maxProbScore, latestMatchingDate };
       })
       .filter(loc => {
-        // 0-bis. Blissfarma: excluir entidades sin compra en los últimos 6 meses
-        if (isBlissfarma) {
-          if (!loc.latestMatchingDate) return false;
-          const lastPurchase = new Date(loc.latestMatchingDate).getTime();
-          if (lastPurchase < sixMonthsAgo) return false;
-        }
-
         // 0. Entity type filter (Blissfarma only): 'doctor' | 'center' | 'all'
         if (entityFilter !== 'all') {
           const entityType = loc.custom_fields?.['entity_type'];
