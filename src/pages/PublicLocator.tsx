@@ -166,6 +166,26 @@ const hexToRgb = (hex: string): string => {
     : '30, 200, 170';
 };
 
+// Canonical cleaner for Razón Social / Company legal names
+const cleanRS = (s?: string | null): string => {
+  if (!s) return '';
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\b(SOCIEDAD ANONIMA CERRADA|EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA|SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA|S\.?A\.?C\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?|S\.?A\.?)\b/g, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim();
+};
+
+const isRSMatch = (a?: string | null, b?: string | null): boolean => {
+  const cleanA = cleanRS(a);
+  const cleanB = cleanRS(b);
+  if (!cleanA || !cleanB) return false;
+  if (cleanA.length < 3 || cleanB.length < 3) return false;
+  return cleanA === cleanB || cleanA.includes(cleanB) || cleanB.includes(cleanA);
+};
+
 export const PublicLocator: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
@@ -332,6 +352,8 @@ export const PublicLocator: React.FC = () => {
           }
         }
 
+        let apiLocations: LocationItem[] = [];
+
         // ─────────────────────────────────────────────────────────────────────
         // BLISSFARMA: Mix B2C (doctors + centers) + B2B filtered to BlissFarma
         // ─────────────────────────────────────────────────────────────────────
@@ -351,15 +373,12 @@ export const PublicLocator: React.FC = () => {
             b2bFiltered
           );
 
-          // Build the merged Blissfarma location list:
-          // Doctors first, then centers, then B2B remainders
-          const blissfarmaLocations: LocationItem[] = [
+          // Build the combined Blissfarma raw location list
+          apiLocations = [
             ...b2cResult.doctors,
             ...b2cResult.centers,
             ...b2bDeduped
-          ].filter(loc =>
-            !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
-          );
+          ];
 
           currentLocator = currentLocator || {
             id: 'local-blissfarma',
@@ -370,21 +389,16 @@ export const PublicLocator: React.FC = () => {
             marker_type: 'standard',
             marker_color: '#1EC8AA',
             marker_image_url: null,
-            search_placeholder: 'Escribe producto, médico o centro...',
+            search_placeholder: 'Buscar por médico, centro o dirección...',
             distance_unit: 'km'
           };
-
-          setLocator(currentLocator);
-          setLocations(blissfarmaLocations);
-          return;
+        } else {
+          // ─────────────────────────────────────────────────────────────────────
+          // ALL OTHER SLUGS (medicosbliss, etc.): existing B2B logic unchanged
+          // ─────────────────────────────────────────────────────────────────────
+          const { locations: b2bLocs } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
+          apiLocations = b2bLocs;
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // ALL OTHER SLUGS (medicosbliss, etc.): existing B2B logic unchanged
-        // ─────────────────────────────────────────────────────────────────────
-
-        // Load live sales data from ERP API with 1-hour cache and fallback
-        const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as LocationItem[]);
 
         // MERGE: Map DB manual overrides (image_url, name, address, phone, email, website, instagram, facebook, lat, lng) over API base locations
         const dbMap = new Map<string, any>();
@@ -393,29 +407,58 @@ export const PublicLocator: React.FC = () => {
         const mergedLocations: LocationItem[] = apiLocations.map((apiLoc: any) => {
           let override = dbMap.get(apiLoc.id);
 
-          // Fallback: Match by Document (RUC/DNI) extracted from custom_fields OR from the DB record's id field.
-          // Handles legacy id formats: erp-doc-blissfarma-{ruc}-{idx} and erp-doc-{ruc}-{slug}.
+          // Fallback matching: Document (RUC/DNI), Razón Social (RS), and CMP
           if (!override) {
             const apiDocNum = (apiLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+            const apiRS = apiLoc.custom_fields?.['Razón Social'] || apiLoc.custom_fields?.['Razon Social'] || (apiLoc.custom_fields?.['entity_type'] === 'center' ? apiLoc.name : '') || '';
+            const apiCMP = (apiLoc.custom_fields?.['CMP'] || apiLoc.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
+            const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-            if (apiDocNum) {
-              for (const [dbId, dbItem] of dbMap.entries()) {
-                const dbDocFromFields = (dbItem.custom_fields?.['Documento'] || '').replace(/\D/g, '');
-                const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
-                const dbDocNum = dbDocFromFields || dbDocFromId;
+            for (const [dbId, dbItem] of dbMap.entries()) {
+              const dbDocFromFields = (dbItem.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+              const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
+              const dbDocNum = dbDocFromFields || dbDocFromId;
+              const dbRS = dbItem.custom_fields?.['Razón Social'] || dbItem.custom_fields?.['Razon Social'] || '';
+              const dbCMP = (dbItem.custom_fields?.['CMP'] || dbItem.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
+              const dbNameClean = (dbItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-                const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                const dbNameClean = (dbItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              // 1. Document (RUC / DNI)
+              if (dbDocNum && apiDocNum && dbDocNum === apiDocNum) {
+                const nameMatch = !apiNameClean || !dbNameClean ||
+                  apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) ||
+                  apiNameClean.length < 4 || dbNameClean.length < 4;
+                if (nameMatch) {
+                  override = dbItem;
+                  dbMap.delete(dbId);
+                  break;
+                }
+              }
 
-                if (dbDocNum && dbDocNum === apiDocNum) {
-                  const nameMatch = !apiNameClean || !dbNameClean ||
-                    apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) ||
-                    apiNameClean.length < 4 || dbNameClean.length < 4;
-                  if (nameMatch) {
-                    override = dbItem;
-                    dbMap.delete(dbId);
-                    break;
-                  }
+              // 2. Razón Social (RS) matching (especially for centers and clinics)
+              if (apiRS && dbRS && isRSMatch(apiRS, dbRS)) {
+                override = dbItem;
+                dbMap.delete(dbId);
+                break;
+              }
+              if (apiLoc.name && dbRS && isRSMatch(apiLoc.name, dbRS)) {
+                override = dbItem;
+                dbMap.delete(dbId);
+                break;
+              }
+              if (apiRS && dbItem.name && isRSMatch(apiRS, dbItem.name)) {
+                override = dbItem;
+                dbMap.delete(dbId);
+                break;
+              }
+
+              // 3. CMP (Colegiatura) with name overlap
+              if (apiCMP && dbCMP && apiCMP.replace(/^0+/, '') === dbCMP.replace(/^0+/, '')) {
+                const nameMatch = !apiNameClean || !dbNameClean ||
+                  apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean);
+                if (nameMatch) {
+                  override = dbItem;
+                  dbMap.delete(dbId);
+                  break;
                 }
               }
             }
@@ -424,37 +467,72 @@ export const PublicLocator: React.FC = () => {
           }
 
           if (override) {
+            const hasValidCoords = (override.lat && override.lng && (override.lat !== 0 || override.lng !== 0));
+            const newLat = hasValidCoords ? override.lat : apiLoc.lat;
+            const newLng = hasValidCoords ? override.lng : apiLoc.lng;
+
+            let updatedTags = Array.from(new Set([...(apiLoc.tags || []), ...(override.tags || [])]));
+            if (hasValidCoords) {
+              updatedTags = updatedTags.filter((t: string) => t !== 'Sin ubicación exacta');
+            }
+
             return {
               ...apiLoc,
               ...override,
+              name: override.name || apiLoc.name,
+              address: override.address || apiLoc.address,
+              lat: newLat,
+              lng: newLng,
+              tags: updatedTags,
+              image_url: override.image_url || apiLoc.image_url || null,
               products: (override.products && Array.isArray(override.products) && override.products.length > 0) 
                 ? override.products 
                 : apiLoc.products,
-              image_url: override.image_url || apiLoc.image_url || null,
-              custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
-              published: override.published !== undefined ? override.published : true
+              linked_entities: apiLoc.linked_entities || override.linked_entities,
+              is_manual_override: true,
+              custom_fields: { 
+                ...(apiLoc.custom_fields || {}), 
+                ...(override.custom_fields || {}),
+                entity_type: override.custom_fields?.['entity_type'] || apiLoc.custom_fields?.['entity_type'] || (apiLoc.id.startsWith('b2c-center') ? 'center' : 'doctor')
+              },
+              published: override.published !== undefined ? override.published : true,
+              grupo_economico_ids: override.grupo_economico_ids || null,
             };
           }
           return apiLoc;
         });
 
-        // Build a set of RUCs already represented in mergedLocations to avoid duplicate orphan entries
+        // Build sets of RUCs and Razones Sociales already represented to avoid duplicate orphan entries
         const mergedRucSet = new Set<string>();
+        const mergedRSSet = new Set<string>();
         mergedLocations.forEach(loc => {
           const ruc = (loc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
           if (ruc) mergedRucSet.add(ruc);
+          const rs = loc.custom_fields?.['Razón Social'] || loc.custom_fields?.['Razon Social'] || '';
+          if (rs) mergedRSSet.add(cleanRS(rs));
         });
 
-        // Add truly new custom locations from DB not in API and not already covered by RUC
+        // Add truly new custom locations from DB not in API and not already covered by RUC/RS
         dbMap.forEach((customDbLoc, dbId) => {
           const dbDocFromFields = (customDbLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
           const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
           const dbDocNum = dbDocFromFields || dbDocFromId;
+          const dbRS = customDbLoc.custom_fields?.['Razón Social'] || customDbLoc.custom_fields?.['Razon Social'] || '';
+          const cleanDbRS = cleanRS(dbRS);
+
           if (dbDocNum && mergedRucSet.has(dbDocNum)) return;
+          if (cleanDbRS && mergedRSSet.has(cleanDbRS)) return;
 
           mergedLocations.unshift({
             ...customDbLoc,
-            published: customDbLoc.published !== undefined ? customDbLoc.published : true
+            is_manual_override: true,
+            published: customDbLoc.published !== undefined ? customDbLoc.published : true,
+            grupo_economico_ids: customDbLoc.grupo_economico_ids || null,
+            custom_fields: {
+              ...(customDbLoc.custom_fields || {}),
+              entity_type: customDbLoc.custom_fields?.['entity_type'] || 
+                (customDbLoc.custom_fields?.['Colegiatura'] || customDbLoc.custom_fields?.['CMP'] ? 'doctor' : 'center')
+            }
           } as LocationItem);
         });
 

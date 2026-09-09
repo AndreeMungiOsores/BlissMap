@@ -553,6 +553,8 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
         'Médicos': doctorNamesDisplay,
         'Documento': '',
         'entity_type': 'center',
+        'Razón Social': centroName,
+        'Razon Social': centroName,
       },
       description: null,
       products: allProducts,

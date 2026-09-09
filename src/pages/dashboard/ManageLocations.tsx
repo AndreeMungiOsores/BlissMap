@@ -171,6 +171,26 @@ const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => {
   return groups;
 };
 
+// Canonical cleaner for Razón Social / Company legal names
+const cleanRS = (s?: string | null): string => {
+  if (!s) return '';
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\b(SOCIEDAD ANONIMA CERRADA|EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA|SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA|S\.?A\.?C\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?|S\.?A\.?)\b/g, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim();
+};
+
+const isRSMatch = (a?: string | null, b?: string | null): boolean => {
+  const cleanA = cleanRS(a);
+  const cleanB = cleanRS(b);
+  if (!cleanA || !cleanB) return false;
+  if (cleanA.length < 3 || cleanB.length < 3) return false;
+  return cleanA === cleanB || cleanA.includes(cleanB) || cleanB.includes(cleanA);
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const ManageLocations: React.FC = () => {
@@ -248,37 +268,61 @@ export const ManageLocations: React.FC = () => {
         dbMap.set(item.id, item);
       });
 
-      // 3. Merge: Apply DB manual overrides over API base locations with smart RUC + Name fallback
+      // 3. Merge: Apply DB manual overrides over API base locations with smart RUC + RS + CMP fallback
       const mergedList: LocationItem[] = apiLocations.map((apiLoc: any) => {
         let override = dbMap.get(apiLoc.id);
 
-        // Fallback: Match by Document (RUC/DNI) extracted from custom_fields OR from the DB record's own id field.
-        // This ensures records saved with legacy id formats (empresa-prefix, array-index, or empresa-agnostic)
-        // are still matched to the correct API entry.
         if (!override) {
           const apiDocNum = (apiLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+          const apiRS = apiLoc.custom_fields?.['Razón Social'] || apiLoc.custom_fields?.['Razon Social'] || (apiLoc.custom_fields?.['entity_type'] === 'center' ? apiLoc.name : '') || '';
+          const apiCMP = (apiLoc.custom_fields?.['CMP'] || apiLoc.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
+          const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-          if (apiDocNum) {
-            for (const [dbId, dbItem] of dbMap.entries()) {
-              // Try custom_fields.Documento first, then extract digits from the record's own id
-              const dbDocFromFields = (dbItem.custom_fields?.['Documento'] || '').replace(/\D/g, '');
-              // Extract any 8-11 digit sequence embedded in the id string (RUC = 11 digits, DNI = 8 digits)
-              const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
-              const dbDocNum = dbDocFromFields || dbDocFromId;
+          for (const [dbId, dbItem] of dbMap.entries()) {
+            const dbDocFromFields = (dbItem.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+            const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
+            const dbDocNum = dbDocFromFields || dbDocFromId;
+            const dbRS = dbItem.custom_fields?.['Razón Social'] || dbItem.custom_fields?.['Razon Social'] || '';
+            const dbCMP = (dbItem.custom_fields?.['CMP'] || dbItem.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
+            const dbNameClean = (dbItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-              const apiNameClean = (apiLoc.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-              const dbNameClean = (dbItem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            // 1. Document (RUC / DNI)
+            if (dbDocNum && apiDocNum && dbDocNum === apiDocNum) {
+              const nameMatch = !apiNameClean || !dbNameClean ||
+                apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) ||
+                apiNameClean.length < 4 || dbNameClean.length < 4;
+              if (nameMatch) {
+                override = dbItem;
+                dbMap.delete(dbId);
+                break;
+              }
+            }
 
-              if (dbDocNum && dbDocNum === apiDocNum) {
-                // Accept the match if names overlap OR if either name is missing/very short
-                const nameMatch = !apiNameClean || !dbNameClean ||
-                  apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean) ||
-                  apiNameClean.length < 4 || dbNameClean.length < 4;
-                if (nameMatch) {
-                  override = dbItem;
-                  dbMap.delete(dbId);
-                  break;
-                }
+            // 2. Razón Social (RS) matching (crucial for centers/clinics)
+            if (apiRS && dbRS && isRSMatch(apiRS, dbRS)) {
+              override = dbItem;
+              dbMap.delete(dbId);
+              break;
+            }
+            if (apiLoc.name && dbRS && isRSMatch(apiLoc.name, dbRS)) {
+              override = dbItem;
+              dbMap.delete(dbId);
+              break;
+            }
+            if (apiRS && dbItem.name && isRSMatch(apiRS, dbItem.name)) {
+              override = dbItem;
+              dbMap.delete(dbId);
+              break;
+            }
+
+            // 3. CMP (Colegiatura) with name overlap
+            if (apiCMP && dbCMP && apiCMP.replace(/^0+/, '') === dbCMP.replace(/^0+/, '')) {
+              const nameMatch = !apiNameClean || !dbNameClean ||
+                apiNameClean.includes(dbNameClean) || dbNameClean.includes(apiNameClean);
+              if (nameMatch) {
+                override = dbItem;
+                dbMap.delete(dbId);
+                break;
               }
             }
           }
@@ -287,14 +331,34 @@ export const ManageLocations: React.FC = () => {
         }
 
         if (override) {
+          const hasValidCoords = (override.lat && override.lng && (override.lat !== 0 || override.lng !== 0));
+          const newLat = hasValidCoords ? override.lat : apiLoc.lat;
+          const newLng = hasValidCoords ? override.lng : apiLoc.lng;
+
+          let updatedTags = Array.from(new Set([...(apiLoc.tags || []), ...(override.tags || [])]));
+          if (hasValidCoords) {
+            updatedTags = updatedTags.filter((t: string) => t !== 'Sin ubicación exacta');
+          }
+
           return {
             ...apiLoc,
             ...override,
+            name: override.name || apiLoc.name,
+            address: override.address || apiLoc.address,
+            lat: newLat,
+            lng: newLng,
+            tags: updatedTags,
+            image_url: override.image_url || apiLoc.image_url || null,
             products: (override.products && Array.isArray(override.products) && override.products.length > 0) 
               ? override.products 
               : apiLoc.products,
+            linked_entities: apiLoc.linked_entities || override.linked_entities,
             is_manual_override: true,
-            custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) },
+            custom_fields: { 
+              ...(apiLoc.custom_fields || {}), 
+              ...(override.custom_fields || {}),
+              entity_type: override.custom_fields?.['entity_type'] || apiLoc.custom_fields?.['entity_type'] || (apiLoc.id.startsWith('b2c-center') ? 'center' : 'doctor')
+            },
             published: override.published !== undefined ? override.published : true,
             grupo_economico_ids: override.grupo_economico_ids || null,
           };
@@ -308,12 +372,14 @@ export const ManageLocations: React.FC = () => {
         } as LocationItem;
       });
 
-      // Build a set of RUCs already represented in mergedList to avoid unshifting DB orphans
-      // that are duplicates of the same clinic saved under a different empresa ID.
+      // Build sets of RUCs and RS already represented in mergedList to avoid duplicates
       const mergedRucSet = new Set<string>();
+      const mergedRSSet = new Set<string>();
       mergedList.forEach(loc => {
         const ruc = (loc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
         if (ruc) mergedRucSet.add(ruc);
+        const rs = loc.custom_fields?.['Razón Social'] || loc.custom_fields?.['Razon Social'] || '';
+        if (rs) mergedRSSet.add(cleanRS(rs));
       });
 
       // Add any truly new custom locations from DB that were not in API and not already covered
@@ -321,15 +387,23 @@ export const ManageLocations: React.FC = () => {
         const dbDocFromFields = (customDbLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
         const dbDocFromId = (dbId.match(/\b(\d{8,11})\b/) || [])[1] || '';
         const dbDocNum = dbDocFromFields || dbDocFromId;
+        const dbRS = customDbLoc.custom_fields?.['Razón Social'] || customDbLoc.custom_fields?.['Razon Social'] || '';
+        const cleanDbRS = cleanRS(dbRS);
 
-        // Skip if this RUC is already in the merged list — it's a stale duplicate from a legacy empresa ID
+        // Skip if this RUC or RS is already in the merged list
         if (dbDocNum && mergedRucSet.has(dbDocNum)) return;
+        if (cleanDbRS && mergedRSSet.has(cleanDbRS)) return;
 
         mergedList.unshift({
           ...customDbLoc,
           is_manual_override: true,
           published: customDbLoc.published !== undefined ? customDbLoc.published : true,
           grupo_economico_ids: customDbLoc.grupo_economico_ids || null,
+          custom_fields: {
+            ...(customDbLoc.custom_fields || {}),
+            entity_type: customDbLoc.custom_fields?.['entity_type'] || 
+              (customDbLoc.custom_fields?.['Colegiatura'] || customDbLoc.custom_fields?.['CMP'] ? 'doctor' : 'center')
+          }
         } as LocationItem);
       });
 
