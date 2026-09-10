@@ -617,7 +617,7 @@ button, input, select, textarea {
   padding: 4px 0;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: 16px; /* 16px previene el auto-zoom de iOS Safari */
   background: transparent;
   color: var(--color-dark-text-primary);
 }
@@ -632,7 +632,7 @@ button, input, select, textarea {
   padding: 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  font-size: 14px;
+  font-size: 16px; /* 16px previene el auto-zoom de iOS Safari */
   background-color: #ffffff;
   cursor: pointer;
 }
@@ -944,6 +944,13 @@ button, input, select, textarea {
     padding: 8px 12px;
     gap: 0;
     pointer-events: auto;
+  }
+
+  /* Prevenir zoom involuntario de iOS Safari al hacer focus en inputs */
+  .locator-search-input,
+  .locator-select,
+  input[type="text"] {
+    font-size: 16px !important;
   }
 
   /* Bottom Sheet Drawer fixed at bottom of mobile screen with iOS Safe Area support */
