@@ -562,29 +562,46 @@ button, input, select, textarea {
 .locator-layout {
   display: grid;
   grid-template-columns: 420px 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "search map"
+    "sidebar map";
   height: 100vh;
   width: 100vw;
   overflow: hidden;
   background-color: var(--color-bg-secondary);
 }
 
-.locator-sidebar {
-  background-color: var(--color-bg-primary);
-  border-right: 1px solid var(--color-border);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-md);
-  z-index: 10;
-}
-
 .locator-search-container {
+  grid-area: search;
   padding: 20px;
   border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 12px;
   background-color: var(--color-bg-primary);
+  z-index: 11;
+}
+
+.locator-sidebar {
+  grid-area: sidebar;
+  background-color: var(--color-bg-primary);
+  border-right: 1px solid var(--color-border);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  overflow-y: auto;
+}
+
+.locator-map-container {
+  grid-area: map;
+  position: relative;
+  height: 100vh;
+  width: 100%;
 }
 
 .locator-search-input-wrapper {
@@ -1015,9 +1032,8 @@ button, input, select, textarea {
     border-top-right-radius: 24px;
   }
 
-  /* Hide floating search container BEHIND sheet cards when sheet is in FULL mode or dragged over top threshold */
-  .locator-sidebar.sheet-full .locator-search-container,
-  .locator-sidebar.is-drag-full .locator-search-container {
+  /* Hide floating search container when sheet is in FULL mode or dragged over top threshold */
+  .locator-search-container.search-hidden-full {
     z-index: 800 !important;
     opacity: 0 !important;
     pointer-events: none !important;

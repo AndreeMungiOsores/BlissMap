@@ -791,6 +791,10 @@ export const PublicLocator: React.FC = () => {
   }, [selectedLocationId]);
 
   // Process, filter, and sort locations (Memoized for high performance)
+  const isSheetHidden = slug === 'blissfarma'
+    ? !selectedLocationId
+    : (!isSelectionActive && !selectedLocationId);
+
   const processedLocations = useMemo(() => {
     const unit = locator?.distance_unit || 'km';
     const isBlissfarma = slug === 'blissfarma';
@@ -980,75 +984,16 @@ export const PublicLocator: React.FC = () => {
   } as React.CSSProperties;
 
   const isDragFull = dragHeight !== null && dragHeight > (window.innerHeight * 0.55);
+  const isSheetFull = mobileSheetState === 'full' || isDragFull;
 
   return (
     <div className="locator-layout" style={dynamicStyles}>
       
-      {/* Sidebar Panel / Mobile Bottom Sheet */}
-      <div 
-        ref={sidebarRef}
-        className={`locator-sidebar sheet-${mobileSheetState} ${isDragFull ? 'is-drag-full' : ''} ${!isSelectionActive ? 'mobile-hidden-sheet' : ''}`}
-        style={dragHeight !== null ? { 
-          height: `${dragHeight}px`, 
-          transition: 'none',
-          zIndex: isDragFull ? 1200 : undefined 
-        } : undefined}
-      >
-        
-        {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
-        <div 
-          className="bottom-sheet-handle-bar"
-          onClick={handleClickHandleBar}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          role="button"
-          tabIndex={0}
-          aria-expanded={mobileSheetState !== 'collapsed'}
-          aria-label={mobileSheetState === 'collapsed' ? 'Deslizar hacia arriba para ver los médicos' : mobileSheetState === 'half' ? 'Deslizar hacia arriba para maximizar' : 'Deslizar hacia abajo para ver el mapa'}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              handleClickHandleBar();
-            }
-          }}
-        >
-          <div className="bottom-sheet-pill" />
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            color: '#00506E',
-            marginTop: '4px',
-            backgroundColor: 'rgba(30, 200, 170, 0.12)',
-            border: '1px solid rgba(30, 200, 170, 0.35)',
-            padding: '6px 18px',
-            borderRadius: 'var(--radius-full)',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
-          }}>
-            {mobileSheetState === 'collapsed' ? (
-              <>
-                <ChevronUp size={18} style={{ color: '#1EC8AA' }} />
-                <span>Desliza para ver médicos</span>
-              </>
-            ) : (
-              <>
-                <ChevronDown size={18} style={{ color: '#1EC8AA' }} />
-                <span>Desliza para ver el mapa</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Selected Product/Brand Banner: REMOVED — chip in search bar is sufficient */}
-
-        {/* Sidebar Header & Search Box */}
-        <div className="locator-search-container">
-          {/* Logo Row (Hidden on Mobile) */}
-          <div className="locator-logo-row mobile-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }} />
+      {/* Floating Search Container (Mobile: Top Fixed | Desktop: Grid Area 'search') */}
+      <div className={`locator-search-container ${isSheetFull ? 'search-hidden-full' : ''}`}>
+        {/* Logo Row (Hidden on Mobile) */}
+        <div className="locator-logo-row mobile-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '48px', maxWidth: '200px', objectFit: 'contain' }} />
             {isPreview && (
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-primary)', backgroundColor: 'rgba(30, 200, 170, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                 Vista Previa
@@ -1138,6 +1083,31 @@ export const PublicLocator: React.FC = () => {
                 }}
                 className="locator-search-input"
               />
+
+              {searchQuery && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedLocationId(null);
+                    setIsDropdownOpen(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0 4px',
+                    color: '#94A3B8',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Limpiar búsqueda"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
             {/* Suggestions Dropdown for Blissfarma: Médicos y Centros */}
@@ -1171,6 +1141,7 @@ export const PublicLocator: React.FC = () => {
                       aria-selected={selectedLocationId === loc.id}
                       tabIndex={0}
                       onClick={() => {
+                        setSearchQuery(loc.name);
                         setSelectedLocationId(loc.id);
                         setIsDropdownOpen(false);
                         if (mobileSheetState === 'collapsed') {
@@ -1180,6 +1151,7 @@ export const PublicLocator: React.FC = () => {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
+                          setSearchQuery(loc.name);
                           setSelectedLocationId(loc.id);
                           setIsDropdownOpen(false);
                           if (mobileSheetState === 'collapsed') {
@@ -1429,7 +1401,64 @@ export const PublicLocator: React.FC = () => {
           </div>
         </div>
 
-        {/* Results View: Conditional Dedicated Detail View vs General Cards List */}
+        {/* Sidebar Panel / Mobile Bottom Sheet (Mobile: Bottom Sheet | Desktop: Grid Area 'sidebar') */}
+        <div 
+          ref={sidebarRef}
+          className={`locator-sidebar sheet-${mobileSheetState} ${isDragFull ? 'is-drag-full' : ''} ${isSheetHidden ? 'mobile-hidden-sheet' : ''}`}
+          style={dragHeight !== null ? { 
+            height: `${dragHeight}px`, 
+            transition: 'none',
+            zIndex: isDragFull ? 1200 : undefined 
+          } : undefined}
+        >
+          {/* Mobile Drag Handle Bar (Touch Swipe Supported Google Maps Pattern) */}
+          <div 
+            className="bottom-sheet-handle-bar"
+            onClick={handleClickHandleBar}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            role="button"
+            tabIndex={0}
+            aria-expanded={mobileSheetState !== 'collapsed'}
+            aria-label={mobileSheetState === 'collapsed' ? 'Deslizar hacia arriba para ver los médicos' : mobileSheetState === 'half' ? 'Deslizar hacia arriba para maximizar' : 'Deslizar hacia abajo para ver el mapa'}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleClickHandleBar();
+              }
+            }}
+          >
+            <div className="bottom-sheet-pill" />
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: 700,
+              color: '#00506E',
+              marginTop: '4px',
+              backgroundColor: 'rgba(30, 200, 170, 0.12)',
+              border: '1px solid rgba(30, 200, 170, 0.35)',
+              padding: '6px 18px',
+              borderRadius: 'var(--radius-full)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+            }}>
+              {mobileSheetState === 'collapsed' ? (
+                <>
+                  <ChevronUp size={18} style={{ color: '#1EC8AA' }} />
+                  <span>Desliza para ver médicos</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={18} style={{ color: '#1EC8AA' }} />
+                  <span>Desliza para ver el mapa</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Results View: Conditional Dedicated Detail View vs General Cards List */}
         {(() => {
           const selectedLocation = selectedLocationId 
             ? (processedLocations.find(l => l.id === selectedLocationId) || locations.find(l => l.id === selectedLocationId))
@@ -1446,7 +1475,10 @@ export const PublicLocator: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => setSelectedLocationId(null)}
+                    onClick={() => {
+                      setSelectedLocationId(null);
+                      setSearchQuery('');
+                    }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2027,6 +2059,9 @@ export const PublicLocator: React.FC = () => {
           selectedLocationId={selectedLocationId}
           onSelectLocation={(locId) => {
             setSelectedLocationId(locId);
+            if (mobileSheetState === 'collapsed') {
+              setMobileSheetState('half');
+            }
           }}
           mapStyle={locator.map_style}
           markerType={locator.marker_type}
