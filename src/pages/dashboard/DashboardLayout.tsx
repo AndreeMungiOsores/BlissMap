@@ -161,15 +161,36 @@ export const DashboardLayout: React.FC = () => {
         }
       }
 
-      setLocators(fetched);
+      setLocators(prev => {
+        if (
+          prev.length === fetched.length &&
+          prev.every((l, i) => l.id === fetched[i].id && l.name === fetched[i].name && l.slug === fetched[i].slug)
+        ) {
+          return prev;
+        }
+        return fetched;
+      });
       
       const storedId = localStorage.getItem('bm_active_locator_id');
-      const found = fetched.find(l => l.id === storedId);
+      const found = fetched.find(l => l.id === storedId) || fetched[0];
       if (found) {
-        setActiveLocator(found);
-      } else {
-        setActiveLocator(fetched[0]);
-        localStorage.setItem('bm_active_locator_id', fetched[0].id);
+        setActiveLocator(prev => {
+          if (
+            prev &&
+            prev.id === found.id &&
+            prev.name === found.name &&
+            prev.slug === found.slug &&
+            prev.marker_color === found.marker_color &&
+            prev.marker_type === found.marker_type &&
+            JSON.stringify(prev.hidden_brands) === JSON.stringify(found.hidden_brands)
+          ) {
+            return prev;
+          }
+          return found;
+        });
+        if (!storedId) {
+          localStorage.setItem('bm_active_locator_id', found.id);
+        }
       }
     } catch (err) {
       console.error('Error fetching locators:', err);
@@ -182,7 +203,7 @@ export const DashboardLayout: React.FC = () => {
 
   useEffect(() => {
     fetchLocators();
-  }, [user]);
+  }, [user?.id]);
 
   const handleLocatorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = locators.find(l => l.id === e.target.value);

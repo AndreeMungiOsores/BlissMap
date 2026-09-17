@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import type { Locator } from './DashboardLayout';
@@ -191,18 +191,31 @@ const isRSMatch = (a?: string | null, b?: string | null): boolean => {
   return cleanA === cleanB || cleanA.includes(cleanB) || cleanB.includes(cleanA);
 };
 
+// ── Module-level cache to keep locations in memory across tab switches and avoid unmounting table ──
+const locationsMemoryCache = new Map<string, LocationItem[]>();
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const ManageLocations: React.FC = () => {
   const { activeLocator, fetchLocators } = useOutletContext<OutletContextType>();
 
-  const [locations, setLocations] = useState<LocationItem[]>([]);
+  const [locations, setLocations] = useState<LocationItem[]>(() => {
+    if (activeLocator && locationsMemoryCache.has(activeLocator.id)) {
+      return locationsMemoryCache.get(activeLocator.id)!;
+    }
+    return [];
+  });
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'manual'>('all');
   const [entityFilter, setEntityFilter] = useState<'all' | 'doctor' | 'center'>('all');
   const [filterNoCoords, setFilterNoCoords] = useState(false);
   const [filterNoAddress, setFilterNoAddress] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (activeLocator && locationsMemoryCache.has(activeLocator.id)) {
+      return false;
+    }
+    return true;
+  });
   const [error] = useState<string | null>(null);
   const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
   const [bannerOpen, setBannerOpen] = useState(true);
@@ -213,24 +226,43 @@ export const ManageLocations: React.FC = () => {
   const [savingBrands, setSavingBrands] = useState(false);
   const [brandSaveSuccess, setBrandSaveSuccess] = useState(false);
 
-  // Sync hiddenBrands and reset filters with activeLocator
+  const lastLocatorIdRef = useRef<string | null>(activeLocator?.id || null);
+
+  // Sync hiddenBrands and reset filters ONLY when activeLocator ID actually changes
   useEffect(() => {
     if (activeLocator) {
+      const isNewLocator = lastLocatorIdRef.current !== activeLocator.id;
+      lastLocatorIdRef.current = activeLocator.id;
+
       const storedLocal = localStorage.getItem(`bm_hidden_brands_${activeLocator.id}`);
       const initialHidden: string[] = activeLocator.hidden_brands && Array.isArray(activeLocator.hidden_brands)
         ? activeLocator.hidden_brands
         : (storedLocal ? JSON.parse(storedLocal) : []);
       
       setHiddenBrands(new Set(initialHidden.map(b => b.toUpperCase())));
-      setEntityFilter('all');
-      setFilterNoCoords(false);
-      setFilterNoAddress(false);
-    }
-  }, [activeLocator]);
 
-  const fetchLocations = useCallback(async () => {
+      if (isNewLocator) {
+        setEntityFilter('all');
+        setFilterNoCoords(false);
+        setFilterNoAddress(false);
+        setSearch('');
+
+        if (locationsMemoryCache.has(activeLocator.id)) {
+          setLocations(locationsMemoryCache.get(activeLocator.id)!);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+      }
+    }
+  }, [activeLocator?.id, activeLocator?.hidden_brands]);
+
+  const fetchLocations = useCallback(async (isSilent = false) => {
     if (!activeLocator) return;
-    setLoading(true);
+    const hasCachedData = locationsMemoryCache.has(activeLocator.id);
+    if (!isSilent && !hasCachedData) {
+      setLoading(true);
+    }
     try {
       // 1. Fetch live/cached API locations (B2B for default locators, or B2C+B2B mix for Blissfarma)
       let apiLocations: LocationItem[] = [];
@@ -411,16 +443,22 @@ export const ManageLocations: React.FC = () => {
         loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))
       );
 
+      locationsMemoryCache.set(activeLocator.id, filtered);
       setLocations(filtered);
     } catch (err: any) {
       console.error(err);
-      setLocations(localDoctorsData as any);
+      if (!locationsMemoryCache.has(activeLocator.id)) {
+        setLocations(localDoctorsData as any);
+      }
     } finally {
       setLoading(false);
     }
-  }, [activeLocator]);
+  }, [activeLocator?.id, activeLocator?.slug]);
 
-  useEffect(() => { fetchLocations(); }, [fetchLocations]);
+  useEffect(() => {
+    const hasCached = activeLocator ? locationsMemoryCache.has(activeLocator.id) : false;
+    fetchLocations(hasCached);
+  }, [fetchLocations, activeLocator?.id]);
 
   const handleTogglePublish = async (id: string, currentStatus?: boolean) => {
     const newStatus = !(currentStatus ?? true);
@@ -428,10 +466,18 @@ export const ManageLocations: React.FC = () => {
       if (!id.startsWith('doc-') && !id.startsWith('b2c-')) {
         await supabase.from('bm_locations').update({ published: newStatus }).eq('id', id);
       }
-      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc));
+      setLocations(prev => {
+        const next = prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc);
+        if (activeLocator) locationsMemoryCache.set(activeLocator.id, next);
+        return next;
+      });
     } catch (err: any) {
       console.error(err);
-      setLocations(prev => prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc));
+      setLocations(prev => {
+        const next = prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc);
+        if (activeLocator) locationsMemoryCache.set(activeLocator.id, next);
+        return next;
+      });
     }
   };
 
@@ -441,10 +487,18 @@ export const ManageLocations: React.FC = () => {
       if (!id.startsWith('doc-')) {
         await supabase.from('bm_locations').delete().eq('id', id);
       }
-      setLocations(prev => prev.filter(loc => loc.id !== id));
+      setLocations(prev => {
+        const next = prev.filter(loc => loc.id !== id);
+        if (activeLocator) locationsMemoryCache.set(activeLocator.id, next);
+        return next;
+      });
     } catch (err: any) {
       console.error(err);
-      setLocations(prev => prev.filter(loc => loc.id !== id));
+      setLocations(prev => {
+        const next = prev.filter(loc => loc.id !== id);
+        if (activeLocator) locationsMemoryCache.set(activeLocator.id, next);
+        return next;
+      });
     }
   };
 
@@ -469,7 +523,7 @@ export const ManageLocations: React.FC = () => {
     } catch (err) {
       console.error('Error unifying group:', err);
     }
-    await fetchLocations();
+    await fetchLocations(true);
   };
 
   const handleDissolveGroup = async (primaryId: string) => {
@@ -479,7 +533,7 @@ export const ManageLocations: React.FC = () => {
     } catch (err) {
       console.error('Error dissolving group:', err);
     }
-    await fetchLocations();
+    await fetchLocations(true);
   };
 
   const handleIgnoreGroup = (group: SuggestedGroup) => {
