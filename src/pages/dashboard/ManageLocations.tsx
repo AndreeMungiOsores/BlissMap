@@ -462,9 +462,28 @@ export const ManageLocations: React.FC = () => {
 
   const handleTogglePublish = async (id: string, currentStatus?: boolean) => {
     const newStatus = !(currentStatus ?? true);
+    const targetLoc = locations.find(l => l.id === id);
     try {
-      if (!id.startsWith('doc-') && !id.startsWith('b2c-')) {
-        await supabase.from('bm_locations').update({ published: newStatus }).eq('id', id);
+      if (!id.startsWith('doc-') && activeLocator) {
+        const { data: updatedRows } = await supabase
+          .from('bm_locations')
+          .update({ published: newStatus })
+          .eq('id', id)
+          .select('id');
+
+        if ((!updatedRows || updatedRows.length === 0) && targetLoc) {
+          await supabase.from('bm_locations').upsert({
+            id: id,
+            locator_id: activeLocator.id,
+            name: targetLoc.name,
+            address: targetLoc.address,
+            lat: targetLoc.lat ?? 0,
+            lng: targetLoc.lng ?? 0,
+            published: newStatus,
+            image_url: targetLoc.image_url || null,
+            custom_fields: targetLoc.custom_fields || {},
+          }, { onConflict: 'id' });
+        }
       }
       setLocations(prev => {
         const next = prev.map(loc => loc.id === id ? { ...loc, published: newStatus } : loc);

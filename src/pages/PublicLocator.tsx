@@ -65,6 +65,7 @@ interface LocationItem {
   products?: ProductItem[];
   distance?: number; // calculated locally
   grupo_economico_ids?: string[] | null;
+  published?: boolean;
   /** Doctors or sub-locations linked to this location (centers only). */
   linked_entities?: LocationItem[];
 }
@@ -344,8 +345,7 @@ export const PublicLocator: React.FC = () => {
           const { data: locationsData } = await supabase
             .from('bm_locations')
             .select('*')
-            .eq('locator_id', locatorData.id)
-            .eq('published', true);
+            .eq('locator_id', locatorData.id);
             
           if (locationsData) {
             dbLocations = locationsData;
@@ -574,6 +574,7 @@ export const PublicLocator: React.FC = () => {
             return loc;
           })
           .filter(loc => {
+            if (loc.published === false) return false;
             if (TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))) return false;
             if (groupSecondaryIdsPublic.has(loc.id)) return false;
             if (hiddenBrandsSet.size > 0 && (!loc.products || loc.products.length === 0)) return false;
