@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { Locator } from './DashboardLayout';
 import { MapPicker } from '../../components/MapPicker';
 import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../../services/b2bApiService';
+import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../../services/b2cApiService';
 import localDoctorsData from '../../data/doctors_data.json';
 import { 
   ArrowLeft, 
@@ -141,8 +142,24 @@ export const LocationForm: React.FC = () => {
       try {
         const decodedId = decodeURIComponent(id);
 
-        // 1. Fetch live/cached B2B API locations
-        const { locations: apiLocations } = await fetchB2BSalesLocations(localDoctorsData as any);
+        // 1. Fetch live/cached API locations (B2C + B2B for Blissfarma or B2C ids, B2B for others)
+        let apiLocations: any[] = [];
+        if (activeLocator?.slug === 'blissfarma' || decodedId.startsWith('b2c-')) {
+          const [b2cResult, b2bResult] = await Promise.all([
+            fetchB2CLocations(),
+            fetchB2BSalesLocations(localDoctorsData as any)
+          ]);
+          const b2bFiltered = filterBlissfarmaOnly(b2bResult.locations);
+          const b2bDeduped = deduplicateB2BAgainstB2C(
+            [...b2cResult.doctors, ...b2cResult.centers],
+            b2bFiltered
+          );
+          apiLocations = [...b2cResult.doctors, ...b2cResult.centers, ...b2bDeduped];
+        } else {
+          const b2bRes = await fetchB2BSalesLocations(localDoctorsData as any);
+          apiLocations = b2bRes.locations;
+        }
+
         const baseLoc = apiLocations.find(loc => loc.id === decodedId || loc.id === id);
 
         if (baseLoc) {
@@ -161,6 +178,30 @@ export const LocationForm: React.FC = () => {
           if (data) supabaseLoc = data;
         } catch (dbErr) {
           console.warn('Supabase fetch notice:', dbErr);
+        }
+
+        // Fallback matching in Supabase by Documento or CMP if not found by exact ID
+        if (!supabaseLoc && baseLoc && activeLocator) {
+          try {
+            const baseDoc = (baseLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+            const baseCMP = (baseLoc.custom_fields?.['CMP'] || baseLoc.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
+            const { data: dbMatches } = await supabase
+              .from('bm_locations')
+              .select('*')
+              .eq('locator_id', activeLocator.id);
+
+            if (dbMatches && dbMatches.length > 0) {
+              supabaseLoc = dbMatches.find(d => {
+                const dDoc = (d.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+                const dCMP = (d.custom_fields?.['CMP'] || d.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
+                if (baseDoc && dDoc && baseDoc === dDoc) return true;
+                if (baseCMP && dCMP && baseCMP.replace(/^0+/, '') === dCMP.replace(/^0+/, '')) return true;
+                return false;
+              }) || null;
+            }
+          } catch (matchErr) {
+            console.warn('Fallback Supabase match notice:', matchErr);
+          }
         }
 
         // 3. Merge: Supabase manual override takes TOP priority over API base location
