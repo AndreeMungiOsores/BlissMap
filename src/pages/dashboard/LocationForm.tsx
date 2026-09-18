@@ -180,29 +180,6 @@ export const LocationForm: React.FC = () => {
           console.warn('Supabase fetch notice:', dbErr);
         }
 
-        // Fallback matching in Supabase by Documento or CMP if not found by exact ID
-        if (!supabaseLoc && baseLoc && activeLocator) {
-          try {
-            const baseDoc = (baseLoc.custom_fields?.['Documento'] || '').replace(/\D/g, '');
-            const baseCMP = (baseLoc.custom_fields?.['CMP'] || baseLoc.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
-            const { data: dbMatches } = await supabase
-              .from('bm_locations')
-              .select('*')
-              .eq('locator_id', activeLocator.id);
-
-            if (dbMatches && dbMatches.length > 0) {
-              supabaseLoc = dbMatches.find(d => {
-                const dDoc = (d.custom_fields?.['Documento'] || '').replace(/\D/g, '');
-                const dCMP = (d.custom_fields?.['CMP'] || d.custom_fields?.['Colegiatura'] || '').replace(/\D/g, '');
-                if (baseDoc && dDoc && baseDoc === dDoc) return true;
-                if (baseCMP && dCMP && baseCMP.replace(/^0+/, '') === dCMP.replace(/^0+/, '')) return true;
-                return false;
-              }) || null;
-            }
-          } catch (matchErr) {
-            console.warn('Fallback Supabase match notice:', matchErr);
-          }
-        }
 
         // 3. Merge: Supabase manual override takes TOP priority over API base location
         const mergedData = supabaseLoc ? {
