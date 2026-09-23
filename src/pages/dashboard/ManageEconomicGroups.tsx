@@ -16,14 +16,18 @@ import {
   Search,
   RefreshCw,
   Stethoscope,
-  Building
+  Building,
+  Pencil,
+  X
 } from 'lucide-react';
 import {
   type LocationItem,
   type SuggestedGroup,
+  type ActiveGroup,
   detectPossibleGroups,
   getActiveGroups,
   unifyEconomicGroup,
+  updateGroupPrimary,
   dissolveEconomicGroup
 } from '../../services/groupService';
 import {
@@ -50,6 +54,12 @@ export const ManageEconomicGroups: React.FC = () => {
   const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Modal Edit Active Group state
+  const [editingGroup, setEditingGroup] = useState<ActiveGroup | null>(null);
+  const [editingPrimaryId, setEditingPrimaryId] = useState<string>('');
+  const [modalExpandedProducts, setModalExpandedProducts] = useState<Record<string, boolean>>({});
+  const [modalSaving, setModalSaving] = useState(false);
 
   // Load locations for the active locator
   const loadData = useCallback(async (forceRefresh = false) => {
@@ -199,6 +209,80 @@ export const ManageEconomicGroups: React.FC = () => {
       setActionLoading(null);
     }
   };
+
+  // Modal Handlers
+  const handleOpenEditModal = (group: ActiveGroup) => {
+    setEditingGroup(group);
+    setEditingPrimaryId(group.primary.id);
+    setModalExpandedProducts({});
+  };
+
+  const handleCloseEditModal = () => {
+    if (modalSaving) return;
+    setEditingGroup(null);
+  };
+
+  const handleToggleModalProducts = (entityId: string) => {
+    setModalExpandedProducts(prev => ({ ...prev, [entityId]: !prev[entityId] }));
+  };
+
+  const handleSaveEditGroup = async () => {
+    if (!activeLocator || !editingGroup) return;
+
+    // If the primary didn't change, simply close the modal
+    if (editingPrimaryId === editingGroup.primary.id) {
+      setEditingGroup(null);
+      return;
+    }
+
+    const newPrimary = editingGroup.members.find(m => m.id === editingPrimaryId);
+    if (!newPrimary) {
+      setNotification({ type: 'error', text: 'No se encontró la ficha seleccionada como principal.' });
+      return;
+    }
+
+    setModalSaving(true);
+    try {
+      const allMemberIds = editingGroup.members.map(m => m.id);
+      await updateGroupPrimary(activeLocator.id, editingGroup.primary, newPrimary, allMemberIds);
+
+      locationsMemoryCache.delete(activeLocator.id);
+      await loadData(true);
+
+      setNotification({
+        type: 'success',
+        text: `Grupo económico actualizado con éxito. La nueva ficha visible en el mapa será "${newPrimary.name}".`
+      });
+      setEditingGroup(null);
+    } catch (err: any) {
+      console.error('Error updating economic group primary:', err);
+      setNotification({
+        type: 'error',
+        text: `Error al actualizar la ficha principal: ${err.message || 'Error desconocido'}`
+      });
+    } finally {
+      setModalSaving(false);
+    }
+  };
+
+  const handleModalDissolve = async () => {
+    if (!editingGroup) return;
+    const primaryId = editingGroup.primary.id;
+    const primaryName = editingGroup.primary.name;
+    setEditingGroup(null);
+    await handleDissolve(primaryId, primaryName);
+  };
+
+  // Keyboard accessibility: Close modal on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && editingGroup && !modalSaving) {
+        setEditingGroup(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingGroup, modalSaving]);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
@@ -960,7 +1044,6 @@ export const ManageEconomicGroups: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {filteredActiveGroups.map(group => {
                 const isExpanded = expandedActiveSecondary[group.primary.id] || false;
-                const isGroupActionLoading = actionLoading === group.primary.id;
 
                 return (
                   <div
@@ -1057,52 +1140,29 @@ export const ManageEconomicGroups: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Right action button: Dissolve */}
+                      {/* Right action button: Editar Grupo */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Link
-                          to={`/dashboard/locations/${group.primary.id}/edit`}
-                          className="btn btn-secondary"
-                          style={{ fontSize: '12px', padding: '6px 12px' }}
-                        >
-                          Editar Ficha
-                        </Link>
                         <button
                           type="button"
-                          onClick={() => handleDissolve(group.primary.id, group.primary.name)}
-                          disabled={isGroupActionLoading}
+                          onClick={() => handleOpenEditModal(group)}
+                          className="btn btn-secondary"
                           style={{
-                            padding: '6px 14px',
                             fontSize: '12px',
+                            padding: '7px 14px',
                             fontWeight: 700,
-                            borderRadius: 'var(--radius-full)',
-                            border: '1px solid rgba(124, 58, 237, 0.3)',
-                            backgroundColor: 'rgba(124, 58, 237, 0.05)',
-                            color: '#7c3aed',
-                            cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            transition: 'all 0.15s ease'
+                            borderRadius: 'var(--radius-full)',
+                            border: '1px solid var(--color-dark-border)',
+                            backgroundColor: 'white',
+                            color: 'var(--color-dark-text-primary)',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                           }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#7c3aed';
-                            e.currentTarget.style.color = '#fff';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(124, 58, 237, 0.05)';
-                            e.currentTarget.style.color = '#7c3aed';
-                          }}
-                          title="Separar este grupo económico para que sus ubicaciones vuelvan a ser independientes"
                         >
-                          {isGroupActionLoading ? (
-                            <>
-                              <RefreshCw size={12} className="animate-spin" /> Separando...
-                            </>
-                          ) : (
-                            <>
-                              <Link2Off size={13} /> Desunir Grupo
-                            </>
-                          )}
+                          <Pencil size={13} style={{ color: 'var(--color-primary)' }} />
+                          Editar Grupo
                         </button>
                       </div>
                     </div>
@@ -1214,6 +1274,481 @@ export const ManageEconomicGroups: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── MODAL: EDIT ACTIVE ECONOMIC GROUP ── */}
+      {editingGroup && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: '20px'
+          }}
+          onClick={handleCloseEditModal}
+        >
+          <div
+            className="panel"
+            style={{
+              width: '100%',
+              maxWidth: '860px',
+              maxHeight: '90vh',
+              backgroundColor: 'var(--color-dark-surface)',
+              border: '1px solid var(--color-dark-border)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08)',
+              margin: 0,
+              padding: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-group-modal-title"
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid var(--color-dark-border)',
+                backgroundColor: '#FAF8F5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'rgba(0, 80, 110, 0.1)',
+                    color: '#00506E',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h2
+                    id="edit-group-modal-title"
+                    style={{
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      color: 'var(--color-dark-text-primary)',
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    Editar Grupo Económico
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        color: '#7c3aed',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)'
+                      }}
+                    >
+                      {editingGroup.members.length} entidades vinculadas
+                    </span>
+                  </h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
+                    <MapPin size={12} style={{ color: 'var(--color-primary)' }} />
+                    <span>{editingGroup.primary.address || 'Sin dirección registrada'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseEditModal}
+                disabled={modalSaving}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-dark-text-tertiary)',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: 'var(--radius-full)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Cerrar ventana"
+                aria-label="Cerrar ventana"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body: Comparison Cards */}
+            <div
+              style={{
+                padding: '20px 24px',
+                overflowY: 'auto',
+                flex: 1
+              }}
+            >
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-secondary)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Fichas que componen este grupo (Haz clic para seleccionar la Ficha Principal visible en el mapa):
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '16px'
+                }}
+              >
+                {editingGroup.members.map(member => {
+                  const isPrimary = member.id === editingPrimaryId;
+                  const entityType = member.custom_fields?.['entity_type'] || (member.id.startsWith('b2c-center') ? 'center' : 'doctor');
+                  const razonSocial = member.custom_fields?.['Razón Social'] || member.custom_fields?.['Razon Social'] || '';
+                  const docNumber = member.custom_fields?.['Documento'] || '';
+                  const cmpNumber = member.custom_fields?.['CMP'] || member.custom_fields?.['Colegiatura'] || '';
+                  const productsList = member.products || [];
+                  const isProdExpanded = modalExpandedProducts[member.id] || false;
+
+                  return (
+                    <div
+                      key={member.id}
+                      onClick={() => setEditingPrimaryId(member.id)}
+                      style={{
+                        padding: '16px',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: isPrimary
+                          ? '2px solid #00506E'
+                          : '1px solid var(--color-dark-border)',
+                        backgroundColor: isPrimary
+                          ? 'rgba(0, 80, 110, 0.03)'
+                          : 'var(--color-dark-surface)',
+                        boxShadow: isPrimary
+                          ? '0 0 0 3px rgba(0, 80, 110, 0.1)'
+                          : 'none',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      {/* Top Selection Status Badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        {isPrimary ? (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              color: '#ffffff',
+                              backgroundColor: '#00506E',
+                              padding: '3px 10px',
+                              borderRadius: 'var(--radius-full)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Star size={11} fill="#ffffff" />
+                            FICHA PRINCIPAL (Visible en mapa)
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: 'var(--color-dark-text-secondary)',
+                              backgroundColor: 'rgba(0,0,0,0.04)',
+                              padding: '3px 8px',
+                              borderRadius: 'var(--radius-full)'
+                            }}
+                          >
+                            ↳ Ficha Secundaria
+                          </span>
+                        )}
+
+                        {/* Radio selection circle */}
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            border: isPrimary ? '6px solid #00506E' : '2px solid var(--color-dark-border)',
+                            backgroundColor: '#ffffff',
+                            transition: 'all 0.15s ease'
+                          }}
+                        />
+                      </div>
+
+                      {/* Member Info */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
+                          {member.image_url ? (
+                            <img
+                              src={member.image_url}
+                              alt={member.name}
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: 'var(--radius-sm)',
+                                objectFit: 'cover',
+                                border: '1px solid var(--color-dark-border)',
+                                flexShrink: 0
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: 'var(--radius-sm)',
+                                backgroundColor: entityType === 'doctor' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 80, 110, 0.1)',
+                                color: entityType === 'doctor' ? '#059669' : '#00506E',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              {entityType === 'doctor' ? <Stethoscope size={20} /> : <Building size={20} />}
+                            </div>
+                          )}
+
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--color-dark-text-primary)', lineHeight: 1.3 }}>
+                              {member.name}
+                              <span
+                                style={{
+                                  marginLeft: '6px',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: 'var(--radius-full)',
+                                  backgroundColor: entityType === 'doctor' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                                  color: entityType === 'doctor' ? '#059669' : '#2563eb'
+                                }}
+                              >
+                                {entityType === 'doctor' ? 'Médico' : 'Centro'}
+                              </span>
+                            </div>
+                            {razonSocial && (
+                              <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
+                                RS: {razonSocial}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Identification Details */}
+                        <div style={{ backgroundColor: 'var(--color-dark-bg)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '10px' }}>
+                          {docNumber && (
+                            <div>
+                              <span style={{ color: 'var(--color-dark-text-tertiary)' }}>RUC / Doc:</span>{' '}
+                              <strong>{docNumber}</strong>
+                            </div>
+                          )}
+                          {cmpNumber && (
+                            <div>
+                              <span style={{ color: 'var(--color-dark-text-tertiary)' }}>Colegiatura:</span>{' '}
+                              <strong>CMP {cmpNumber}</strong>
+                            </div>
+                          )}
+                          <div style={{ color: 'var(--color-dark-text-secondary)', wordBreak: 'break-word' }}>
+                            <span style={{ color: 'var(--color-dark-text-tertiary)' }}>Dirección:</span>{' '}
+                            {member.address || '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Products Accordion & Direct Edit Link */}
+                      <div style={{ paddingTop: '8px', borderTop: '1px solid var(--color-dark-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '12px' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleModalProducts(member.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--color-primary)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Package size={13} />
+                          {productsList.length} producto(s) aportado(s)
+                          {isProdExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+
+                        <Link
+                          to={`/dashboard/locations/${member.id}/edit`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--color-dark-text-tertiary)',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          title="Abrir formulario para editar foto, teléfono o datos de esta ficha"
+                        >
+                          Editar ficha ↗
+                        </Link>
+                      </div>
+
+                      {isProdExpanded && (
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            padding: '8px',
+                            backgroundColor: 'var(--color-dark-bg)',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '4px',
+                            maxHeight: '100px',
+                            overflowY: 'auto'
+                          }}
+                        >
+                          {productsList.length > 0 ? (
+                            productsList.map((p, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  backgroundColor: 'var(--color-dark-surface)',
+                                  border: '1px solid var(--color-dark-border)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  color: 'var(--color-dark-text-primary)'
+                                }}
+                              >
+                                {p.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)' }}>
+                              Sin productos específicos
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--color-dark-border)',
+                backgroundColor: '#FAF8F5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              {/* Left: Chosen summary & Dissolve option */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)' }}>
+                  Visible en el mapa como:{' '}
+                  <strong style={{ color: '#00506E' }}>
+                    {editingGroup.members.find(m => m.id === editingPrimaryId)?.name || editingGroup.primary.name}
+                  </strong>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleModalDissolve}
+                  disabled={modalSaving}
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#b91c1c',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0
+                  }}
+                  title="Separar este grupo económico para que sus ubicaciones vuelvan a ser independientes"
+                >
+                  Desunir / Separar Grupo
+                </button>
+              </div>
+
+              {/* Right: Actions */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  disabled={modalSaving}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '13px', padding: '8px 16px' }}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveEditGroup}
+                  disabled={modalSaving}
+                  className="btn btn-primary"
+                  style={{
+                    fontSize: '13px',
+                    padding: '8px 20px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {modalSaving ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" /> Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={14} /> Guardar Cambios
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

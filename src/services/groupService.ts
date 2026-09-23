@@ -133,7 +133,10 @@ export const getActiveGroups = (list: LocationItem[]): ActiveGroup[] => {
 
   return primaryLocs.map(primary => {
     const memberIds = primary.grupo_economico_ids || [];
-    const members = list.filter(l => memberIds.includes(l.id));
+    let members = list.filter(l => memberIds.includes(l.id));
+    if (!members.some(m => m.id === primary.id)) {
+      members = [primary, ...members];
+    }
     const secondaryMembers = members.filter(m => m.id !== primary.id);
 
     const allProducts = members.flatMap(m => m.products || []);
@@ -190,6 +193,54 @@ export const unifyEconomicGroup = async (
     .upsert(payload, { onConflict: 'id' });
 
   if (error) throw error;
+};
+
+/**
+ * Update the primary entity of an active economic group.
+ * Removes grupo_economico_ids from the previous primary and assigns it to the new primary.
+ */
+export const updateGroupPrimary = async (
+  activeLocatorId: string,
+  oldPrimary: LocationItem,
+  newPrimary: LocationItem,
+  allMemberIds: string[]
+): Promise<void> => {
+  if (oldPrimary.id === newPrimary.id) {
+    return;
+  }
+
+  const memberIdsSet = new Set(allMemberIds);
+  memberIdsSet.add(oldPrimary.id);
+  memberIdsSet.add(newPrimary.id);
+  const updatedIds = Array.from(memberIdsSet);
+
+  // 1. Remove grupo_economico_ids from old primary
+  const { error: removeErr } = await supabase
+    .from('bm_locations')
+    .update({ grupo_economico_ids: null })
+    .eq('id', oldPrimary.id);
+
+  if (removeErr) throw removeErr;
+
+  // 2. Assign grupo_economico_ids to the new primary
+  const payload: any = {
+    id: newPrimary.id,
+    locator_id: activeLocatorId,
+    name: newPrimary.name,
+    address: newPrimary.address || oldPrimary.address,
+    lat: (newPrimary.lat && newPrimary.lat !== 0) ? newPrimary.lat : (oldPrimary.lat ?? 0),
+    lng: (newPrimary.lng && newPrimary.lng !== 0) ? newPrimary.lng : (oldPrimary.lng ?? 0),
+    image_url: newPrimary.image_url || null,
+    custom_fields: newPrimary.custom_fields || {},
+    published: newPrimary.published !== false,
+    grupo_economico_ids: updatedIds,
+  };
+
+  const { error: upsertErr } = await supabase
+    .from('bm_locations')
+    .upsert(payload, { onConflict: 'id' });
+
+  if (upsertErr) throw upsertErr;
 };
 
 /**
