@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   Search,
   RefreshCw,
-  Info,
   Stethoscope,
   Building
 } from 'lucide-react';
@@ -227,9 +226,6 @@ export const ManageEconomicGroups: React.FC = () => {
               <Building2 size={26} style={{ color: 'var(--color-primary)' }} />
               Grupos Económicos
             </h1>
-            <p style={{ margin: '6px 0 0 0', fontSize: '14px', color: 'var(--color-dark-text-secondary)', maxWidth: '750px', lineHeight: 1.5 }}>
-              Agrupa múltiples razones sociales o consultorios que operan en la misma sede física. Esto consolida sus productos en una sola ficha y evita pines duplicados en el mapa.
-            </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -425,27 +421,6 @@ export const ManageEconomicGroups: React.FC = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(234, 179, 8, 0.08)',
-                  border: '1px solid rgba(234, 179, 8, 0.3)',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '10px',
-                  fontSize: '13px',
-                  color: '#854d0e',
-                  lineHeight: 1.5
-                }}
-              >
-                <Info size={18} style={{ flexShrink: 0, marginTop: '2px', color: '#ca8a04' }} />
-                <div>
-                  <strong>¿Cómo funciona la unificación?</strong> En cada grupo sugerido abajo,{' '}
-                  <strong>haz clic sobre la ficha que desees designar como Principal</strong>. Esa será la que aparecerá visible en el mapa público con su nombre y foto. Los productos de las fichas secundarias se sumarán a su catálogo automáticamente sin duplicar pines.
-                </div>
-              </div>
-
               {filteredSuggestions.map((group, groupIdx) => {
                 const groupKey = [...group.ids].sort().join('|');
                 const chosenPrimaryId = selectedPrimaries[groupKey] || group.primaryId;
