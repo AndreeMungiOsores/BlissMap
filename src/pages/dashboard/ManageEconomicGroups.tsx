@@ -47,6 +47,7 @@ export const ManageEconomicGroups: React.FC = () => {
   const [selectedPrimaries, setSelectedPrimaries] = useState<Record<string, string>>({});
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const [expandedActiveSecondary, setExpandedActiveSecondary] = useState<Record<string, boolean>>({});
+  const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -125,6 +126,10 @@ export const ManageEconomicGroups: React.FC = () => {
 
   const handleToggleActiveSecondary = (primaryId: string) => {
     setExpandedActiveSecondary(prev => ({ ...prev, [primaryId]: !prev[primaryId] }));
+  };
+
+  const handleToggleSuggestion = (groupKey: string) => {
+    setExpandedSuggestions(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
   };
 
   const handleIgnoreGroup = (group: SuggestedGroup) => {
@@ -426,6 +431,7 @@ export const ManageEconomicGroups: React.FC = () => {
                 const chosenPrimaryId = selectedPrimaries[groupKey] || group.primaryId;
                 const chosenPrimary = group.members.find(m => m.id === chosenPrimaryId) || group.members[0];
                 const isGroupActionLoading = actionLoading === groupKey;
+                const isExpanded = expandedSuggestions[groupKey] || false;
 
                 return (
                   <div
@@ -438,18 +444,30 @@ export const ManageEconomicGroups: React.FC = () => {
                       overflow: 'hidden'
                     }}
                   >
-                    {/* Group Header */}
+                    {/* Group Header (Clickable to toggle) */}
                     <div
+                      onClick={() => handleToggleSuggestion(groupKey)}
                       style={{
                         padding: '16px 20px',
-                        backgroundColor: '#FAF8F5',
-                        borderBottom: '1px solid var(--color-dark-border)',
+                        backgroundColor: isExpanded ? '#FAF8F5' : 'var(--color-dark-surface)',
+                        borderBottom: isExpanded ? '1px solid var(--color-dark-border)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
-                        gap: '12px'
+                        gap: '12px',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.15s ease'
                       }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleToggleSuggestion(groupKey);
+                        }
+                      }}
+                      aria-expanded={isExpanded}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div
@@ -508,7 +526,10 @@ export const ManageEconomicGroups: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button
                           type="button"
-                          onClick={() => handleIgnoreGroup(group)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIgnoreGroup(group);
+                          }}
                           disabled={isGroupActionLoading}
                           style={{
                             padding: '7px 14px',
@@ -525,7 +546,10 @@ export const ManageEconomicGroups: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleUnify(group)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnify(group);
+                          }}
                           disabled={isGroupActionLoading}
                           style={{
                             padding: '7px 18px',
@@ -552,12 +576,41 @@ export const ManageEconomicGroups: React.FC = () => {
                             </>
                           )}
                         </button>
+
+                        {/* Expand / Collapse Arrow Toggle */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSuggestion(groupKey);
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '7px 12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            borderRadius: 'var(--radius-full)',
+                            border: '1px solid var(--color-dark-border)',
+                            backgroundColor: isExpanded ? 'rgba(0, 80, 110, 0.08)' : '#ffffff',
+                            color: isExpanded ? '#00506E' : 'var(--color-dark-text-secondary)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                          aria-expanded={isExpanded}
+                          title={isExpanded ? 'Contraer detalle' : 'Expandir detalle'}
+                        >
+                          <span>{isExpanded ? 'Ocultar' : 'Ver detalle'}</span>
+                          {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </button>
                       </div>
                     </div>
 
-                    {/* Member Entities Comparison Grid */}
-                    <div style={{ padding: '20px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {/* Member Entities Comparison Grid (Collapsed by default) */}
+                    {isExpanded && (
+                      <div style={{ padding: '20px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Fichas que componen este grupo (Haz clic para seleccionar la Ficha Principal):
                       </div>
 
@@ -848,8 +901,9 @@ export const ManageEconomicGroups: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
-                );
+                  )}
+                </div>
+              );
               })}
             </div>
           )}
