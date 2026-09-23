@@ -51,6 +51,7 @@ export const ManageEconomicGroups: React.FC = () => {
   const [selectedPrimaries, setSelectedPrimaries] = useState<Record<string, string>>({});
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const [expandedActiveSecondary, setExpandedActiveSecondary] = useState<Record<string, boolean>>({});
+  const [expandedActiveProducts, setExpandedActiveProducts] = useState<Record<string, boolean>>({});
   const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -136,6 +137,10 @@ export const ManageEconomicGroups: React.FC = () => {
 
   const handleToggleActiveSecondary = (primaryId: string) => {
     setExpandedActiveSecondary(prev => ({ ...prev, [primaryId]: !prev[primaryId] }));
+  };
+
+  const handleToggleActiveProducts = (primaryId: string) => {
+    setExpandedActiveProducts(prev => ({ ...prev, [primaryId]: !prev[primaryId] }));
   };
 
   const handleToggleSuggestion = (groupKey: string) => {
@@ -1044,6 +1049,7 @@ export const ManageEconomicGroups: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {filteredActiveGroups.map(group => {
                 const isExpanded = expandedActiveSecondary[group.primary.id] || false;
+                const isProductsExpanded = expandedActiveProducts[group.primary.id] || false;
 
                 return (
                   <div
@@ -1168,12 +1174,33 @@ export const ManageEconomicGroups: React.FC = () => {
                     </div>
 
                     {/* Integrated Products & Secondary Members Section */}
-                    <div style={{ padding: '14px 20px', backgroundColor: 'var(--color-dark-bg)', borderBottom: '1px solid var(--color-dark-border)' }}>
+                    <div style={{ padding: '14px 20px', backgroundColor: 'var(--color-dark-bg)', borderBottom: (isExpanded || isProductsExpanded) ? '1px solid var(--color-dark-border)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--color-dark-text-primary)' }}>
-                          <Package size={15} style={{ color: 'var(--color-primary)' }} />
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActiveProducts(group.primary.id)}
+                          disabled={group.totalProducts === 0}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: group.totalProducts > 0 ? 'var(--color-dark-text-primary)' : 'var(--color-dark-text-tertiary)',
+                            cursor: group.totalProducts > 0 ? 'pointer' : 'default',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          aria-expanded={isProductsExpanded}
+                          title={group.totalProducts > 0 ? (isProductsExpanded ? 'Contraer lista de productos' : 'Ver productos combinados') : undefined}
+                        >
+                          <Package size={15} style={{ color: group.totalProducts > 0 ? 'var(--color-primary)' : 'var(--color-dark-text-tertiary)' }} />
                           <span>{group.totalProducts} productos combinados en esta sede</span>
-                        </div>
+                          {group.totalProducts > 0 && (
+                            isProductsExpanded ? <ChevronUp size={14} style={{ color: 'var(--color-primary)' }} /> : <ChevronDown size={14} style={{ color: 'var(--color-dark-text-secondary)' }} />
+                          )}
+                        </button>
 
                         <button
                           type="button"
@@ -1189,35 +1216,43 @@ export const ManageEconomicGroups: React.FC = () => {
                             alignItems: 'center',
                             gap: '4px'
                           }}
+                          aria-expanded={isExpanded}
                         >
                           {isExpanded ? 'Ocultar fichas secundarias' : `Ver ${group.secondaryMembers.length} ficha(s) secundaria(s) agrupada(s)`}
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
                       </div>
 
-                      {/* Combined Products Pills */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '10px' }}>
-                        {group.combinedProducts.slice(0, 15).map((p, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              fontSize: '11px',
-                              padding: '2px 8px',
-                              borderRadius: 'var(--radius-sm)',
-                              backgroundColor: 'var(--color-dark-surface)',
-                              border: '1px solid var(--color-dark-border)',
-                              color: 'var(--color-dark-text-primary)'
-                            }}
-                          >
-                            {p.name}
-                          </span>
-                        ))}
-                        {group.combinedProducts.length > 15 && (
-                          <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', padding: '2px 4px' }}>
-                            +{group.combinedProducts.length - 15} más
-                          </span>
-                        )}
-                      </div>
+                      {/* Combined Products Pills (Collapsible) */}
+                      {isProductsExpanded && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '5px',
+                            marginTop: '10px',
+                            maxHeight: '160px',
+                            overflowY: 'auto',
+                            padding: '4px 0'
+                          }}
+                        >
+                          {group.combinedProducts.map((p, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: 'var(--radius-sm)',
+                                backgroundColor: 'var(--color-dark-surface)',
+                                border: '1px solid var(--color-dark-border)',
+                                color: 'var(--color-dark-text-primary)'
+                              }}
+                            >
+                              {p.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Secondary Members Details (Collapsible) */}
