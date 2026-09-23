@@ -18,7 +18,10 @@ import {
   Stethoscope,
   Building,
   Pencil,
-  X
+  X,
+  Plus,
+  Trash2,
+  Check
 } from 'lucide-react';
 import {
   type LocationItem,
@@ -28,6 +31,7 @@ import {
   getActiveGroups,
   unifyEconomicGroup,
   updateGroupPrimary,
+  createManualGroup,
   dissolveEconomicGroup
 } from '../../services/groupService';
 import {
@@ -61,6 +65,13 @@ export const ManageEconomicGroups: React.FC = () => {
   const [editingPrimaryId, setEditingPrimaryId] = useState<string>('');
   const [modalExpandedProducts, setModalExpandedProducts] = useState<Record<string, boolean>>({});
   const [modalSaving, setModalSaving] = useState(false);
+
+  // Modal Create New Group state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createSearch, setCreateSearch] = useState('');
+  const [createSelectedEntities, setCreateSelectedEntities] = useState<LocationItem[]>([]);
+  const [createPrimaryId, setCreatePrimaryId] = useState<string>('');
+  const [createSaving, setCreateSaving] = useState(false);
 
   // Load locations for the active locator
   const loadData = useCallback(async (forceRefresh = false) => {
@@ -118,6 +129,34 @@ export const ManageEconomicGroups: React.FC = () => {
       g.members.some(m => m.name.toLowerCase().includes(q))
     );
   }, [activeGroups, search]);
+
+  // Map of entity ID to existing group name (to detect and block entities that already belong to a group)
+  const groupedEntityInfoMap = useMemo(() => {
+    const map = new Map<string, string>();
+    activeGroups.forEach(g => {
+      map.set(g.primary.id, g.primary.name);
+      g.primary.grupo_economico_ids?.forEach(id => {
+        map.set(id, g.primary.name);
+      });
+      g.members.forEach(m => {
+        map.set(m.id, g.primary.name);
+      });
+    });
+    return map;
+  }, [activeGroups]);
+
+  // Filtered locations for Create New Group modal
+  const createFilteredLocations = useMemo(() => {
+    if (!createSearch.trim()) return locations;
+    const q = createSearch.toLowerCase().trim();
+    return locations.filter(loc =>
+      loc.name.toLowerCase().includes(q) ||
+      loc.address.toLowerCase().includes(q) ||
+      (loc.custom_fields?.['Documento'] && loc.custom_fields['Documento'].includes(q)) ||
+      (loc.custom_fields?.['Razón Social'] && loc.custom_fields['Razón Social'].toLowerCase().includes(q)) ||
+      (loc.custom_fields?.['Razon Social'] && loc.custom_fields['Razon Social'].toLowerCase().includes(q))
+    );
+  }, [locations, createSearch]);
 
   // Auto-switch to active tab if there are no suggestions but there are active groups
   useEffect(() => {
@@ -278,16 +317,92 @@ export const ManageEconomicGroups: React.FC = () => {
     await handleDissolve(primaryId, primaryName);
   };
 
-  // Keyboard accessibility: Close modal on Escape
+  // Create Group Handlers
+  const handleToggleSelectForNewGroup = (loc: LocationItem) => {
+    // Prevent adding if entity already belongs to another group
+    const existingGroupName = groupedEntityInfoMap.get(loc.id);
+    if (existingGroupName) {
+      alert(`Esta ficha ya pertenece al grupo económico "${existingGroupName}". Para vincularla a otro grupo, primero debes disolver su grupo actual.`);
+      return;
+    }
+
+    const isAlreadySelected = createSelectedEntities.some(e => e.id === loc.id);
+    if (isAlreadySelected) {
+      const next = createSelectedEntities.filter(e => e.id !== loc.id);
+      setCreateSelectedEntities(next);
+      if (createPrimaryId === loc.id) {
+        setCreatePrimaryId(next.length > 0 ? next[0].id : '');
+      }
+    } else {
+      const next = [...createSelectedEntities, loc];
+      setCreateSelectedEntities(next);
+      if (!createPrimaryId) {
+        setCreatePrimaryId(loc.id);
+      }
+    }
+  };
+
+  const handleRemoveFromNewGroup = (entityId: string) => {
+    const next = createSelectedEntities.filter(e => e.id !== entityId);
+    setCreateSelectedEntities(next);
+    if (createPrimaryId === entityId) {
+      setCreatePrimaryId(next.length > 0 ? next[0].id : '');
+    }
+  };
+
+  const handleSaveNewManualGroup = async () => {
+    if (!activeLocator) return;
+    if (createSelectedEntities.length < 2) {
+      setNotification({
+        type: 'error',
+        text: 'Debes seleccionar al menos 2 fichas para crear un grupo económico.'
+      });
+      return;
+    }
+
+    const primary = createSelectedEntities.find(e => e.id === createPrimaryId) || createSelectedEntities[0];
+    const memberIds = createSelectedEntities.map(e => e.id);
+
+    setCreateSaving(true);
+    try {
+      await createManualGroup(activeLocator.id, primary, memberIds);
+      locationsMemoryCache.delete(activeLocator.id);
+      await loadData(true);
+
+      setNotification({
+        type: 'success',
+        text: `Grupo económico creado con éxito. La ficha visible en el mapa será "${primary.name}".`
+      });
+      setIsCreateModalOpen(false);
+      setCreateSelectedEntities([]);
+      setCreatePrimaryId('');
+      setCreateSearch('');
+      setActiveTab('active');
+    } catch (err: any) {
+      console.error('Error creating manual economic group:', err);
+      setNotification({
+        type: 'error',
+        text: `Error al crear el grupo económico: ${err.message || 'Error desconocido'}`
+      });
+    } finally {
+      setCreateSaving(false);
+    }
+  };
+
+  // Keyboard accessibility: Close modals on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && editingGroup && !modalSaving) {
-        setEditingGroup(null);
+      if (e.key === 'Escape') {
+        if (editingGroup && !modalSaving) {
+          setEditingGroup(null);
+        } else if (isCreateModalOpen && !createSaving) {
+          setIsCreateModalOpen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editingGroup, modalSaving]);
+  }, [editingGroup, modalSaving, isCreateModalOpen, createSaving]);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
@@ -332,6 +447,28 @@ export const ManageEconomicGroups: React.FC = () => {
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               Actualizar
+            </button>
+
+            <button
+              onClick={() => {
+                setCreateSelectedEntities([]);
+                setCreatePrimaryId('');
+                setCreateSearch('');
+                setIsCreateModalOpen(true);
+              }}
+              className="btn btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                padding: '8px 16px',
+                fontWeight: 700
+              }}
+              title="Crear un nuevo grupo económico manualmente"
+            >
+              <Plus size={15} />
+              Crear nuevo grupo
             </button>
           </div>
         </div>
@@ -1778,6 +1915,568 @@ export const ManageEconomicGroups: React.FC = () => {
                   ) : (
                     <>
                       <CheckCircle2 size={14} /> Guardar Cambios
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CREATE NEW ECONOMIC GROUP ── */}
+      {isCreateModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: '20px'
+          }}
+          onClick={() => {
+            if (!createSaving) setIsCreateModalOpen(false);
+          }}
+        >
+          <div
+            className="panel"
+            style={{
+              width: '100%',
+              maxWidth: '960px',
+              height: '85vh',
+              maxHeight: '750px',
+              backgroundColor: 'var(--color-dark-surface)',
+              border: '1px solid var(--color-dark-border)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              margin: 0,
+              padding: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-group-modal-title"
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid var(--color-dark-border)',
+                backgroundColor: '#FAF8F5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'rgba(0, 80, 110, 0.1)',
+                    color: '#00506E',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h2
+                    id="create-group-modal-title"
+                    style={{
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      color: 'var(--color-dark-text-primary)',
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    Crear Nuevo Grupo Económico
+                  </h2>
+                  <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
+                    Vincula consultorios o clínicas que operan en la misma sede física para consolidar sus productos.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!createSaving) setIsCreateModalOpen(false);
+                }}
+                disabled={createSaving}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-dark-text-tertiary)',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: 'var(--radius-full)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Cerrar ventana"
+                aria-label="Cerrar ventana"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body: 2 Columns Responsive */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto'
+              }}
+            >
+              {/* Left Column: Search & Available Entities */}
+              <div
+                style={{
+                  borderRight: '1px solid var(--color-dark-border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '360px',
+                  backgroundColor: 'var(--color-dark-surface)'
+                }}
+              >
+                <div style={{ padding: '16px 20px 12px 20px', borderBottom: '1px solid var(--color-dark-border)' }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search
+                      size={15}
+                      style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--color-dark-text-tertiary)'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={createSearch}
+                      onChange={(e) => setCreateSearch(e.target.value)}
+                      placeholder="Buscar por clínica, doctor, dirección o RUC..."
+                      className="form-control"
+                      style={{
+                        paddingLeft: '36px',
+                        height: '38px',
+                        fontSize: '13px',
+                        width: '100%'
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', fontSize: '11px', color: 'var(--color-dark-text-tertiary)' }}>
+                    <span>Mostrando {createFilteredLocations.length} ubicaciones</span>
+                    <span>{createSelectedEntities.length} seleccionadas</span>
+                  </div>
+                </div>
+
+                {/* Locations Scroll List */}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  {createFilteredLocations.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-dark-text-secondary)', fontSize: '13px' }}>
+                      No se encontraron ubicaciones que coincidan con la búsqueda.
+                    </div>
+                  ) : (
+                    createFilteredLocations.map((loc) => {
+                      const existingGroupName = groupedEntityInfoMap.get(loc.id);
+                      const isAlreadyGrouped = Boolean(existingGroupName);
+                      const isSelected = createSelectedEntities.some((e) => e.id === loc.id);
+
+                      return (
+                        <div
+                          key={loc.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '12px 18px',
+                            borderBottom: '1px solid var(--color-dark-border)',
+                            backgroundColor: isSelected ? 'rgba(0, 80, 110, 0.04)' : 'transparent',
+                            opacity: isAlreadyGrouped ? 0.65 : 1,
+                            transition: 'background-color 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', minWidth: 0, flex: 1, paddingRight: '12px' }}>
+                            <div
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                backgroundColor: isSelected ? 'rgba(0, 80, 110, 0.1)' : 'rgba(239, 68, 68, 0.08)',
+                                color: isSelected ? '#00506E' : '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                marginTop: '2px'
+                              }}
+                            >
+                              <MapPin size={16} />
+                            </div>
+
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-dark-text-primary)', lineHeight: 1.3, wordBreak: 'break-word' }}>
+                                {loc.name}
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
+                                {loc.address || 'Sin dirección registrada'}
+                              </div>
+
+                              {isAlreadyGrouped && (
+                                <div
+                                  style={{
+                                    marginTop: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                    color: '#b45309'
+                                  }}
+                                  title={`Esta ficha ya está unificada en el grupo "${existingGroupName}"`}
+                                >
+                                  <AlertCircle size={10} />
+                                  Ya en grupo: {existingGroupName}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Button */}
+                          <div>
+                            {isAlreadyGrouped ? (
+                              <button
+                                type="button"
+                                disabled
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  border: '1px solid var(--color-dark-border)',
+                                  backgroundColor: 'rgba(0,0,0,0.04)',
+                                  color: 'var(--color-dark-text-tertiary)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'not-allowed'
+                                }}
+                                title={`No disponible: Ya forma parte del grupo "${existingGroupName}"`}
+                              >
+                                <Plus size={16} />
+                              </button>
+                            ) : isSelected ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSelectForNewGroup(loc)}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  backgroundColor: '#16a34a',
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 5px rgba(22, 163, 74, 0.3)',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Ficha seleccionada (clic para deseleccionar)"
+                              >
+                                <Check size={16} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSelectForNewGroup(loc)}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  border: '1px solid var(--color-dark-border)',
+                                  backgroundColor: '#ffffff',
+                                  color: 'var(--color-dark-text-secondary)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Agregar al grupo"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Selected Entities & Ficha Principal Chooser */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                  backgroundColor: '#FAF8F5'
+                }}
+              >
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-dark-border)', backgroundColor: '#FAF8F5' }}>
+                  <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-dark-text-primary)' }}>
+                    Fichas Vinculadas ({createSelectedEntities.length})
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
+                    Haz clic sobre una ficha para designarla como <strong>Ficha Principal</strong> (visible en el mapa público).
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+                  {createSelectedEntities.length === 0 ? (
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        padding: '40px 16px',
+                        color: 'var(--color-dark-text-tertiary)',
+                        border: '2px dashed var(--color-dark-border)',
+                        borderRadius: 'var(--radius-md)',
+                        marginTop: '20px'
+                      }}
+                    >
+                      <Building2 size={32} style={{ margin: '0 auto 10px auto', opacity: 0.4 }} />
+                      <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-dark-text-secondary)' }}>
+                        Ninguna ficha seleccionada
+                      </div>
+                      <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                        Usa el buscador de la izquierda y haz clic en el botón <strong>+</strong> para añadir fichas a este grupo.
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {createSelectedEntities.map((item, idx) => {
+                        const isPrimary = item.id === createPrimaryId;
+                        const initial = (item.name || 'C').trim().charAt(0).toUpperCase();
+
+                        // Soft avatar colors palette
+                        const colors = [
+                          { bg: '#fee2e2', text: '#b91c1c' },
+                          { bg: '#fef3c7', text: '#b45309' },
+                          { bg: '#e0f2fe', text: '#0369a1' },
+                          { bg: '#f3e8ff', text: '#7e22ce' },
+                          { bg: '#dcfce7', text: '#15803d' },
+                          { bg: '#ffedd5', text: '#c2410c' }
+                        ];
+                        const color = colors[idx % colors.length];
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setCreatePrimaryId(item.id)}
+                            style={{
+                              padding: '12px 14px',
+                              borderRadius: 'var(--radius-md)',
+                              backgroundColor: isPrimary ? '#ffffff' : '#ffffff',
+                              border: isPrimary ? '2px solid #00506E' : '1px solid var(--color-dark-border)',
+                              boxShadow: isPrimary ? '0 0 0 3px rgba(0, 80, 110, 0.1)' : '0 1px 3px rgba(0,0,0,0.03)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                              <div
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: 'var(--radius-sm)',
+                                  backgroundColor: color.bg,
+                                  color: color.text,
+                                  fontWeight: 800,
+                                  fontSize: '14px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {initial}
+                              </div>
+
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-dark-text-primary)', lineHeight: 1.3, wordBreak: 'break-word' }}>
+                                  {item.name}
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
+                                  {item.address || 'Sin dirección registrada'}
+                                </div>
+                                <div style={{ marginTop: '4px' }}>
+                                  {isPrimary ? (
+                                    <span
+                                      style={{
+                                        fontSize: '10px',
+                                        fontWeight: 800,
+                                        backgroundColor: '#00506E',
+                                        color: '#ffffff',
+                                        padding: '2px 8px',
+                                        borderRadius: 'var(--radius-full)',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                      }}
+                                    >
+                                      <Star size={10} fill="#ffffff" /> Ficha Principal (Visible)
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        fontSize: '10px',
+                                        color: 'var(--color-dark-text-tertiary)',
+                                        backgroundColor: 'rgba(0,0,0,0.04)',
+                                        padding: '2px 6px',
+                                        borderRadius: 'var(--radius-full)'
+                                      }}
+                                    >
+                                      ↳ Ficha Secundaria
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFromNewGroup(item.id);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#9ca3af',
+                                cursor: 'pointer',
+                                padding: '6px',
+                                borderRadius: 'var(--radius-sm)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'color 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = '#ef4444';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = '#9ca3af';
+                              }}
+                              title="Quitar ficha del grupo"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--color-dark-border)',
+                backgroundColor: '#FAF8F5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              {/* Left: Summary */}
+              <div>
+                {createSelectedEntities.length < 2 ? (
+                  <span style={{ fontSize: '13px', color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertCircle size={14} />
+                    Selecciona al menos 2 fichas para crear un grupo económico.
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)' }}>
+                    Ficha visible en mapa:{' '}
+                    <strong style={{ color: '#00506E' }}>
+                      {createSelectedEntities.find((e) => e.id === createPrimaryId)?.name || createSelectedEntities[0]?.name}
+                    </strong>{' '}
+                    ({createSelectedEntities.length} entidades vinculadas)
+                  </span>
+                )}
+              </div>
+
+              {/* Right: Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  disabled={createSaving}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '13px', padding: '8px 16px' }}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveNewManualGroup}
+                  disabled={createSelectedEntities.length < 2 || createSaving}
+                  className="btn btn-primary"
+                  style={{
+                    fontSize: '13px',
+                    padding: '8px 22px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: (createSelectedEntities.length < 2 || createSaving) ? 0.6 : 1,
+                    cursor: (createSelectedEntities.length < 2 || createSaving) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {createSaving ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" /> Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Link2 size={14} /> Guardar Vínculo
                     </>
                   )}
                 </button>

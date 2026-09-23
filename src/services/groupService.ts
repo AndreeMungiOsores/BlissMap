@@ -254,3 +254,35 @@ export const dissolveEconomicGroup = async (primaryId: string): Promise<void> =>
 
   if (error) throw error;
 };
+
+/**
+ * Manually create a new economic group with a specified primary and member list.
+ */
+export const createManualGroup = async (
+  activeLocatorId: string,
+  primary: LocationItem,
+  memberIds: string[]
+): Promise<void> => {
+  const memberIdsSet = new Set(memberIds);
+  memberIdsSet.add(primary.id);
+  const finalIds = Array.from(memberIdsSet);
+
+  const payload: any = {
+    id: primary.id,
+    locator_id: activeLocatorId,
+    name: primary.name,
+    address: primary.address,
+    lat: primary.lat ?? 0,
+    lng: primary.lng ?? 0,
+    image_url: primary.image_url || null,
+    custom_fields: primary.custom_fields || {},
+    published: primary.published !== false,
+    grupo_economico_ids: finalIds,
+  };
+
+  const { error } = await supabase
+    .from('bm_locations')
+    .upsert(payload, { onConflict: 'id' });
+
+  if (error) throw error;
+};
