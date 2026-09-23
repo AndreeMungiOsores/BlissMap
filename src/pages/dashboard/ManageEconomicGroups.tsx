@@ -2010,9 +2010,6 @@ export const ManageEconomicGroups: React.FC = () => {
                   >
                     Crear Nuevo Grupo Económico
                   </h2>
-                  <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
-                    Vincula consultorios o clínicas que operan en la misma sede física para consolidar sus productos.
-                  </div>
                 </div>
               </div>
 
@@ -2254,9 +2251,6 @@ export const ManageEconomicGroups: React.FC = () => {
                   <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-dark-text-primary)' }}>
                     Fichas Vinculadas ({createSelectedEntities.length})
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
-                    Haz clic sobre una ficha para designarla como <strong>Ficha Principal</strong> (visible en el mapa público).
-                  </div>
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
@@ -2274,9 +2268,6 @@ export const ManageEconomicGroups: React.FC = () => {
                       <Building2 size={32} style={{ margin: '0 auto 10px auto', opacity: 0.4 }} />
                       <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-dark-text-secondary)' }}>
                         Ninguna ficha seleccionada
-                      </div>
-                      <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                        Usa el buscador de la izquierda y haz clic en el botón <strong>+</strong> para añadir fichas a este grupo.
                       </div>
                     </div>
                   ) : (
