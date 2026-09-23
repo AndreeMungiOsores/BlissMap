@@ -56,13 +56,6 @@ interface LocationItem {
   grupo_economico_ids?: string[] | null;
 }
 
-interface SuggestedGroup {
-  ids: string[];
-  name: string;
-  address: string;
-  totalProducts: number;
-  rucs: string[];
-}
 
 interface OutletContextType {
   activeLocator: Locator | null;
@@ -112,64 +105,6 @@ export const isWithoutTextAddress = (loc: LocationItem): boolean => {
   return false;
 };
 
-const normalizeAddress = (addr: string): string =>
-  removeAccents(addr)
-    .replace(/\bav\b\.?/g, 'av').replace(/\bjr\b\.?/g, 'jr').replace(/\bcalle\b/g, 'cl')
-    .replace(/\bnro\b\.?/g, '').replace(/\bnumero\b/g, '')
-    .replace(/[.,#°]/g, ' ').replace(/\s+/g, ' ').trim();
-
-const nameSimilarity = (a: string, b: string): number => {
-  const bigrams = (s: string) => {
-    const set = new Set<string>();
-    for (let i = 0; i < s.length - 1; i++) set.add(s[i] + s[i + 1]);
-    return set;
-  };
-  const ba = bigrams(removeAccents(a));
-  const bb = bigrams(removeAccents(b));
-  if (ba.size === 0 || bb.size === 0) return 0;
-  let intersection = 0;
-  ba.forEach(g => { if (bb.has(g)) intersection++; });
-  return (2 * intersection) / (ba.size + bb.size);
-};
-
-const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => {
-  const groups: SuggestedGroup[] = [];
-  const used = new Set<string>();
-
-  for (let i = 0; i < list.length; i++) {
-    if (used.has(list[i].id)) continue;
-    const addrI = normalizeAddress(list[i].address);
-    if (!addrI || addrI.length < 8) continue;
-    const peers: LocationItem[] = [list[i]];
-
-    for (let j = i + 1; j < list.length; j++) {
-      if (used.has(list[j].id) || list[j].id === list[i].id) continue;
-      if (list[i].grupo_economico_ids?.includes(list[j].id) || list[j].grupo_economico_ids?.includes(list[i].id)) continue;
-      const addrJ = normalizeAddress(list[j].address);
-      // Use address similarity >= 0.75 instead of exact match to handle minor API text variations
-      if (nameSimilarity(addrI, addrJ) < 0.75) continue;
-      if (nameSimilarity(list[i].name, list[j].name) >= 0.55) {
-        peers.push(list[j]);
-        used.add(list[j].id);
-      }
-    }
-
-    if (peers.length >= 2) {
-      used.add(list[i].id);
-      const allProducts = peers.flatMap(p => p.products || []);
-      const uniqueProducts = new Map<string, ProductItem>();
-      allProducts.forEach(p => { if (!uniqueProducts.has(p.name)) uniqueProducts.set(p.name, p); });
-      groups.push({
-        ids: peers.map(p => p.id),
-        name: peers[0].name,
-        address: peers[0].address,
-        totalProducts: uniqueProducts.size,
-        rucs: peers.map(p => p.custom_fields?.['Documento'] || '').filter(Boolean),
-      });
-    }
-  }
-  return groups;
-};
 
 // Canonical cleaner for Razón Social / Company legal names
 const cleanRS = (s?: string | null): string => {
@@ -217,8 +152,6 @@ export const ManageLocations: React.FC = () => {
     return true;
   });
   const [error] = useState<string | null>(null);
-  const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
-  const [bannerOpen, setBannerOpen] = useState(true);
 
   // Brand Visibility Section State
   const [brandVisibilityOpen, setBrandVisibilityOpen] = useState(false);
@@ -521,30 +454,6 @@ export const ManageLocations: React.FC = () => {
     }
   };
 
-  const handleUnifyGroup = async (group: SuggestedGroup) => {
-    const members = locations.filter(l => group.ids.includes(l.id));
-    const primary = members.reduce((best, cur) =>
-      (cur.products?.length || 0) >= (best.products?.length || 0) ? cur : best
-    );
-    try {
-      await supabase.from('bm_locations').upsert({
-        id: primary.id,
-        locator_id: activeLocator!.id,
-        name: primary.name,
-        address: primary.address,
-        lat: primary.lat ?? 0,
-        lng: primary.lng ?? 0,
-        image_url: primary.image_url || null,
-        custom_fields: primary.custom_fields || {},
-        published: primary.published !== false,
-        grupo_economico_ids: group.ids,
-      }, { onConflict: 'id' });
-    } catch (err) {
-      console.error('Error unifying group:', err);
-    }
-    await fetchLocations(true);
-  };
-
   const handleDissolveGroup = async (primaryId: string) => {
     if (!window.confirm('¿Deseas separar este grupo económico? Las ubicaciones volverán a mostrarse de forma independiente.')) return;
     try {
@@ -555,17 +464,7 @@ export const ManageLocations: React.FC = () => {
     await fetchLocations(true);
   };
 
-  const handleIgnoreGroup = (group: SuggestedGroup) => {
-    const key = [...group.ids].sort().join('|');
-    setIgnoredGroupKeys(prev => new Set([...prev, key]));
-  };
-
   // ── Derived state ─────────────────────────────────────────────────────────
-
-  const suggestedGroups = useMemo(() => {
-    const raw = detectPossibleGroups(locations);
-    return raw.filter(g => !ignoredGroupKeys.has([...g.ids].sort().join('|')));
-  }, [locations, ignoredGroupKeys]);
 
   const groupSecondaryIds = useMemo(() => {
     const secondary = new Set<string>();
@@ -1228,63 +1127,6 @@ export const ManageLocations: React.FC = () => {
             </button>
           </div>
         </section>
-      )}
-
-      {/* Suggested Groups Banner */}
-      {suggestedGroups.length > 0 && (
-        <div style={{
-          marginBottom: '16px', borderRadius: 'var(--radius-lg)',
-          border: '1px solid rgba(234,179,8,0.4)', backgroundColor: 'rgba(234,179,8,0.06)', overflow: 'hidden'
-        }}>
-          <button type="button" onClick={() => setBannerOpen(o => !o)} style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 20px', background: 'none', border: 'none', cursor: 'pointer',
-            color: '#ca8a04', fontWeight: 700, fontSize: '13px', gap: '10px'
-          }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link2 size={15} />
-              Posibles grupos económicos detectados ({suggestedGroups.length}) — misma dirección, nombre similar
-            </span>
-            {bannerOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
-          {bannerOpen && (
-            <div style={{ padding: '0 20px 16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {suggestedGroups.map(group => (
-                <div key={group.ids.join('|')} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
-                  gap: '10px', padding: '12px 16px',
-                  backgroundColor: 'var(--color-dark-surface)', borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-dark-border)'
-                }}>
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-dark-text-primary)' }}>
-                      {group.name} <span style={{ color: 'var(--color-dark-text-tertiary)', fontWeight: 400 }}>×{group.ids.length}</span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>{group.address}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '2px' }}>
-                      RUCs: {group.rucs.join(' • ')} &nbsp;·&nbsp; {group.totalProducts} productos combinados
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => handleIgnoreGroup(group)} style={{
-                      padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 600,
-                      border: '1px solid var(--color-dark-border)', background: 'transparent',
-                      color: 'var(--color-dark-text-secondary)', cursor: 'pointer'
-                    }}>Ignorar</button>
-                    <button type="button" onClick={() => handleUnifyGroup(group)} style={{
-                      padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 700,
-                      border: 'none', backgroundColor: '#00506E', color: '#fff', cursor: 'pointer',
-                      display: 'inline-flex', alignItems: 'center', gap: '6px'
-                    }}>
-                      <Link2 size={12} />
-                      Unificar como Grupo
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       )}
 
       {/* Locations Table */}

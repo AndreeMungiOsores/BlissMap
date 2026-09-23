@@ -44,3 +44,28 @@ export const nameSimilarity = (a: string, b: string): number => {
 
   return (2 * intersection) / (bigramA.size + bigramB.size);
 };
+
+/**
+ * Canonical cleaner for Razón Social / Company legal names.
+ */
+export const cleanRS = (s?: string | null): string => {
+  if (!s) return '';
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\b(SOCIEDAD ANONIMA CERRADA|EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA|SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA|S\.?A\.?C\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?|S\.?A\.?)\b/g, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim();
+};
+
+/**
+ * Check if two names / razones sociales match canonical corporate name.
+ */
+export const isRSMatch = (a?: string | null, b?: string | null): boolean => {
+  const cleanA = cleanRS(a);
+  const cleanB = cleanRS(b);
+  if (!cleanA || !cleanB) return false;
+  if (cleanA.length < 3 || cleanB.length < 3) return false;
+  return cleanA === cleanB || cleanA.includes(cleanB) || cleanB.includes(cleanA);
+};

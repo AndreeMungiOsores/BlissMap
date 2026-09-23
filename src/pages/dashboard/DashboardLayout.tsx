@@ -5,6 +5,7 @@ import { supabase } from '../../supabaseClient';
 import { 
   Map, 
   MapPin, 
+  Building2,
   Settings, 
   Code, 
   LogOut, 
@@ -317,6 +318,16 @@ export const DashboardLayout: React.FC = () => {
                     >
                       <MapPin size={18} />
                       Ubicaciones
+                    </Link>
+                  </li>
+                  <li>
+                    <Link 
+                      to="/dashboard/groups" 
+                      className={`sidebar-item ${isActive('/dashboard/groups') ? 'active' : ''}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Building2 size={18} />
+                      Grupos Económicos
                     </Link>
                   </li>
                   <li>

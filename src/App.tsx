@@ -7,6 +7,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardLayout } from './pages/dashboard/DashboardLayout';
 import { Overview } from './pages/dashboard/Overview';
 import { ManageLocations } from './pages/dashboard/ManageLocations';
+import { ManageEconomicGroups } from './pages/dashboard/ManageEconomicGroups';
 import { LocationForm } from './pages/dashboard/LocationForm';
 import { WidgetSettings } from './pages/dashboard/WidgetSettings';
 import { EmbedPreview } from './pages/dashboard/EmbedPreview';
@@ -28,6 +29,7 @@ function App() {
           }>
             <Route index element={<Overview />} />
             <Route path="locations" element={<ManageLocations />} />
+            <Route path="groups" element={<ManageEconomicGroups />} />
             <Route path="locations/new" element={<LocationForm />} />
             <Route path="locations/:id/edit" element={<LocationForm />} />
             <Route path="settings" element={<WidgetSettings />} />
