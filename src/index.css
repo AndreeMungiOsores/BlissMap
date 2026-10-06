@@ -1116,7 +1116,75 @@ button, input, select, textarea {
 /* Custom Leaflet Marker Cluster Styling */
 .custom-marker-cluster {
   background: transparent;
+  overflow: visible !important;
 }
+
+/* Floating Tooltip Hint Bubble ('Toca para ver') */
+.cluster-bubble-hint {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: cluster-hint-bounce 2.2s ease-in-out infinite;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.cluster-bubble-hint::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0 5px;
+  border-style: solid;
+  border-color: #ffffff transparent transparent transparent;
+  transition: border-color 0.2s ease;
+}
+
+@keyframes cluster-hint-bounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cluster-bubble-hint {
+    animation: none;
+  }
+}
+
+.custom-marker-cluster:hover .cluster-bubble-hint {
+  background: #00506E;
+  color: #ffffff;
+  border-color: #00506E;
+}
+
+.custom-marker-cluster:hover .cluster-bubble-hint::after {
+  border-color: #00506E transparent transparent transparent;
+}
+
 
 .custom-marker-cluster .cluster-inner {
   width: 44px;

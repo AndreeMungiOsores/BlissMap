@@ -40,7 +40,7 @@ interface LocatorMapProps {
   initialCenterToLima?: boolean;
 }
 
-// Custom Cluster Icon generator with gradient colors and size scaling
+// Custom Cluster Icon generator with gradient colors, size scaling and interactive hint bubble
 const createCustomClusterIcon = (cluster: any) => {
   const count = cluster.getChildCount();
   let sizeClass = 'cluster-small';
@@ -51,12 +51,18 @@ const createCustomClusterIcon = (cluster: any) => {
   }
 
   return L.divIcon({
-    html: `<div class="cluster-inner"><span>${count}</span></div>`,
+    html: `
+      <div class="cluster-bubble-hint" title="Toca para ver ${count} lugares" aria-label="Toca para ver ${count} lugares">
+        <span>Toca para ver</span>
+      </div>
+      <div class="cluster-inner"><span>${count}</span></div>
+    `,
     className: `custom-marker-cluster ${sizeClass}`,
     iconSize: L.point(44, 44),
     iconAnchor: L.point(22, 22)
   });
 };
+
 
 // Leaflet center updater and bounds adjuster helper
 const FitMapBounds: React.FC<{
