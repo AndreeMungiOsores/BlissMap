@@ -64,7 +64,7 @@ const createCustomClusterIcon = (cluster: any) => {
 };
 
 
-// Leaflet center updater and bounds adjuster helper
+// Leaflet center updater, bounds adjuster and initial zoom watcher helper
 const FitMapBounds: React.FC<{
   locations: LocationItem[];
   selectedLocation: LocationItem | null;
@@ -72,39 +72,83 @@ const FitMapBounds: React.FC<{
 }> = ({ locations, selectedLocation, initialCenterToLima }) => {
   const map = useMap();
   const hasInitializedRef = React.useRef(false);
+  const initialZoomRef = React.useRef<number | null>(null);
+
+  // Sync zoom state with CSS class on map container
+  const updateZoomClass = React.useCallback(() => {
+    const container = map.getContainer();
+    if (!container) return;
+
+    if (initialZoomRef.current === null) return;
+
+    const currentZoom = map.getZoom();
+    // Allow small epsilon (0.2) for fractional zoom on mobile pinch gestures
+    const isAtInitial = currentZoom <= (initialZoomRef.current + 0.2);
+    if (isAtInitial) {
+      container.classList.add('map-at-initial-zoom');
+    } else {
+      container.classList.remove('map-at-initial-zoom');
+    }
+  }, [map]);
+
+  // Listen to zoom and move events
+  useEffect(() => {
+    map.on('zoom', updateZoomClass);
+    map.on('zoomend', updateZoomClass);
+    map.on('moveend', updateZoomClass);
+
+    return () => {
+      map.off('zoom', updateZoomClass);
+      map.off('zoomend', updateZoomClass);
+      map.off('moveend', updateZoomClass);
+    };
+  }, [map, updateZoomClass]);
 
   useEffect(() => {
     if (selectedLocation && selectedLocation.lat && selectedLocation.lng && (selectedLocation.lat !== 0 || selectedLocation.lng !== 0)) {
       map.setView([selectedLocation.lat, selectedLocation.lng], 18, { animate: true });
 
       // On mobile the map is full-screen (100vh) with a bottom sheet overlaid on top.
-      // getSize().y always returns ~100vh so we can't rely on it.
-      // Instead detect mobile via window width and shift the view up by the
-      // approximate height of the bottom sheet so the pin lands in the
-      // visible portion of the map above the sheet.
       map.once('moveend', () => {
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-          // sheet-expanded is 45vh; centre the pin halfway between top of
-          // visible area and top of sheet → offset = 45vh / 2 ≈ 22.5vh
           const sheetH = window.innerHeight * 0.45;
           const offsetPx = Math.round(sheetH / 2);
           map.panBy([0, offsetPx], { animate: true, duration: 0.4 });
         }
+        updateZoomClass();
       });
     } else if (locations.length > 0) {
       if (initialCenterToLima && !hasInitializedRef.current) {
         hasInitializedRef.current = true;
         map.setView([-12.07, -77.03], 11, { animate: false });
+        initialZoomRef.current = 11;
+        updateZoomClass();
         return;
       }
       const validLocs = locations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0));
       if (validLocs.length > 0) {
         const bounds = L.latLngBounds(validLocs.map(loc => [loc.lat, loc.lng]));
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+
+        // Calculate expected initial zoom and sync
+        try {
+          const targetZoom = Math.min(map.getBoundsZoom(bounds, false, L.point(50, 50)), 14);
+          initialZoomRef.current = targetZoom;
+          updateZoomClass();
+        } catch {
+          // Fallback if bounds calculation needs rendered dimensions
+          initialZoomRef.current = map.getZoom();
+          updateZoomClass();
+        }
+
+        map.once('moveend', () => {
+          initialZoomRef.current = map.getZoom();
+          updateZoomClass();
+        });
       }
     }
-  }, [locations, selectedLocation, map, initialCenterToLima]);
+  }, [locations, selectedLocation, map, initialCenterToLima, updateZoomClass]);
 
   return null;
 };
