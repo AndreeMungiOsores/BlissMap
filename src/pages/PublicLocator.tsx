@@ -952,6 +952,24 @@ export const PublicLocator: React.FC = () => {
     return 1.0;
   }, [locator]);
 
+  // Locations rendered on the map, ensuring selected location is always included
+  const mapLocations = useMemo(() => {
+    const base = locator?.slug === 'blissfarma'
+      ? processedLocations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0) && !loc.tags?.includes('Sin ubicación exacta'))
+      : (isSelectionActive ? processedLocations : []);
+
+    if (selectedLocationId) {
+      const selectedItem = processedLocations.find(l => l.id === selectedLocationId) || locations.find(l => l.id === selectedLocationId);
+      if (selectedItem && selectedItem.lat && selectedItem.lng && (selectedItem.lat !== 0 || selectedItem.lng !== 0)) {
+        if (!base.some(l => l.id === selectedItem.id)) {
+          return [...base, selectedItem];
+        }
+      }
+    }
+    return base;
+  }, [locator?.slug, processedLocations, isSelectionActive, selectedLocationId, locations]);
+
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#FAF8F5' }}>
@@ -1869,7 +1887,12 @@ export const PublicLocator: React.FC = () => {
                         <button
                           key={doc.id}
                           type="button"
-                          onClick={() => setSelectedLocationId(doc.id)}
+                          onClick={() => {
+                            if (entityFilter !== 'all') {
+                              setEntityFilter('doctor');
+                            }
+                            setSelectedLocationId(doc.id);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1976,7 +1999,12 @@ export const PublicLocator: React.FC = () => {
                             <button
                               key={sede.id}
                               type="button"
-                              onClick={() => setSelectedLocationId(sede.id)}
+                              onClick={() => {
+                                if (entityFilter !== 'all') {
+                                  setEntityFilter('center');
+                                }
+                                setSelectedLocationId(sede.id);
+                              }}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -2253,11 +2281,7 @@ export const PublicLocator: React.FC = () => {
       {/* Map Panel */}
       <div className="locator-map-container">
         <LocatorMap 
-          locations={
-            locator.slug === 'blissfarma'
-              ? processedLocations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0) && !loc.tags?.includes('Sin ubicación exacta'))
-              : (isSelectionActive ? processedLocations : [])
-          }
+          locations={mapLocations}
           selectedLocationId={selectedLocationId}
           onSelectLocation={(locId) => {
             setSelectedLocationId(locId);

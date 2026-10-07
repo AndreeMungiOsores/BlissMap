@@ -33,7 +33,7 @@ import localB2CData from '../data/b2c_data.json';
 const B2C_API_BASE = '/api/b2c-erp';
 const B2C_API_DIRECT = 'https://blisscorp.niuxpro.com/e/action/33_json/16_vtab2cmed/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY_B2C = 'blissmap_b2c_api_v5';
+const CACHE_KEY_B2C = 'blissmap_b2c_api_v6';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /** Default Lima coordinates for placeholder filtering. */
@@ -187,8 +187,29 @@ const buildKnownGeocodedIndex = (): GeocodedReference[] => {
 };
 
 /**
+ * Matches street name and building/street number even if administrative tokens differ.
+ * e.g., 'CAL. TARATA NRO. 294 INT. 4 URB. LEURO' matches 'Calle Tarata 294, Miraflores, Perú'
+ */
+const matchStreetAndNumber = (addr1: string, addr2: string): boolean => {
+  if (!addr1 || !addr2) return false;
+  const norm = (s: string) => s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(calle|cal|cl|av|avenida|jr|jiron|pasaje|psje|nro|numero|int|interior|dpto|departamento|urb|urbanizacion|lote|mza|mz|piso|of|oficina)\b\.?/g, ' ')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const tokens1 = norm(addr1).split(' ').filter(Boolean);
+  const tokens2 = norm(addr2).split(' ').filter(Boolean);
+  const nums1 = tokens1.filter(t => /^\d+$/.test(t) && t.length >= 2);
+  const words1 = tokens1.filter(t => !/^\d+$/.test(t) && t.length >= 4);
+  const nums2 = new Set(tokens2.filter(t => /^\d+$/.test(t)));
+  const words2 = new Set(tokens2.filter(t => !/^\d+$/.test(t)));
+  return nums1.some(n => nums2.has(n)) && words1.some(w => words2.has(w));
+};
+
+/**
  * Resolves coordinates for a B2C medical center by comparing against known B2B coordinates
- * using name and address bigram similarity.
+ * using name and address similarity plus street & number verification.
  */
 const resolveCenterCoordinates = (
   centroName: string,
@@ -207,6 +228,9 @@ const resolveCenterCoordinates = (
       }
     }
     if (direccionCentro && item.address) {
+      if (matchStreetAndNumber(direccionCentro, item.address)) {
+        return { lat: item.lat, lng: item.lng };
+      }
       const simAddr = nameSimilarity(direccionCentro, item.address);
       if (simAddr > 0.78 && simAddr > bestScore) {
         bestScore = simAddr;
@@ -399,7 +423,22 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
   centroGroupsByKey.forEach((group, key) => {
     const name = (group.rawCentro.centro || '').trim();
     const dir = (group.rawCentro.direccion_centro || '').trim();
-    const resolved = resolveCenterCoordinates(name, dir, knownIndex);
+    let resolved = resolveCenterCoordinates(name, dir, knownIndex);
+
+    // Fallback: Check if any doctor practicing in this center has known geocoded coordinates
+    if (!resolved && group.cmps.length > 0) {
+      for (const cmp of group.cmps) {
+        const med = rawMedicos.find(m => (m.cmp || '').trim() === cmp);
+        if (med) {
+          const docResolved = resolveDoctorCoordinates(med.medico || '', med.nro_doc_med || '', null, knownIndex);
+          if (docResolved) {
+            resolved = docResolved;
+            break;
+          }
+        }
+      }
+    }
+
     if (resolved) {
       centerCoordsByKey.set(key, resolved);
     }
