@@ -33,7 +33,7 @@ import localB2CData from '../data/b2c_data.json';
 const B2C_API_BASE = '/api/b2c-erp';
 const B2C_API_DIRECT = 'https://blisscorp.niuxpro.com/e/action/33_json/16_vtab2cmed/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY_B2C = 'blissmap_b2c_api_v4';
+const CACHE_KEY_B2C = 'blissmap_b2c_api_v5';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /** Default Lima coordinates for placeholder filtering. */
@@ -481,6 +481,9 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
       ],
       custom_fields: {
         'CMP': cmp,
+        'RNE': (med as any).rne || (med as any).RNE || '',
+        'Graduado en': (med as any).graduado_en || (med as any).universidad || '',
+        'Interés en': (med as any).interes_en || (med as any).especialidad || '',
         'Documento': (med.nro_doc_med || '').trim(),
         'Pacientes BlissFarma': String(med.pacientes),
         'entity_type': 'doctor',
@@ -564,10 +567,32 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     centersByKey.set(key, locationItem);
   });
 
+  // ── 7. Link centers back to each doctor (Encuéntralo en: Sedes) ───────────
+  doctorsByCmp.forEach((doctor, cmp) => {
+    const doctorCentros = centrosByCmp.get(cmp) || [];
+    const linkedCenters: LocationItem[] = [];
+    const seenCenterKeys = new Set<string>();
+
+    doctorCentros.forEach(c => {
+      const centroName = (c.centro || '').trim();
+      if (!centroName) return;
+      const key = toSlug(centroName);
+      if (seenCenterKeys.has(key)) return;
+      seenCenterKeys.add(key);
+
+      const centerLoc = centersByKey.get(key);
+      if (centerLoc) {
+        linkedCenters.push(centerLoc);
+      }
+    });
+
+    doctor.linked_entities = linkedCenters;
+  });
+
   const doctors = Array.from(doctorsByCmp.values());
   const centers = Array.from(centersByKey.values());
 
-  console.log(`[B2C API] Built ${doctors.length} doctors, ${centers.length} centers.`);
+  console.log(`[B2C API] Built ${doctors.length} doctors with linked centers, ${centers.length} centers.`);
 
   // ── 6. Persist to cache ───────────────────────────────────────────────────
   try {

@@ -20,7 +20,9 @@ import {
   MessageCircle,
   ArrowLeft,
   Building2,
-  Globe
+  Globe,
+  Stethoscope,
+  GraduationCap
 } from 'lucide-react';
 
 // Custom SVG Icons for Instagram and Facebook
@@ -1527,8 +1529,12 @@ export const PublicLocator: React.FC = () => {
                       style={{ width: '64px', height: '64px', borderRadius: '16px', objectFit: 'cover', flexShrink: 0, border: '1.5px solid #E2E8F0', boxShadow: '0 3px 10px rgba(0,0,0,0.08)' }} 
                     />
                   ) : (
-                    <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: 'rgba(30, 200, 170, 0.12)', border: '1.5px solid rgba(30, 200, 170, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00506E', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.04)' }}>
-                      <Building2 size={32} />
+                    <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: selectedLocation.custom_fields?.['entity_type'] === 'doctor' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(0, 80, 110, 0.08)', border: '1.5px solid rgba(30, 200, 170, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00506E', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.04)' }}>
+                      {selectedLocation.custom_fields?.['entity_type'] === 'doctor' ? (
+                        <Stethoscope size={30} style={{ color: '#00506E' }} />
+                      ) : (
+                        <Building2 size={32} />
+                      )}
                     </div>
                   )}
 
@@ -1539,6 +1545,83 @@ export const PublicLocator: React.FC = () => {
                     <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: '1.4', fontWeight: 500 }}>
                       {selectedLocation.address}
                     </p>
+
+                    {/* Doctor Professional Metadata (CMP, RNE, Graduado en, Interés en) */}
+                    {selectedLocation.custom_fields?.['entity_type'] === 'doctor' && (() => {
+                      const cmp = selectedLocation.custom_fields?.['CMP'];
+                      const rne = selectedLocation.custom_fields?.['RNE'];
+                      const grad = selectedLocation.custom_fields?.['Graduado en'];
+                      const interes = selectedLocation.custom_fields?.['Interés en'];
+
+                      if (!cmp && !rne && !grad && !interes) return null;
+
+                      return (
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px', alignItems: 'center' }}>
+                          {cmp && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '2.5px 8px',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(0, 80, 110, 0.08)',
+                              color: '#00506E',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              border: '1px solid rgba(0, 80, 110, 0.18)'
+                            }}>
+                              CMP: {cmp}
+                            </span>
+                          )}
+                          {rne && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '2.5px 8px',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(30, 200, 170, 0.12)',
+                              color: '#00506E',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              border: '1px solid rgba(30, 200, 170, 0.3)'
+                            }}>
+                              RNE: {rne}
+                            </span>
+                          )}
+                          {grad && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2.5px 8px',
+                              borderRadius: '8px',
+                              backgroundColor: '#F8FAFC',
+                              color: '#475569',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              border: '1px solid #E2E8F0'
+                            }}>
+                              <GraduationCap size={13} style={{ color: '#00506E' }} />
+                              {grad}
+                            </span>
+                          )}
+                          {interes && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '2.5px 8px',
+                              borderRadius: '8px',
+                              backgroundColor: '#FFF7ED',
+                              color: '#C2410C',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              border: '1px solid #FFEDD5'
+                            }}>
+                              Área: {interes}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Social Network Chips (Web, IG, FB) INSIDE Top Card, directly below address */}
                     {(() => {
@@ -1863,6 +1946,124 @@ export const PublicLocator: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Encuéntralo en — for doctor entities with linked sedes / centers */}
+                {selectedLocation.custom_fields?.['entity_type'] === 'doctor' && (() => {
+                  const linkedSedes = selectedLocation.linked_entities || [];
+                  return (
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '20px',
+                      padding: '16px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#00506E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          🏥 ENCUÉNTRALO EN ({linkedSedes.length > 0 ? linkedSedes.length : 1})
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                          Toca una sede para ubicarla en el mapa
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {linkedSedes.length > 0 ? (
+                          linkedSedes.map((sede) => (
+                            <button
+                              key={sede.id}
+                              type="button"
+                              onClick={() => setSelectedLocationId(sede.id)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '10px 12px',
+                                borderRadius: '14px',
+                                border: '1.5px solid #E2E8F0',
+                                backgroundColor: '#F8FAFC',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                width: '100%',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(30, 200, 170, 0.08)';
+                                e.currentTarget.style.borderColor = 'rgba(30, 200, 170, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                e.currentTarget.style.borderColor = '#E2E8F0';
+                              }}
+                            >
+                              <div style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '10px',
+                                backgroundColor: 'rgba(0, 80, 110, 0.08)',
+                                border: '1.5px solid rgba(0, 80, 110, 0.18)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#00506E',
+                                flexShrink: 0,
+                              }}>
+                                <Building2 size={20} />
+                              </div>
+
+                              <div style={{ flexGrow: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '13px', fontWeight: 800, color: '#00506E', lineHeight: '1.3', marginBottom: '2px' }}>
+                                  {toTitleCase(sede.name)}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {sede.address}
+                                </div>
+                              </div>
+
+                              <ChevronRight size={16} style={{ color: '#1EC8AA', flexShrink: 0 }} />
+                            </button>
+                          ))
+                        ) : (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px 12px',
+                            borderRadius: '14px',
+                            border: '1.5px solid #E2E8F0',
+                            backgroundColor: '#F8FAFC',
+                          }}>
+                            <div style={{
+                              width: '38px',
+                              height: '38px',
+                              borderRadius: '10px',
+                              backgroundColor: 'rgba(0, 80, 110, 0.08)',
+                              border: '1.5px solid rgba(0, 80, 110, 0.18)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#00506E',
+                              flexShrink: 0,
+                            }}>
+                              <Building2 size={20} />
+                            </div>
+                            <div style={{ flexGrow: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: '#00506E', lineHeight: '1.3', marginBottom: '2px' }}>
+                                Consultorio Particular
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
+                                {selectedLocation.address}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Primary Action Buttons: Cómo llegar + WhatsApp */}
                 {(() => {

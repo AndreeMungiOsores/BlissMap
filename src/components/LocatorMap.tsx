@@ -25,6 +25,7 @@ interface LocationItem {
   custom_fields: Record<string, string>;
   description: string | null;
   products?: ProductItem[];
+  linked_entities?: LocationItem[];
 }
 
 interface LocatorMapProps {
@@ -105,19 +106,44 @@ const FitMapBounds: React.FC<{
   }, [map, updateZoomClass]);
 
   useEffect(() => {
-    if (selectedLocation && selectedLocation.lat && selectedLocation.lng && (selectedLocation.lat !== 0 || selectedLocation.lng !== 0)) {
-      map.setView([selectedLocation.lat, selectedLocation.lng], 18, { animate: true });
+    if (selectedLocation) {
+      const isDoctor = selectedLocation.custom_fields?.['entity_type'] === 'doctor';
+      const validSedes = (isDoctor && selectedLocation.linked_entities)
+        ? selectedLocation.linked_entities.filter(s => s.lat && s.lng && (s.lat !== 0 || s.lng !== 0))
+        : [];
 
-      // On mobile the map is full-screen (100vh) with a bottom sheet overlaid on top.
-      map.once('moveend', () => {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-          const sheetH = window.innerHeight * 0.45;
-          const offsetPx = Math.round(sheetH / 2);
-          map.panBy([0, offsetPx], { animate: true, duration: 0.4 });
+      if (validSedes.length > 1) {
+        const bounds = L.latLngBounds(validSedes.map(s => [s.lat, s.lng]));
+        map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
+
+        map.once('moveend', () => {
+          const isMobile = window.innerWidth <= 768;
+          if (isMobile) {
+            const sheetH = window.innerHeight * 0.45;
+            const offsetPx = Math.round(sheetH / 2);
+            map.panBy([0, offsetPx], { animate: true, duration: 0.4 });
+          }
+          updateZoomClass();
+        });
+      } else {
+        const targetLat = validSedes.length === 1 ? validSedes[0].lat : selectedLocation.lat;
+        const targetLng = validSedes.length === 1 ? validSedes[0].lng : selectedLocation.lng;
+
+        if (targetLat && targetLng && (targetLat !== 0 || targetLng !== 0)) {
+          map.setView([targetLat, targetLng], 17, { animate: true });
+
+          // On mobile the map is full-screen (100vh) with a bottom sheet overlaid on top.
+          map.once('moveend', () => {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+              const sheetH = window.innerHeight * 0.45;
+              const offsetPx = Math.round(sheetH / 2);
+              map.panBy([0, offsetPx], { animate: true, duration: 0.4 });
+            }
+            updateZoomClass();
+          });
         }
-        updateZoomClass();
-      });
+      }
     } else if (locations.length > 0) {
       if (initialCenterToLima && !hasInitializedRef.current) {
         hasInitializedRef.current = true;
@@ -169,7 +195,10 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
 
   // Leaflet Dynamic Colored Pin SVG / Custom image loader
   const getLeafletIcon = (locId: string) => {
-    const isActive = locId === selectedLocationId;
+    const isDirectlySelected = locId === selectedLocationId;
+    const isLinkedSede = selectedLocation?.custom_fields?.['entity_type'] === 'doctor' &&
+      Boolean(selectedLocation.linked_entities?.some(s => s.id === locId));
+    const isActive = isDirectlySelected || isLinkedSede;
     const finalColor = markerColor;
     const currentScale = Math.min(Math.max(Number(markerScale) || 1.0, 0.5), 3.0);
 
