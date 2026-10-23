@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import type { Locator } from './DashboardLayout';
 import {
@@ -21,42 +21,138 @@ import {
   X,
   Plus,
   Trash2,
-  Check
+  Check,
+  ShieldCheck,
+  Sparkles,
+  Receipt,
+  Store,
+  Users,
+  Filter
 } from 'lucide-react';
 import {
   type LocationItem,
   type SuggestedGroup,
   type ActiveGroup,
+  type OfficialGeItem,
   detectPossibleGroups,
   getActiveGroups,
   unifyEconomicGroup,
+  batchUnifyOfficialGroups,
+  batchEnrichActiveGroups,
   updateGroupPrimary,
   createManualGroup,
-  dissolveEconomicGroup
+  dissolveEconomicGroup,
+  clearGeMatchCache,
+  areDoctorsConflicting,
+  getDoctorTokens,
+  normalizePersonTokens,
+  evaluatePersonMatch,
+  normalizeAddress
 } from '../../services/groupService';
+import { supabase } from '../../supabaseClient';
 import {
   fetchLocatorLocations,
   locationsMemoryCache
 } from '../../services/locationService';
+import { determineEntityType } from '../../utils/entityUtils';
 
 interface OutletContextType {
   activeLocator: Locator | null;
+  locators?: Locator[];
   fetchLocators?: () => Promise<void>;
 }
 
-export const ManageEconomicGroups: React.FC = () => {
-  const { activeLocator } = useOutletContext<OutletContextType>();
+const OfficialGeShieldBadge: React.FC<{ officialGe: OfficialGeItem }> = ({ officialGe }) => {
+  return (
+    <span
+      style={{
+        width: '24px',
+        height: '24px',
+        borderRadius: 'var(--radius-full)',
+        backgroundColor: '#00506E',
+        color: '#ffffff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        flexShrink: 0
+      }}
+      title={`${officialGe.idge} • ${officialGe.nombre}${officialGe.propietario ? ` - Propietario: ${officialGe.propietario}` : ''}`}
+      aria-label={`${officialGe.idge} • ${officialGe.nombre}`}
+    >
+      <ShieldCheck size={14} />
+    </span>
+  );
+};
 
+export const ManageEconomicGroups: React.FC = () => {
+  const { activeLocator, locators } = useOutletContext<OutletContextType>();
+
+  const [locatorScope, setLocatorScope] = useState<'all' | 'medicosbliss' | 'blissfarma'>('all');
+  const [isScopeDropdownOpen, setIsScopeDropdownOpen] = useState(false);
+  const scopeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close scope dropdown on outside click or escape key
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (scopeDropdownRef.current && !scopeDropdownRef.current.contains(e.target as Node)) {
+        setIsScopeDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsScopeDropdownOpen(false);
+      }
+    };
+    if (isScopeDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isScopeDropdownOpen]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'suggestions' | 'active'>('suggestions');
   const [search, setSearch] = useState('');
-  const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+  const [ignoredGroupKeys, setIgnoredGroupKeys] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('bm_ignored_group_keys');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [selectedPrimaries, setSelectedPrimaries] = useState<Record<string, string>>({});
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
-  const [expandedActiveSecondary, setExpandedActiveSecondary] = useState<Record<string, boolean>>({});
-  const [expandedActiveProducts, setExpandedActiveProducts] = useState<Record<string, boolean>>({});
-  const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
+    const [cardActiveTab, setCardActiveTab] = useState<Record<string, 'billing' | 'sedes' | 'staff' | 'products'>>({});
+  const [expandedVehicleProducts, setExpandedVehicleProducts] = useState<Record<string, boolean>>({});
+  const [expandedActiveCards, setExpandedActiveCards] = useState<Record<string, boolean>>({});
+
+  const handleToggleActiveCard = (groupId: string) => {
+    setExpandedActiveCards(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  const getCardTab = (groupId: string): 'billing' | 'sedes' | 'staff' | 'products' => {
+    return cardActiveTab[groupId] || 'billing';
+  };
+
+  const setCardTab = (groupId: string, tab: 'billing' | 'sedes' | 'staff' | 'products') => {
+    setCardActiveTab(prev => ({ ...prev, [groupId]: tab }));
+  };
+
+  const toggleVehicleProducts = (vehicleKey: string) => {
+    setExpandedVehicleProducts(prev => ({ ...prev, [vehicleKey]: !prev[vehicleKey] }));
+  };
+    const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -73,13 +169,57 @@ export const ManageEconomicGroups: React.FC = () => {
   const [createPrimaryId, setCreatePrimaryId] = useState<string>('');
   const [createSaving, setCreateSaving] = useState(false);
 
-  // Load locations for the active locator
+  // Batch process state
+  const [batchProgress, setBatchProgress] = useState<{
+    active: boolean;
+    total: number;
+    current: number;
+    currentName: string;
+  } | null>(null);
+
+  // Load locations across locators according to selected scope (Global by default)
   const loadData = useCallback(async (forceRefresh = false) => {
-    if (!activeLocator) return;
     setLoading(true);
     setNotification(null);
+    if (forceRefresh) {
+      clearGeMatchCache();
+    }
     try {
-      const data = await fetchLocatorLocations(activeLocator, forceRefresh);
+      const allLocators = locators && locators.length > 0 ? locators : (activeLocator ? [activeLocator] : []);
+      let data: LocationItem[] = [];
+
+      if (locatorScope === 'all') {
+        const loadedArrays = await Promise.all(
+          allLocators.map(async loc => {
+            const locs = await fetchLocatorLocations(loc, forceRefresh);
+            return locs.map(l => ({
+              ...l,
+              locator_id: l.locator_id || loc.id,
+              custom_fields: {
+                ...(l.custom_fields || {}),
+                _locator_slug: loc.slug,
+                _locator_name: loc.name
+              }
+            }));
+          })
+        );
+        data = loadedArrays.flat();
+      } else {
+        const targetLocator = allLocators.find(l => l.slug === locatorScope) || activeLocator;
+        if (targetLocator) {
+          const locs = await fetchLocatorLocations(targetLocator, forceRefresh);
+          data = locs.map(l => ({
+            ...l,
+            locator_id: l.locator_id || targetLocator.id,
+            custom_fields: {
+              ...(l.custom_fields || {}),
+              _locator_slug: targetLocator.slug,
+              _locator_name: targetLocator.name
+            }
+          }));
+        }
+      }
+
       setLocations(data);
     } catch (err: any) {
       console.error('Error loading locations for economic groups:', err);
@@ -90,11 +230,435 @@ export const ManageEconomicGroups: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeLocator]);
+  }, [activeLocator, locators, locatorScope]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Auto-dissolve specific legacy false positive groups (authorized cleanup - runs at most once)
+  const legacyCleanupRanRef = useRef(false);
+  useEffect(() => {
+    if (loading || !activeLocator || legacyCleanupRanRef.current) return;
+    const targets = locations.filter(
+      l => (l.id === 'b2c-cmp-026094' || l.id === 'b2c-cmp-065743') &&
+           l.grupo_economico_ids &&
+           l.grupo_economico_ids.length > 0
+    );
+
+    if (targets.length > 0) {
+      legacyCleanupRanRef.current = true;
+      const dissolveTargets = async () => {
+        try {
+          for (const target of targets) {
+            await dissolveEconomicGroup(target.id);
+          }
+          locationsMemoryCache.clear();
+          clearGeMatchCache();
+          await loadData(true);
+        } catch (err: any) {
+          console.error('Error auto-dissolving legacy false positives:', err);
+        }
+      };
+      dissolveTargets();
+    }
+  }, [locations, loading, activeLocator, loadData]);
+
+  // One-time in-browser sanitization of contaminated clusters using authenticated user session
+  const dbSanitizedRef = useRef(false);
+  useEffect(() => {
+    if (loading || locations.length === 0 || dbSanitizedRef.current) return;
+    dbSanitizedRef.current = true;
+
+    // Detect clusters with conflicting doctors or misattributed GE tags
+    const contaminated = locations.filter(l => {
+      if (l.grupo_economico_ids && l.grupo_economico_ids.length > 1) {
+        const members = locations.filter(m => l.grupo_economico_ids!.includes(m.id));
+        if (members.some(m => areDoctorsConflicting(l, m))) return true;
+      }
+      // Detect conflict between GE Propietario and Location Doctor
+      const storedProp = l.custom_fields?.['crb7e_propietarioge'];
+      if (storedProp) {
+        const docToks = getDoctorTokens(l);
+        const propToks = normalizePersonTokens(storedProp);
+        if (docToks.length >= 2 && propToks.length >= 2) {
+          const res = evaluatePersonMatch(docToks, propToks);
+          if (res.isConflict || !res.isMatch) return true;
+        }
+      }
+      // Detect Luvak Derm SAC mistakenly bound to GE-0158 or with Jannell Obregon
+      const ruc = l.custom_fields?.['Documento'] || l.custom_fields?.['RUC'];
+      if (ruc === '20614466180' && (l.custom_fields?.['crb7e_idge'] !== 'GE-0420' || l.custom_fields?.['Médico']?.includes('Jannell'))) return true;
+      // Detect ADVANCED DERMACLINIC S.A.C. (RUC 20612424331) mistakenly bound to GE-0124
+      if (ruc === '20612424331' && l.custom_fields?.['crb7e_idge'] !== 'GE-0403') return true;
+      // Detect Clínica Del Pilar contaminated with Dermaclinic in grupo_economico_ids
+      if (l.id === 'erp-doc-blissfarma-20602477925-cl-nica-del-pilar-ayacucho' && l.grupo_economico_ids?.some(id => id.includes('dermaclinic') || id === '2184787d-1b04-4e9d-aebf-41e7b6f3f7be')) return true;
+      // Detect Consultorio: Dra. Blanca Alva (RUC 20600905512) mistakenly bound to GE-0022 instead of GE-0103
+      if (ruc === '20600905512' && l.custom_fields?.['crb7e_idge'] !== 'GE-0103') return true;
+      // Detect Dermocentro La Piel (RUC 20614171775) mistakenly bound to GE-0334 instead of GE-0405
+      if (ruc === '20614171775' && (l.custom_fields?.['crb7e_idge'] !== 'GE-0405' || l.custom_fields?.['Médico']?.includes('Garcia Saravia'))) return true;
+      // Detect Servicios Medicos & Dermatologos Asociados (RUC 20549024760) mistakenly bound to GE-0369
+      if (ruc === '20549024760' && l.custom_fields?.['crb7e_idge'] === 'GE-0369') return true;
+      // Detect Dermia Risoul (RUC 20611868384) mistakenly bound to GE-0113 instead of GE-0274
+      if (ruc === '20611868384' && l.custom_fields?.['crb7e_idge'] !== 'GE-0274') return true;
+      // Detect Dermavita contaminated with Dermastage (Dr. Oscar Pereda)
+      if (l.id === 'b2c-center-derma-vital-sociedad-anonima-cerrada' && (l.grupo_economico_ids?.some(id => id.includes('dermastage')) || l.custom_fields?.['Médicos']?.includes('Pereda'))) return true;
+      // Detect Skin Center with merged Shinzato (GE-0008) and Laure (GE-0497)
+      if (l.name === 'Skin Center') {
+        if (ruc === '20615202666' && (l.grupo_economico_ids?.some(id => id.includes('20605935797') || id === 'e2dc11ea-0abd-4478-a41a-988b63c9fc56') || l.custom_fields?.['crb7e_idge'] !== 'GE-0497')) return true;
+        if (ruc === '20605935797' && (l.grupo_economico_ids?.some(id => id.includes('20615202666') || id === 'b66f4302-04ec-4e1a-a315-614cbd62d8a9') || l.custom_fields?.['crb7e_idge'] !== 'GE-0008')) return true;
+      }
+      // Detect Dra. Violeta Muñoz contaminated with Dra. Tello / Apagüeño
+      if (l.id === 'erp-doc-skinbliss-20615634051-e-v-beauty-skin-med-s-a-c-s' && l.grupo_economico_ids?.some(id => id.includes('apag-e-o') || id.includes('20609870835'))) return true;
+      // Detect alien b2c-cmp- doctor IDs injected into grupo_economico_ids
+      if (l.grupo_economico_ids?.some(id => id.startsWith('b2c-cmp-'))) {
+        const ownCmp = (l.custom_fields?.['Colegiatura'] || l.custom_fields?.['CMP'] || (l.id.startsWith('b2c-cmp-') ? l.id.replace('b2c-cmp-', '') : '')).replace(/\D/g, '').replace(/^0+/, '');
+        const hasAlien = l.grupo_economico_ids.some(id => {
+          if (!id.startsWith('b2c-cmp-')) return false;
+          const injectedCmp = id.replace('b2c-cmp-', '').replace(/^0+/, '');
+          return !ownCmp || injectedCmp !== ownCmp;
+        });
+        if (hasAlien) return true;
+      }
+      // Detect Dermabeauty Center E.I.R.L. with duplicate RUC
+      if (l.id === 'b2c-center-dermabeauty-center-e-i-r-l' && l.custom_fields?.['Documento'] !== '20612515884') return true;
+      // Ensure Clínica Cderma affiliates Dra. Karel Rios Paredes (CMP 050850) and Dra. Jaqueline Calizaya (CMP 039704)
+      if (l.name.toLowerCase().includes('cderma')) {
+        const aff = l.custom_fields?.['medicos_afiliados_ids'] || '';
+        if (!aff.includes('050850') || l.custom_fields?.['crb7e_idge'] === 'GE-0284') return true;
+      }
+      // Detect centers with empty Documento where a matching Razón Social has a known valid RUC
+      const curDoc = (l.custom_fields?.['Documento'] || l.custom_fields?.['RUC'] || '').replace(/\D/g, '');
+      const curRs = l.custom_fields?.['Razón Social'] || l.custom_fields?.['Razon Social'];
+      if (!curDoc && curRs) {
+        const match = locations.find(other => {
+          const oDoc = (other.custom_fields?.['Documento'] || other.custom_fields?.['RUC'] || '').replace(/\D/g, '');
+          const oRs = other.custom_fields?.['Razón Social'] || other.custom_fields?.['Razon Social'];
+          return oDoc && (oDoc.length === 11 || oDoc.length === 8) && oRs && normalizeAddress(oRs) === normalizeAddress(curRs);
+        });
+        if (match) return true;
+      }
+      return false;
+    });
+
+    if (contaminated.length > 0) {
+      (async () => {
+        try {
+          let updatedAny = false;
+          for (const target of contaminated) {
+            const ruc = target.custom_fields?.['Documento'] || target.custom_fields?.['RUC'];
+            const newFields = { ...(target.custom_fields || {}) };
+
+            // Specifically sanitize Luvak Derm SAC (RUC 20614466180) to GE-0420
+            if (ruc === '20614466180') {
+              newFields['crb7e_idge'] = 'GE-0420';
+              newFields['crb7e_nombrege'] = 'Luvak Derm';
+              newFields['crb7e_propietarioge'] = 'Katherine Noelia Obregon Candela';
+              newFields['crb7e_rol'] = 'Dermatologo';
+              newFields['Médico'] = 'Obregon Candela, Katherine Noelia';
+              newFields['Médicos'] = 'Obregon Candela, Katherine Noelia';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields, grupo_economico_ids: null })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically sanitize ADVANCED DERMACLINIC S.A.C. (RUC 20612424331) to GE-0403 (Dora Lucia Vicuña Rios)
+            if (ruc === '20612424331') {
+              newFields['crb7e_idge'] = 'GE-0403';
+              newFields['crb7e_nombrege'] = 'Dermaclinic - Vicuña';
+              newFields['crb7e_propietarioge'] = 'Dora Lucia Vicuña Rios';
+              newFields['crb7e_rol'] = 'Dermatologo';
+              newFields['Médico'] = 'Vicuña Rios, Dora Lucia';
+              newFields['Colegiatura'] = 'CMP 036951';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields, grupo_economico_ids: null })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically clean Clínica Del Pilar from foreign Dermaclinic members
+            if (target.id === 'erp-doc-blissfarma-20602477925-cl-nica-del-pilar-ayacucho') {
+              const cleanIds = (target.grupo_economico_ids || []).filter(
+                id => !id.includes('dermaclinic') && id !== '2184787d-1b04-4e9d-aebf-41e7b6f3f7be'
+              );
+              await supabase
+                .from('bm_locations')
+                .update({
+                  grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                  custom_fields: target.custom_fields
+                })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically sanitize Consultorio: Dra. Blanca Alva (RUC 20600905512) to GE-0103
+            if (ruc === '20600905512') {
+              newFields['crb7e_idge'] = 'GE-0103';
+              newFields['crb7e_nombrege'] = 'Ile De Beaute';
+              newFields['crb7e_propietarioge'] = 'Blanca Luz Alva Huapaya';
+              newFields['crb7e_rol'] = 'Dermatologo';
+              newFields['Médico'] = 'Alva Huapaya, Blanca Luz';
+              newFields['Médicos'] = 'Alva Huapaya, Blanca Luz';
+              newFields['Colegiatura'] = 'CMP 057982';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically sanitize Dermocentro La Piel (RUC 20614171775) to GE-0405 (Teddy Jordan Nuñez Contreras)
+            if (ruc === '20614171775') {
+              newFields['crb7e_idge'] = 'GE-0405';
+              newFields['crb7e_nombrege'] = 'Dermocentro La Piel';
+              newFields['crb7e_propietarioge'] = 'Teddy Jordan Nuñez Contreras';
+              newFields['crb7e_rol'] = 'Dermatologo';
+              newFields['Médico'] = 'Nuñez Contreras, Teddy Jordan';
+              newFields['Médicos'] = 'Nuñez Contreras, Teddy Jordan';
+              newFields['Colegiatura'] = 'CMP 071064';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically strip false GE-0369 from Servicios Medicos & Dermatologos Asociados (RUC 20549024760, Dr. Héctor Cáceres Ríos)
+            if (ruc === '20549024760') {
+              delete newFields['crb7e_idge'];
+              delete newFields['crb7e_nombrege'];
+              delete newFields['crb7e_propietarioge'];
+              delete newFields['crb7e_rol'];
+              newFields['Médico'] = 'Caceres Rios, Hector Wilfredo';
+              newFields['Médicos'] = 'Caceres Rios, Hector Wilfredo';
+              newFields['Colegiatura'] = 'CMP 017740';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically sanitize Dermia Risoul (RUC 20611868384) to GE-0274 (Dra. Jenny Janeth Zapana Alarcon)
+            if (ruc === '20611868384') {
+              newFields['crb7e_idge'] = 'GE-0274';
+              newFields['crb7e_nombrege'] = 'Dermia - Risoul';
+              newFields['crb7e_propietarioge'] = 'Jenny Janeth Zapana Alarcon';
+              newFields['crb7e_rol'] = 'Estetico';
+              newFields['Médico'] = 'Zapana Alarcon, Jenny Janeth';
+              newFields['Colegiatura'] = 'CMP 038212';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically separate Dermavita (Dra. Jacqueline Arce) from Dermastage (Dr. Oscar Pereda)
+            if (target.id === 'b2c-center-derma-vital-sociedad-anonima-cerrada') {
+              const cleanIds = (target.grupo_economico_ids || []).filter(
+                id => !id.includes('dermastage')
+              );
+              newFields['Médico'] = 'Arce Izaguirre, Jacqueline';
+              newFields['Médicos'] = 'Arce Izaguirre, Jacqueline';
+              newFields['Colegiatura'] = 'CMP 058064';
+              await supabase
+                .from('bm_locations')
+                .update({
+                  grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                  custom_fields: newFields
+                })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically separate Skin Center between Dr. Shinzato (GE-0008) and Dra. Laure (GE-0497)
+            if (target.name === 'Skin Center') {
+              if (ruc === '20615202666') {
+                newFields['crb7e_idge'] = 'GE-0497';
+                newFields['crb7e_nombrege'] = 'Tatiana Melissa Laure Velasquez';
+                newFields['crb7e_propietarioge'] = 'Tatiana Melissa Laure Velasquez';
+                newFields['crb7e_rol'] = 'Estetico';
+                newFields['Médico'] = 'Laure Velasquez, Tatiana Melissa';
+                newFields['Colegiatura'] = 'CMP 095949';
+                const cleanIds = (target.grupo_economico_ids || []).filter(
+                  id => !id.includes('20605935797') && id !== 'e2dc11ea-0abd-4478-a41a-988b63c9fc56'
+                );
+                await supabase
+                  .from('bm_locations')
+                  .update({
+                    grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                    custom_fields: newFields
+                  })
+                  .eq('id', target.id);
+                updatedAny = true;
+                continue;
+              } else if (ruc === '20605935797') {
+                newFields['crb7e_idge'] = 'GE-0008';
+                newFields['crb7e_nombrege'] = 'Shinzato';
+                newFields['crb7e_propietarioge'] = 'Alberto Carlos Shinzato Uemura';
+                newFields['crb7e_rol'] = 'Dermatologo';
+                newFields['Médico'] = 'Shinzato Uemura, Alberto Carlos';
+                newFields['Colegiatura'] = 'CMP 066953';
+                const cleanIds = (target.grupo_economico_ids || []).filter(
+                  id => !id.includes('20615202666') && id !== 'b66f4302-04ec-4e1a-a315-614cbd62d8a9'
+                );
+                await supabase
+                  .from('bm_locations')
+                  .update({
+                    grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                    custom_fields: newFields
+                  })
+                  .eq('id', target.id);
+                updatedAny = true;
+                continue;
+              }
+            }
+
+            // Specifically separate Consultorio: Dra. Violeta Muñoz from Dra. Tello / Apagüeño
+            if (target.id === 'erp-doc-skinbliss-20615634051-e-v-beauty-skin-med-s-a-c-s') {
+              const cleanIds = (target.grupo_economico_ids || []).filter(
+                id => !id.includes('20609870835') && !id.includes('apag-e-o')
+              );
+              await supabase
+                .from('bm_locations')
+                .update({
+                  grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                  custom_fields: target.custom_fields
+                })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Specifically purge alien b2c-cmp- doctor IDs from grupo_economico_ids
+            if (target.grupo_economico_ids?.some(id => id.startsWith('b2c-cmp-'))) {
+              const ownCmp = (target.custom_fields?.['Colegiatura'] || target.custom_fields?.['CMP'] || (target.id.startsWith('b2c-cmp-') ? target.id.replace('b2c-cmp-', '') : '')).replace(/\D/g, '').replace(/^0+/, '');
+              const cleanIds = target.grupo_economico_ids.filter(id => {
+                if (!id.startsWith('b2c-cmp-')) return true;
+                const injectedCmp = id.replace('b2c-cmp-', '').replace(/^0+/, '');
+                return ownCmp && injectedCmp === ownCmp;
+              });
+
+              if (cleanIds.length !== target.grupo_economico_ids.length) {
+                await supabase
+                  .from('bm_locations')
+                  .update({
+                    grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                    custom_fields: target.custom_fields
+                  })
+                  .eq('id', target.id);
+                updatedAny = true;
+                continue;
+              }
+            }
+
+            // Specifically affiliate Dra. Karel Ríos (CMP 050850) and Dra. Jaqueline Calizaya (CMP 039704) to Clínica Cderma, and clear false GE-0284
+            if (target.name.toLowerCase().includes('cderma')) {
+              let cdermaChanged = false;
+              if (!target.custom_fields?.['medicos_afiliados_ids']?.includes('050850')) {
+                newFields['medicos_afiliados_ids'] = JSON.stringify(['039704', '050850']);
+                newFields['Médicos'] = 'Calizaya Quea De Contreras, Jaqueline Ymira, Rios Paredes, Karel';
+                cdermaChanged = true;
+              }
+              if (newFields['crb7e_idge'] === 'GE-0284') {
+                delete newFields['crb7e_idge'];
+                delete newFields['crb7e_nombrege'];
+                delete newFields['crb7e_propietarioge'];
+                delete newFields['crb7e_rol'];
+                cdermaChanged = true;
+              }
+              if (cdermaChanged) {
+                await supabase
+                  .from('bm_locations')
+                  .update({ custom_fields: newFields })
+                  .eq('id', target.id);
+                updatedAny = true;
+                continue;
+              }
+            }
+
+            // Specifically sanitize Dermabeauty Center E.I.R.L. to its proper RUC 20612515884
+            if (target.id === 'b2c-center-dermabeauty-center-e-i-r-l') {
+              newFields['Documento'] = '20612515884';
+              newFields['Razón Social'] = 'DERMABEAUTY CENTER E.I.R.L.';
+              newFields['Razon Social'] = 'DERMABEAUTY CENTER E.I.R.L.';
+              newFields['Nombre Comercial'] = 'Dermabeauty Center';
+              await supabase
+                .from('bm_locations')
+                .update({ custom_fields: newFields })
+                .eq('id', target.id);
+              updatedAny = true;
+              continue;
+            }
+
+            // Inherit valid RUC if target has empty Documento but has a known matching Razón Social
+            if (!ruc && (newFields['Razón Social'] || newFields['Razon Social'])) {
+              const rs = newFields['Razón Social'] || newFields['Razon Social'];
+              const match = locations.find(other => {
+                const oDoc = (other.custom_fields?.['Documento'] || other.custom_fields?.['RUC'] || '').replace(/\D/g, '');
+                const oRs = other.custom_fields?.['Razón Social'] || other.custom_fields?.['Razon Social'];
+                return oDoc && (oDoc.length === 11 || oDoc.length === 8) && oRs && normalizeAddress(oRs) === normalizeAddress(rs);
+              });
+              if (match) {
+                const oDoc = (match.custom_fields?.['Documento'] || match.custom_fields?.['RUC'] || '').replace(/\D/g, '');
+                newFields['Documento'] = oDoc;
+              }
+            }
+
+            const cleanMembers = target.grupo_economico_ids
+              ? locations.filter(m => target.grupo_economico_ids!.includes(m.id) && !areDoctorsConflicting(target, m))
+              : [];
+            const cleanIds = cleanMembers.map(m => m.id);
+            const storedProp = newFields['crb7e_propietarioge'];
+            if (storedProp) {
+              const docToks = getDoctorTokens(target);
+              const propToks = normalizePersonTokens(storedProp);
+              if (docToks.length >= 2 && propToks.length >= 2) {
+                const res = evaluatePersonMatch(docToks, propToks);
+                if (res.isConflict || !res.isMatch) {
+                  delete newFields['crb7e_idge'];
+                  delete newFields['crb7e_nombrege'];
+                  delete newFields['crb7e_propietarioge'];
+                  delete newFields['crb7e_rol'];
+                }
+              }
+            }
+
+            await supabase
+              .from('bm_locations')
+              .update({
+                grupo_economico_ids: cleanIds.length > 1 ? cleanIds : null,
+                custom_fields: newFields
+              })
+              .eq('id', target.id);
+            updatedAny = true;
+          }
+
+          if (updatedAny) {
+            locationsMemoryCache.clear();
+            clearGeMatchCache();
+            await loadData(true);
+          }
+        } catch (err) {
+          console.warn('Notice during automatic DB sanitization:', err);
+        }
+      })();
+    }
+  }, [loading, locations, loadData]);
+
+
 
   // Derived: Suggested groups
   const suggestedGroups = useMemo(() => {
@@ -107,7 +671,17 @@ export const ManageEconomicGroups: React.FC = () => {
     return getActiveGroups(locations);
   }, [locations]);
 
-  // Filtered by search
+  // Official suggestions count
+  const officialSuggestions = useMemo(() => {
+    return suggestedGroups.filter(g => Boolean(g.officialGe));
+  }, [suggestedGroups]);
+
+  // Active groups with official GE match but missing crb7e_idge in database
+  const unenrichedActiveGroups = useMemo(() => {
+    return activeGroups.filter(g => g.officialGe && !g.primary.custom_fields?.['crb7e_idge']);
+  }, [activeGroups]);
+
+  // Filtered by search (supports name, address, RUC, GE code, GE name, and owner)
   const filteredSuggestions = useMemo(() => {
     if (!search.trim()) return suggestedGroups;
     const q = search.toLowerCase().trim();
@@ -115,7 +689,13 @@ export const ManageEconomicGroups: React.FC = () => {
       g.name.toLowerCase().includes(q) ||
       g.address.toLowerCase().includes(q) ||
       g.rucs.some(r => r.includes(q)) ||
-      g.members.some(m => m.name.toLowerCase().includes(q))
+      g.members.some(m => m.name.toLowerCase().includes(q)) ||
+      (g.officialGe && (
+        g.officialGe.idge.toLowerCase().includes(q) ||
+        g.officialGe.nombre.toLowerCase().includes(q) ||
+        g.officialGe.propietario.toLowerCase().includes(q) ||
+        g.officialGe.rol.toLowerCase().includes(q)
+      ))
     );
   }, [suggestedGroups, search]);
 
@@ -126,9 +706,21 @@ export const ManageEconomicGroups: React.FC = () => {
       g.primary.name.toLowerCase().includes(q) ||
       g.primary.address.toLowerCase().includes(q) ||
       g.rucs.some(r => r.includes(q)) ||
-      g.members.some(m => m.name.toLowerCase().includes(q))
+      g.members.some(m => m.name.toLowerCase().includes(q)) ||
+      (g.officialGe && (
+        g.officialGe.idge.toLowerCase().includes(q) ||
+        g.officialGe.nombre.toLowerCase().includes(q) ||
+        g.officialGe.propietario.toLowerCase().includes(q) ||
+        g.officialGe.rol.toLowerCase().includes(q)
+      ))
     );
   }, [activeGroups, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredActiveGroups.length / pageSize));
+  const paginatedActiveGroups = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredActiveGroups.slice(start, start + pageSize);
+  }, [filteredActiveGroups, currentPage, pageSize]);
 
   // Map of entity ID to existing group name (to detect and block entities that already belong to a group)
   const groupedEntityInfoMap = useMemo(() => {
@@ -174,13 +766,6 @@ export const ManageEconomicGroups: React.FC = () => {
     setExpandedProducts(prev => ({ ...prev, [entityId]: !prev[entityId] }));
   };
 
-  const handleToggleActiveSecondary = (primaryId: string) => {
-    setExpandedActiveSecondary(prev => ({ ...prev, [primaryId]: !prev[primaryId] }));
-  };
-
-  const handleToggleActiveProducts = (primaryId: string) => {
-    setExpandedActiveProducts(prev => ({ ...prev, [primaryId]: !prev[primaryId] }));
-  };
 
   const handleToggleSuggestion = (groupKey: string) => {
     setExpandedSuggestions(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
@@ -188,11 +773,19 @@ export const ManageEconomicGroups: React.FC = () => {
 
   const handleIgnoreGroup = (group: SuggestedGroup) => {
     const key = [...group.ids].sort().join('|');
-    setIgnoredGroupKeys(prev => new Set([...prev, key]));
+    setIgnoredGroupKeys(prev => {
+      const next = new Set([...prev, key]);
+      try {
+        localStorage.setItem('bm_ignored_group_keys', JSON.stringify(Array.from(next)));
+      } catch (err) {
+        console.error('Error saving ignored groups to localStorage:', err);
+      }
+      return next;
+    });
   };
 
   const handleUnify = async (group: SuggestedGroup) => {
-    if (!activeLocator) return;
+    const targetLocatorId = activeLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
     const groupKey = [...group.ids].sort().join('|');
     const chosenPrimaryId = selectedPrimaries[groupKey] || group.primaryId;
     const chosenPrimary = group.members.find(m => m.id === chosenPrimaryId) || group.members[0];
@@ -200,10 +793,10 @@ export const ManageEconomicGroups: React.FC = () => {
     setActionLoading(groupKey);
     setNotification(null);
     try {
-      await unifyEconomicGroup(activeLocator.id, group, chosenPrimaryId);
+      await unifyEconomicGroup(targetLocatorId, group, chosenPrimaryId);
       
-      // Update memory cache locally
-      locationsMemoryCache.delete(activeLocator.id);
+      // Clear memory cache across all locators so both maps stay in sync
+      locationsMemoryCache.clear();
       await loadData(true);
 
       setNotification({
@@ -220,6 +813,115 @@ export const ManageEconomicGroups: React.FC = () => {
       });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleBatchUnifyOfficial = async () => {
+    const targetLocatorId = activeLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
+    const confirmed = window.confirm(
+      `¿Deseas unificar en lote los ${officialSuggestions.length} grupos oficiales CRM detectados?\n\nCada grupo se configurará automáticamente con su código oficial GE y metadatos correspondientes.`
+    );
+    if (!confirmed) return;
+
+    setBatchProgress({
+      active: true,
+      total: officialSuggestions.length,
+      current: 0,
+      currentName: 'Iniciando unificación en lote...'
+    });
+    setNotification(null);
+
+    try {
+      const result = await batchUnifyOfficialGroups(
+        targetLocatorId,
+        officialSuggestions,
+        (completed, total, currentName) => {
+          setBatchProgress({
+            active: true,
+            total,
+            current: completed,
+            currentName
+          });
+        }
+      );
+
+      locationsMemoryCache.clear();
+      await loadData(true);
+
+      if (result.errors.length === 0) {
+        setNotification({
+          type: 'success',
+          text: `¡Éxito! Se han unificado exitosamente los ${result.successCount} grupos oficiales CRM.`
+        });
+      } else {
+        setNotification({
+          type: 'error',
+          text: `Se unificaron ${result.successCount} grupos. Hubo ${result.errors.length} errores.`
+        });
+      }
+      setActiveTab('active');
+    } catch (err: any) {
+      console.error('Error during batch unification:', err);
+      setNotification({
+        type: 'error',
+        text: `Error durante la unificación en lote: ${err.message || 'Error desconocido'}`
+      });
+    } finally {
+      setBatchProgress(null);
+    }
+  };
+
+  const handleBatchEnrichActive = async () => {
+    if (!activeLocator) return;
+    const confirmed = window.confirm(
+      `¿Deseas sincronizar los códigos oficiales CRM en los ${unenrichedActiveGroups.length} grupos activos?\n\nEsto guardará de forma permanente el código GE, nombre del grupo y propietario en la base de datos.`
+    );
+    if (!confirmed) return;
+
+    setBatchProgress({
+      active: true,
+      total: unenrichedActiveGroups.length,
+      current: 0,
+      currentName: 'Sincronizando metadatos...'
+    });
+    setNotification(null);
+
+    try {
+      const result = await batchEnrichActiveGroups(
+        activeLocator.id,
+        unenrichedActiveGroups,
+        (completed, total, currentName) => {
+          setBatchProgress({
+            active: true,
+            total,
+            current: completed,
+            currentName
+          });
+        }
+      );
+
+      locationsMemoryCache.delete(activeLocator.id);
+      await loadData(true);
+
+      if (result.errors.length === 0) {
+        setNotification({
+          type: 'success',
+          text: `¡Éxito! Se sincronizaron los metadatos oficiales en los ${result.successCount} grupos activos.`
+        });
+      } else {
+        setNotification({
+          type: 'error',
+          text: `Se sincronizaron ${result.successCount} grupos. Hubo ${result.errors.length} errores.`
+        });
+      }
+    } catch (err: any) {
+      console.error('Error during batch enrichment:', err);
+      setNotification({
+        type: 'error',
+        text: `Error durante la sincronización: ${err.message || 'Error desconocido'}`
+      });
+    } finally {
+      setBatchProgress(null);
     }
   };
 
@@ -582,17 +1284,140 @@ export const ManageEconomicGroups: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Search in Groups */}
-        <div style={{ position: 'relative', minWidth: '240px' }}>
-          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-dark-text-tertiary)' }} />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por sede, nombre o RUC..."
-            className="form-control"
-            style={{ paddingLeft: '34px', fontSize: '13px', height: '36px', width: '100%' }}
-          />
+        {/* Quick Search and Scope Filter Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ position: 'relative', minWidth: '240px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-dark-text-tertiary)' }} />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por sede, nombre o RUC..."
+              className="form-control"
+              style={{ paddingLeft: '34px', fontSize: '13px', height: '36px', width: '100%' }}
+            />
+          </div>
+
+          {/* Discrete Filter Button */}
+          <div style={{ position: 'relative' }} ref={scopeDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsScopeDropdownOpen(prev => !prev)}
+              aria-label="Filtrar por ámbito de grupo económico"
+              aria-haspopup="menu"
+              aria-expanded={isScopeDropdownOpen}
+              title={`Ámbito: ${locatorScope === 'all' ? 'Vista Global Corporativa (Ambos)' : locatorScope === 'medicosbliss' ? 'MedicosBliss (B2B)' : 'Blissfarma (B2C)'}`}
+              style={{
+                width: '36px',
+                height: '36px',
+                padding: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 'var(--radius-md)',
+                border: locatorScope !== 'all' ? '1.5px solid var(--color-primary)' : '1px solid var(--color-dark-border)',
+                backgroundColor: locatorScope !== 'all' ? 'rgba(0, 80, 110, 0.08)' : 'var(--color-dark-surface)',
+                color: locatorScope !== 'all' ? 'var(--color-primary)' : 'var(--color-dark-text-secondary)',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Filter size={15} />
+              {locatorScope !== 'all' && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '6px',
+                    right: '6px',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: locatorScope === 'medicosbliss' ? '#3B82F6' : '#1EC8AA'
+                  }}
+                />
+              )}
+            </button>
+
+            {/* Clickable Dropdown Menu */}
+            {isScopeDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  minWidth: '270px',
+                  backgroundColor: 'var(--color-dark-surface, #ffffff)',
+                  border: '1px solid var(--color-dark-border, #e2e8f0)',
+                  borderRadius: 'var(--radius-lg, 10px)',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                  zIndex: 100,
+                  padding: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}
+                role="menu"
+                aria-label="Seleccionar ámbito de visualización"
+              >
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--color-dark-text-tertiary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    padding: '4px 8px 6px 8px',
+                    borderBottom: '1px solid var(--color-dark-border)'
+                  }}
+                >
+                  Ámbito de visualización
+                </div>
+
+                {[
+                  { id: 'all', label: 'Vista Global Corporativa (Ambos)', icon: '🌐', title: 'Ver y gestionar grupos de toda la corporación' },
+                  { id: 'medicosbliss', label: 'MedicosBliss (B2B)', icon: '🩺', title: 'Ver solo grupos con sedes en MedicosBliss' },
+                  { id: 'blissfarma', label: 'Blissfarma (B2C)', icon: '💊', title: 'Ver solo grupos con sedes en Blissfarma' }
+                ].map(opt => {
+                  const isSelected = locatorScope === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="menuitem"
+                      title={opt.title}
+                      onClick={() => {
+                        setLocatorScope(opt.id as 'all' | 'medicosbliss' | 'blissfarma');
+                        setIsScopeDropdownOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: 'var(--radius-md, 6px)',
+                        border: 'none',
+                        backgroundColor: isSelected ? 'rgba(0, 80, 110, 0.1)' : 'transparent',
+                        color: isSelected ? 'var(--color-primary)' : 'var(--color-dark-text-primary)',
+                        fontSize: '13px',
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background-color 0.12s ease'
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{opt.icon}</span>
+                        <span>{opt.label}</span>
+                      </span>
+                      {isSelected && <Check size={14} style={{ color: 'var(--color-primary)' }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -607,6 +1432,70 @@ export const ManageEconomicGroups: React.FC = () => {
       {/* ── TAB 1: SUGGESTED GROUPS ── */}
       {!loading && activeTab === 'suggestions' && (
         <div>
+          {/* Official CRM Detected Batch Banner */}
+          {officialSuggestions.length > 0 && !search && (
+            <div
+              style={{
+                padding: '16px 20px',
+                backgroundColor: 'rgba(0, 80, 110, 0.05)',
+                border: '1px solid rgba(0, 80, 110, 0.2)',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: '#00506E',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#00506E' }}>
+                    Grupos Oficiales CRM Detectados ({officialSuggestions.length})
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
+                    Se identificaron {officialSuggestions.length} agrupaciones con correspondencia en el catálogo oficial de Dynamics 365.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleBatchUnifyOfficial}
+                disabled={Boolean(batchProgress?.active)}
+                className="btn btn-primary"
+                style={{
+                  fontSize: '13px',
+                  padding: '8px 20px',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#00506E',
+                  color: '#ffffff'
+                }}
+              >
+                <Sparkles size={15} />
+                Unificar Todos los Grupos Oficiales ({officialSuggestions.length})
+              </button>
+            </div>
+          )}
+
           {filteredSuggestions.length === 0 ? (
             <div
               style={{
@@ -713,8 +1602,40 @@ export const ManageEconomicGroups: React.FC = () => {
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            {group.officialGe ? (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  backgroundColor: '#00506E',
+                                  color: '#ffffff',
+                                  padding: '3px 9px',
+                                  borderRadius: 'var(--radius-full)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  letterSpacing: '0.3px'
+                                }}
+                              >
+                                <ShieldCheck size={13} />
+                                {group.officialGe.idge} • Oficial CRM
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                  color: '#a16207',
+                                  padding: '2px 8px',
+                                  borderRadius: 'var(--radius-full)'
+                                }}
+                              >
+                                Sugerencia #{groupIdx + 1}: Misma Sede Física
+                              </span>
+                            )}
                             <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                              Sugerencia #{groupIdx + 1}: Misma Sede Física
+                              {group.officialGe ? group.officialGe.nombre : group.name}
                             </span>
                             <span
                               style={{
@@ -741,6 +1662,11 @@ export const ManageEconomicGroups: React.FC = () => {
                               {group.totalProducts} productos combinados
                             </span>
                           </div>
+                          {group.officialGe && (
+                            <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '3px' }}>
+                              Propietario GE: <strong style={{ color: 'var(--color-dark-text-primary)' }}>{group.officialGe.propietario}</strong> • Rol: <strong>{group.officialGe.rol}</strong>
+                            </div>
+                          )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
                             <MapPin size={12} style={{ color: 'var(--color-primary)' }} />
                             <span>{group.address}</span>
@@ -849,7 +1775,7 @@ export const ManageEconomicGroups: React.FC = () => {
                       >
                         {group.members.map(member => {
                           const isPrimary = member.id === chosenPrimaryId;
-                          const entityType = member.custom_fields?.['entity_type'] || (member.id.startsWith('b2c-center') ? 'center' : 'doctor');
+                          const entityType = member.custom_fields?.['entity_type'] || determineEntityType(member);
                           const razonSocial = member.custom_fields?.['Razón Social'] || member.custom_fields?.['Razon Social'] || '';
                           const docNumber = member.custom_fields?.['Documento'] || '';
                           const cmpNumber = member.custom_fields?.['CMP'] || member.custom_fields?.['Colegiatura'] || '';
@@ -877,43 +1803,61 @@ export const ManageEconomicGroups: React.FC = () => {
                                 position: 'relative'
                               }}
                             >
-                              {/* Primary / Secondary Indicator Badge */}
-                              <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                {isPrimary ? (
-                                  <span
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      fontSize: '11px',
-                                      fontWeight: 800,
-                                      padding: '4px 10px',
-                                      borderRadius: 'var(--radius-full)',
-                                      backgroundColor: '#00506E',
-                                      color: 'white'
-                                    }}
-                                  >
-                                    <Star size={11} fill="white" />
-                                    FICHA PRINCIPAL (Visible en mapa)
-                                  </span>
-                                ) : (
-                                  <span
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      fontSize: '11px',
-                                      fontWeight: 600,
-                                      padding: '4px 10px',
-                                      borderRadius: 'var(--radius-full)',
-                                      backgroundColor: 'var(--color-dark-bg)',
-                                      color: 'var(--color-dark-text-secondary)',
-                                      border: '1px solid var(--color-dark-border)'
-                                    }}
-                                  >
-                                    ↳ Ficha Secundaria
-                                  </span>
-                                )}
+                              {/* Primary / Secondary Indicator Badge & Locator Pill */}
+                              <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {isPrimary ? (
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        padding: '4px 10px',
+                                        borderRadius: 'var(--radius-full)',
+                                        backgroundColor: '#00506E',
+                                        color: 'white'
+                                      }}
+                                    >
+                                      <Star size={11} fill="white" />
+                                      FICHA PRINCIPAL (Visible en mapa)
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        padding: '4px 10px',
+                                        borderRadius: 'var(--radius-full)',
+                                        backgroundColor: 'var(--color-dark-bg)',
+                                        color: 'var(--color-dark-text-secondary)',
+                                        border: '1px solid var(--color-dark-border)'
+                                      }}
+                                    >
+                                      ↳ Ficha Secundaria
+                                    </span>
+                                  )}
+
+                                  {member.custom_fields?.['_locator_slug'] && (
+                                    <span
+                                      style={{
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        padding: '3px 8px',
+                                        borderRadius: 'var(--radius-full)',
+                                        backgroundColor: member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                                        color: member.custom_fields['_locator_slug'] === 'blissfarma' ? '#0d9488' : '#1d4ed8',
+                                        border: `1px solid ${member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                                      }}
+                                    >
+                                      {member.custom_fields['_locator_slug'] === 'blissfarma' ? '💊 Blissfarma' : '🩺 MedicosBliss'}
+                                    </span>
+                                  )}
+                                </div>
 
                                 {/* Radio circle */}
                                 <div
@@ -1139,6 +2083,70 @@ export const ManageEconomicGroups: React.FC = () => {
       {/* ── TAB 2: ACTIVE UNIFIED GROUPS ── */}
       {!loading && activeTab === 'active' && (
         <div>
+          {/* Active Groups Sync Official CRM Metadata Banner */}
+          {unenrichedActiveGroups.length > 0 && !search && (
+            <div
+              style={{
+                padding: '16px 20px',
+                backgroundColor: 'rgba(124, 58, 237, 0.05)',
+                border: '1px solid rgba(124, 58, 237, 0.2)',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: '#7c3aed',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#7c3aed' }}>
+                    Sincronización Oficial CRM Disponible ({unenrichedActiveGroups.length})
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
+                    Hay {unenrichedActiveGroups.length} grupos activos que corresponden a códigos oficiales pero aún no guardaron su código GE en la base de datos.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleBatchEnrichActive}
+                disabled={Boolean(batchProgress?.active)}
+                className="btn btn-primary"
+                style={{
+                  fontSize: '13px',
+                  padding: '8px 20px',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#7c3aed',
+                  color: '#ffffff'
+                }}
+              >
+                <Sparkles size={15} />
+                Sincronizar Códigos GE ({unenrichedActiveGroups.length})
+              </button>
+            </div>
+          )}
+
           {filteredActiveGroups.length === 0 ? (
             <div
               style={{
@@ -1184,9 +2192,12 @@ export const ManageEconomicGroups: React.FC = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {filteredActiveGroups.map(group => {
-                const isExpanded = expandedActiveSecondary[group.primary.id] || false;
-                const isProductsExpanded = expandedActiveProducts[group.primary.id] || false;
+              {paginatedActiveGroups.map(group => {
+                const isCardExpanded = expandedActiveCards[group.primary.id] || false;
+                const currentTab = getCardTab(group.primary.id);
+                const billingVehicles = group.billingVehicles || [];
+                const physicalSedes = group.physicalSedes || [];
+                const medicalStaff = group.medicalStaff || [];
 
                 return (
                   <div
@@ -1195,103 +2206,171 @@ export const ManageEconomicGroups: React.FC = () => {
                       backgroundColor: 'var(--color-dark-surface)',
                       borderRadius: 'var(--radius-lg)',
                       border: '1px solid var(--color-dark-border)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
                       overflow: 'hidden'
                     }}
                   >
-                    {/* Active Group Header */}
+                    {/* ── NIVEL 1: CABEZA DEL GRUPO ECONÓMICO (Identidad Corporativa) ── */}
                     <div
                       style={{
-                        padding: '16px 20px',
+                        padding: '18px 22px',
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
-                        gap: '14px',
-                        borderBottom: '1px solid var(--color-dark-border)'
+                        gap: '16px',
+                        borderBottom: isCardExpanded ? '1px solid var(--color-dark-border)' : 'none',
+                        background: 'linear-gradient(to right, rgba(0, 80, 110, 0.03), transparent)'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '260px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1, minWidth: '300px' }}>
                         {group.primary.image_url ? (
                           <img
                             src={group.primary.image_url}
                             alt={group.primary.name}
                             style={{
-                              width: '50px',
-                              height: '50px',
-                              borderRadius: 'var(--radius-sm)',
+                              width: '56px',
+                              height: '56px',
+                              borderRadius: 'var(--radius-md)',
                               objectFit: 'cover',
-                              border: '1px solid var(--color-dark-border)'
+                              border: '1.5px solid var(--color-dark-border)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
                             }}
                           />
                         ) : (
                           <div
                             style={{
-                              width: '50px',
-                              height: '50px',
-                              borderRadius: 'var(--radius-sm)',
+                              width: '56px',
+                              height: '56px',
+                              borderRadius: 'var(--radius-md)',
                               backgroundColor: 'rgba(0, 80, 110, 0.1)',
                               color: '#00506E',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              flexShrink: 0
                             }}
                           >
-                            <Building2 size={24} />
+                            <Building2 size={26} />
                           </div>
                         )}
 
-                        <div>
+                        <div style={{ flex: 1 }}>
+                          {/* Title + Badges */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                            <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-dark-text-primary)', letterSpacing: '-0.2px' }}>
                               {group.primary.name}
                             </span>
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                backgroundColor: 'rgba(124, 58, 237, 0.1)',
-                                color: '#7c3aed',
-                                padding: '2px 8px',
-                                borderRadius: 'var(--radius-full)'
-                              }}
-                            >
-                              Grupo Económico ({group.members.length} entidades)
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                color: '#059669',
-                                padding: '2px 8px',
-                                borderRadius: 'var(--radius-full)'
-                              }}
-                            >
-                              Visible en Mapa
-                            </span>
+                            {group.officialGe && (
+                              <OfficialGeShieldBadge officialGe={group.officialGe} />
+                            )}
+                            {/* Unified Visibility & Locator Pill */}
+                            {(() => {
+                              const isVisible = group.primary.published !== false;
+                              const locSlug = group.primary.custom_fields?.['_locator_slug'] || activeLocator?.slug || 'medicosbliss';
+                              const locName = locSlug === 'blissfarma' ? 'Blissfarma' : 'MedicosBliss';
+                              const locIcon = locSlug === 'blissfarma' ? '💊' : '🩺';
+                              return (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    backgroundColor: isVisible ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+                                    color: isVisible ? '#059669' : '#64748b',
+                                    border: isVisible ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid rgba(100, 116, 139, 0.25)',
+                                    padding: '3px 9px',
+                                    borderRadius: 'var(--radius-full)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                  }}
+                                  title={isVisible ? `Publicado y visible en el mapa de ${locName}` : `Oculto / no visible en el mapa de ${locName}`}
+                                >
+                                  <span>{locIcon}</span>
+                                  <span>{isVisible ? `Visible en ${locName}` : `Oculto en ${locName}`}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '4px' }}>
-                            <MapPin size={13} style={{ color: 'var(--color-primary)' }} />
-                            <span>{group.primary.address}</span>
-                          </div>
+                          {/* Owner & Role */}
+                          {group.officialGe ? (
+                            <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', marginTop: '4px' }}>
+                              Dueño Real / Propietario GE: <strong style={{ color: 'var(--color-dark-text-primary)' }}>{group.officialGe.propietario}</strong>
+                              &nbsp;·&nbsp; Rol: <strong style={{ color: 'var(--color-dark-text-primary)' }}>{group.officialGe.rol}</strong>
+                            </div>
+                          ) : (
+                            (() => {
+                              const primaryDoc =
+                                group.primary.custom_fields?.['Médico'] ||
+                                group.primary.custom_fields?.['Medicos'] ||
+                                group.primary.custom_fields?.['Doctor'] ||
+                                group.members.map(m => m.custom_fields?.['Médico'] || m.custom_fields?.['Doctor']).find(Boolean);
+                              if (primaryDoc) {
+                                return (
+                                  <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', marginTop: '4px' }}>
+                                    Dueño Real / Médico Titular: <strong style={{ color: 'var(--color-dark-text-primary)' }}>{primaryDoc}</strong>
+                                    &nbsp;·&nbsp; Rol: <strong style={{ color: 'var(--color-dark-text-primary)' }}>Médico Titular</strong>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()
+                          )}
 
-                          <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px' }}>
-                            RUCs integrados: <strong>{group.rucs.join(' • ') || '—'}</strong>
+                          {/* Address & Branding Cascade Indicators */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+                              <MapPin size={13} style={{ color: 'var(--color-primary)' }} />
+                              <span>Sede Principal: <strong>{group.primary.address}</strong></span>
+                            </div>
+
+                            {/* Branding Social Cascade Info */}
+                            {(group.primary.website || group.primary.instagram || group.primary.facebook || group.primary.phone) && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(124, 58, 237, 0.08)', color: '#7c3aed', fontWeight: 600 }}>
+                                <Sparkles size={11} />
+                                <span>Cascada de branding activa hacia sedes</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Right action button: Editar Grupo */}
+                      {/* Right action button: Toggle Desglose & Editar Grupo */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActiveCard(group.primary.id)}
+                          className="btn btn-secondary"
+                          style={{
+                            fontSize: '12px',
+                            padding: '8px 14px',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            borderRadius: 'var(--radius-full)',
+                            border: '1px solid var(--color-dark-border)',
+                            backgroundColor: isCardExpanded ? 'rgba(0, 80, 110, 0.08)' : 'white',
+                            color: isCardExpanded ? 'var(--color-primary)' : 'var(--color-dark-text-primary)',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title={isCardExpanded ? 'Contraer desglose' : 'Ver desglose completo'}
+                          aria-expanded={isCardExpanded}
+                        >
+                          <span>{isCardExpanded ? 'Contraer' : 'Ver desglose'}</span>
+                          {isCardExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => handleOpenEditModal(group)}
                           className="btn btn-secondary"
                           style={{
                             fontSize: '12px',
-                            padding: '7px 14px',
+                            padding: '8px 16px',
                             fontWeight: 700,
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -1310,144 +2389,591 @@ export const ManageEconomicGroups: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Integrated Products & Secondary Members Section */}
-                    <div style={{ padding: '14px 20px', backgroundColor: 'var(--color-dark-bg)', borderBottom: (isExpanded || isProductsExpanded) ? '1px solid var(--color-dark-border)' : 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActiveProducts(group.primary.id)}
-                          disabled={group.totalProducts === 0}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: group.totalProducts > 0 ? 'var(--color-dark-text-primary)' : 'var(--color-dark-text-tertiary)',
-                            cursor: group.totalProducts > 0 ? 'pointer' : 'default',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                          aria-expanded={isProductsExpanded}
-                          title={group.totalProducts > 0 ? (isProductsExpanded ? 'Contraer lista de productos' : 'Ver productos combinados') : undefined}
-                        >
-                          <Package size={15} style={{ color: group.totalProducts > 0 ? 'var(--color-primary)' : 'var(--color-dark-text-tertiary)' }} />
-                          <span>{group.totalProducts} productos combinados en esta sede</span>
-                          {group.totalProducts > 0 && (
-                            isProductsExpanded ? <ChevronUp size={14} style={{ color: 'var(--color-primary)' }} /> : <ChevronDown size={14} style={{ color: 'var(--color-dark-text-secondary)' }} />
-                          )}
-                        </button>
+                    {isCardExpanded && (
+                      <>
+                        {/* ── BARRA DE NAVEGACIÓN JERÁRQUICA (4 NIVELES DEL FLUJO) ── */}
+                    <div
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: 'var(--color-dark-bg)',
+                        borderBottom: '1px solid var(--color-dark-border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      {/* Tab 1: Facturación / RUCs */}
+                      <button
+                        type="button"
+                        onClick={() => setCardTab(group.primary.id, 'billing')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: currentTab === 'billing' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
+                          backgroundColor: currentTab === 'billing' ? '#00506E' : 'var(--color-dark-surface)',
+                          color: currentTab === 'billing' ? '#ffffff' : 'var(--color-dark-text-secondary)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Receipt size={13} />
+                        <span>1. Facturación / RUCs ({billingVehicles.length})</span>
+                      </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActiveSecondary(group.primary.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: 'var(--color-primary)',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          aria-expanded={isExpanded}
-                        >
-                          {isExpanded ? 'Ocultar fichas secundarias' : `Ver ${group.secondaryMembers.length} ficha(s) secundaria(s) agrupada(s)`}
-                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                      </div>
+                      {/* Tab 2: Sedes Físicas */}
+                      <button
+                        type="button"
+                        onClick={() => setCardTab(group.primary.id, 'sedes')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: currentTab === 'sedes' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
+                          backgroundColor: currentTab === 'sedes' ? '#00506E' : 'var(--color-dark-surface)',
+                          color: currentTab === 'sedes' ? '#ffffff' : 'var(--color-dark-text-secondary)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Store size={13} />
+                        <span>2. Sedes Físicas ({physicalSedes.length})</span>
+                      </button>
 
-                      {/* Combined Products Pills (Collapsible) */}
-                      {isProductsExpanded && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '5px',
-                            marginTop: '10px',
-                            maxHeight: '160px',
-                            overflowY: 'auto',
-                            padding: '4px 0'
-                          }}
-                        >
-                          {group.combinedProducts.map((p, idx) => (
-                            <span
-                              key={idx}
+                      {/* Tab 3: Staff Médico Afiliado */}
+                      <button
+                        type="button"
+                        onClick={() => setCardTab(group.primary.id, 'staff')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: currentTab === 'staff' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
+                          backgroundColor: currentTab === 'staff' ? '#00506E' : 'var(--color-dark-surface)',
+                          color: currentTab === 'staff' ? '#ffffff' : 'var(--color-dark-text-secondary)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Users size={13} />
+                        <span>3. Staff Médico ({medicalStaff.length})</span>
+                      </button>
+
+                      {/* Tab 4: Inventario Consolidado */}
+                      <button
+                        type="button"
+                        onClick={() => setCardTab(group.primary.id, 'products')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: currentTab === 'products' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
+                          backgroundColor: currentTab === 'products' ? '#00506E' : 'var(--color-dark-surface)',
+                          color: currentTab === 'products' ? '#ffffff' : 'var(--color-dark-text-secondary)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Package size={13} />
+                        <span>4. Ventas Consolidadas ({group.totalProducts} prod.)</span>
+                      </button>
+                    </div>
+
+                    {/* ── CONTENIDO DEL PANEL SEGÚN LA PESTAÑA ACTIVA ── */}
+                    <div style={{ padding: '18px 22px' }}>
+                      {/* ══ PESTAÑA 2: RAZONES SOCIALES / RUCs ══ */}
+                      {currentTab === 'billing' && (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                Vehículos de Compra Asociados al Grupo
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+                                RUCs 20, RUCs 10 y DNIs con los que este cliente factura. Todas las compras suman automáticamente al Grupo Económico.
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(0, 80, 110, 0.08)', color: '#00506E' }}>
+                              Cascada de Ventas Activa
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {billingVehicles.map((vehicle, vIdx) => {
+                              const vehicleKey = `${group.primary.id}-${vehicle.documentNumber}`;
+                              const isVehicleExpanded = expandedVehicleProducts[vehicleKey] || false;
+
+                              return (
+                                <div
+                                  key={vIdx}
+                                  style={{
+                                    padding: '12px 16px',
+                                    borderRadius: 'var(--radius-md)',
+                                    backgroundColor: 'var(--color-dark-bg)',
+                                    border: '1px solid var(--color-dark-border)'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span
+                                          style={{
+                                            fontSize: '11px',
+                                            fontWeight: 800,
+                                            padding: '2px 7px',
+                                            borderRadius: 'var(--radius-sm)',
+                                            backgroundColor: vehicle.documentType === 'RUC 20' ? 'rgba(59, 130, 246, 0.15)' : (vehicle.documentType === 'RUC 10' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(30, 200, 170, 0.15)'),
+                                            color: vehicle.documentType === 'RUC 20' ? '#1d4ed8' : (vehicle.documentType === 'RUC 10' ? '#7c3aed' : '#0d9488')
+                                          }}
+                                        >
+                                          {vehicle.documentType}
+                                        </span>
+                                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                          {vehicle.businessName}
+                                        </span>
+                                        <span style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', fontFamily: 'monospace' }}>
+                                          Doc: {vehicle.documentNumber}
+                                        </span>
+                                      </div>
+                                      <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px' }}>
+                                        Fichas asociadas: {vehicle.originNames.join(', ')}
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '3px 9px', borderRadius: 'var(--radius-full)' }}>
+                                        +{vehicle.totalPurchasedQty} unid. ({vehicle.productsCount} prod.)
+                                      </span>
+
+                                      {vehicle.productsCount > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleVehicleProducts(vehicleKey)}
+                                          style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontSize: '11px',
+                                            fontWeight: 600,
+                                            color: 'var(--color-primary)',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                            padding: 0
+                                          }}
+                                        >
+                                          {isVehicleExpanded ? 'Ocultar' : 'Ver productos'}
+                                          {isVehicleExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Desglose de productos de este vehículo */}
+                                  {isVehicleExpanded && vehicle.products.length > 0 && (
+                                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--color-dark-border)' }}>
+                                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-dark-text-secondary)', marginBottom: '6px' }}>
+                                        Productos facturados bajo este RUC / Razón Social:
+                                      </div>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                                        {vehicle.products.map((vp, vpIdx) => (
+                                          <span
+                                            key={vpIdx}
+                                            style={{
+                                              fontSize: '11px',
+                                              padding: '2px 8px',
+                                              borderRadius: 'var(--radius-sm)',
+                                              backgroundColor: 'var(--color-dark-surface)',
+                                              border: '1px solid var(--color-dark-border)',
+                                              color: 'var(--color-dark-text-primary)'
+                                            }}
+                                          >
+                                            {vp.name} {vp.qty ? `(${vp.qty} uds)` : ''}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ══ PESTAÑA 3: SEDES FÍSICAS (LOCALES PLAZA DERMA) ══ */}
+                      {currentTab === 'sedes' && (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                Locales y Sedes de Atención al Público
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+                                Puntos físicos donde el grupo atiende a pacientes. Heredan el branding corporativo del grupo económico.
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(124, 58, 237, 0.08)', color: '#7c3aed' }}>
+                              Cascada de Branding Activa
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {physicalSedes.map((sede, sIdx) => (
+                              <div
+                                key={sIdx}
+                                style={{
+                                  padding: '14px 16px',
+                                  borderRadius: 'var(--radius-md)',
+                                  backgroundColor: 'var(--color-dark-bg)',
+                                  border: '1px solid var(--color-dark-border)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: '12px'
+                                }}
+                              >
+                                <div style={{ flex: 1, minWidth: '240px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                      {sede.name}
+                                    </span>
+                                    {sede.isPrimary ? (
+                                      <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: '#00506E', color: 'white' }}>
+                                        Sede Principal (Insignia)
+                                      </span>
+                                    ) : (
+                                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-dark-text-secondary)' }}>
+                                        Sede Secundaria
+                                      </span>
+                                    )}
+                                    {sede.brandingInherited && (
+                                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                        <Sparkles size={10} /> Hereda Logo y Redes del GE
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '5px' }}>
+                                    <MapPin size={13} style={{ color: 'var(--color-primary)' }} />
+                                    <span>{sede.address}</span>
+                                    {sede.lat !== 0 && sede.lng !== 0 && (
+                                      <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', fontFamily: 'monospace' }}>
+                                        ({sede.lat.toFixed(4)}, {sede.lng.toFixed(4)})
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {sede.phone && (
+                                    <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
+                                      Teléfono de atención: <strong>{sede.phone}</strong>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark-text-secondary)', backgroundColor: 'var(--color-dark-surface)', padding: '4px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-dark-border)' }}>
+                                    {sede.staffCount > 0 ? `${sede.staffCount} médicos asignados` : 'Sin médicos asignados'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ══ PESTAÑA 4: STAFF MÉDICO AFILIADO (RELACIÓN N:M) ══ */}
+                      {currentTab === 'staff' && (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                Directorio de Médicos Afiliados a las Sedes
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+                                Relación laboral N:M independiente de las facturas. Médicos que pasan consulta en los locales de este grupo.
+                              </div>
+                            </div>
+                            <Link
+                              to="/dashboard/affiliations"
                               style={{
-                                fontSize: '11px',
-                                padding: '2px 8px',
-                                borderRadius: 'var(--radius-sm)',
-                                backgroundColor: 'var(--color-dark-surface)',
-                                border: '1px solid var(--color-dark-border)',
-                                color: 'var(--color-dark-text-primary)'
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                color: 'var(--color-primary)',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
                               }}
                             >
-                              {p.name}
-                            </span>
-                          ))}
+                              Gestionar Afiliaciones &rarr;
+                            </Link>
+                          </div>
+
+                          {medicalStaff.length === 0 ? (
+                            <div
+                              style={{
+                                padding: '24px',
+                                textAlign: 'center',
+                                borderRadius: 'var(--radius-md)',
+                                backgroundColor: 'var(--color-dark-bg)',
+                                border: '1px dashed var(--color-dark-border)'
+                              }}
+                            >
+                              <Stethoscope size={28} style={{ color: 'var(--color-dark-text-tertiary)', margin: '0 auto 8px' }} />
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-dark-text-secondary)' }}>
+                                No se detectó staff médico asignado a estas sedes aún.
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px' }}>
+                                Puedes vincular los doctores que pasan consulta en esta clínica desde el módulo de Afiliaciones.
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                              {medicalStaff.map((doc, dIdx) => (
+                                <div
+                                  key={dIdx}
+                                  style={{
+                                    padding: '14px',
+                                    borderRadius: 'var(--radius-md)',
+                                    backgroundColor: 'var(--color-dark-bg)',
+                                    border: '1px solid var(--color-dark-border)',
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '12px'
+                                  }}
+                                >
+                                  {doc.photoUrl ? (
+                                    <img
+                                      src={doc.photoUrl}
+                                      alt={doc.name}
+                                      style={{
+                                        width: '44px',
+                                        height: '44px',
+                                        borderRadius: 'var(--radius-full)',
+                                        objectFit: 'cover',
+                                        border: '1px solid var(--color-dark-border)',
+                                        flexShrink: 0
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      style={{
+                                        width: '44px',
+                                        height: '44px',
+                                        borderRadius: 'var(--radius-full)',
+                                        backgroundColor: 'rgba(30, 200, 170, 0.1)',
+                                        color: '#0d9488',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      <Stethoscope size={20} />
+                                    </div>
+                                  )}
+
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                      {doc.name}
+                                    </div>
+
+                                    {(doc.cmp || doc.rne) && (
+                                      <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px', fontFamily: 'monospace' }}>
+                                        {[doc.cmp, doc.rne ? `RNE ${doc.rne}` : ''].filter(Boolean).join(' · ')}
+                                      </div>
+                                    )}
+
+                                    {doc.specialty && (
+                                      <div style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, marginTop: '2px' }}>
+                                        {doc.specialty}
+                                      </div>
+                                    )}
+
+                                    {/* Sedes donde atiende */}
+                                    {doc.assignedSedes.length > 0 && (
+                                      <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>
+                                        Pasa consulta en: <strong>{doc.assignedSedes.join(', ')}</strong>
+                                      </div>
+                                    )}
+
+                                    {/* Multi-afiliación externa */}
+                                    {doc.otherCenters.length > 0 && (
+                                      <div style={{ marginTop: '4px', fontSize: '10px', color: 'var(--color-dark-text-tertiary)' }}>
+                                        También atiende en: <em>{doc.otherCenters.slice(0, 2).join(', ')}{doc.otherCenters.length > 2 ? ` (+${doc.otherCenters.length - 2} más)` : ''}</em>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ══ PESTAÑA: VENTAS CONSOLIDADAS / INVENTARIO ══ */}
+                      {currentTab === 'products' && (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
+                                Inventario Consolidado de Ventas ({group.totalProducts} productos distintos)
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
+                                Suma algebraica de cantidades compradas entre todos los RUCs y razones sociales del grupo.
+                              </div>
+                            </div>
+                          </div>
+
+                          {group.combinedProducts.length === 0 ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-dark-text-tertiary)', fontSize: '12px' }}>
+                              No hay productos registrados para este grupo.
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                                gap: '8px',
+                                maxHeight: '280px',
+                                overflowY: 'auto',
+                                paddingRight: '4px'
+                              }}
+                            >
+                              {group.combinedProducts.map((prod, pIdx) => (
+                                <div
+                                  key={pIdx}
+                                  style={{
+                                    padding: '8px 12px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    backgroundColor: 'var(--color-dark-bg)',
+                                    border: '1px solid var(--color-dark-border)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px'
+                                  }}
+                                >
+                                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-primary)', wordBreak: 'break-word' }}>
+                                    {prod.name}
+                                  </span>
+                                  {prod.qty !== undefined && (
+                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#059669', backgroundColor: 'rgba(16, 185, 129, 0.12)', padding: '2px 7px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap' }}>
+                                      {prod.qty} uds
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
+                  </>
+                )}
+              </div>
+            );
+              })}
 
-                    {/* Secondary Members Details (Collapsible) */}
-                    {isExpanded && (
-                      <div style={{ padding: '16px 20px', backgroundColor: 'var(--color-dark-surface)' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark-text-secondary)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          Fichas Secundarias fusionadas bajo este grupo:
-                        </div>
+              {/* Pagination Controls */}
+            {filteredActiveGroups.length > pageSize && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  padding: '16px 20px',
+                  backgroundColor: 'var(--color-dark-surface)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--color-dark-border)',
+                  marginTop: '20px'
+                }}
+              >
+                <div style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)' }}>
+                  Mostrando <strong>{Math.min((currentPage - 1) * pageSize + 1, filteredActiveGroups.length)}</strong> –{' '}
+                  <strong>{Math.min(currentPage * pageSize, filteredActiveGroups.length)}</strong> de{' '}
+                  <strong>{filteredActiveGroups.length}</strong> grupos unificados
+                </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {group.secondaryMembers.map(sec => (
-                            <div
-                              key={sec.id}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '12px', padding: '6px 14px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ◀ Anterior
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((p, idx, arr) => {
+                        const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
+                        return (
+                          <React.Fragment key={p}>
+                            {showEllipsisBefore && <span style={{ padding: '0 4px', color: 'var(--color-dark-text-tertiary)' }}>…</span>}
+                            <button
+                              type="button"
+                              onClick={() => setCurrentPage(p)}
                               style={{
-                                padding: '10px 14px',
+                                minWidth: '32px',
+                                height: '32px',
+                                padding: '0 8px',
                                 borderRadius: 'var(--radius-md)',
-                                backgroundColor: 'var(--color-dark-bg)',
-                                border: '1px solid var(--color-dark-border)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                flexWrap: 'wrap',
-                                gap: '10px'
+                                border: p === currentPage ? '1.5px solid var(--color-primary)' : '1px solid var(--color-dark-border)',
+                                backgroundColor: p === currentPage ? 'rgba(0, 80, 110, 0.1)' : 'var(--color-dark-surface)',
+                                color: p === currentPage ? 'var(--color-primary)' : 'var(--color-dark-text-secondary)',
+                                fontSize: '12px',
+                                fontWeight: p === currentPage ? 700 : 500,
+                                cursor: 'pointer'
                               }}
                             >
-                              <div>
-                                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-dark-text-primary)' }}>
-                                  {sec.name}
-                                </div>
-                                <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
-                                  RS: {sec.custom_fields?.['Razón Social'] || sec.custom_fields?.['Razon Social'] || '—'} &nbsp;·&nbsp; 
-                                  Doc: {sec.custom_fields?.['Documento'] || '—'} &nbsp;·&nbsp; 
-                                  Aporta {sec.products?.length || 0} productos
-                                </div>
-                              </div>
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '2px 8px',
-                                  borderRadius: 'var(--radius-full)',
-                                  backgroundColor: 'rgba(0,0,0,0.05)',
-                                  color: 'var(--color-dark-text-secondary)'
-                                }}
-                              >
-                                Oculto en mapa individualmente
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '12px', padding: '6px 14px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Siguiente ▶
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )}
 
       {/* ── MODAL: EDIT ACTIVE ECONOMIC GROUP ── */}
       {editingGroup && (
@@ -1594,7 +3120,7 @@ export const ManageEconomicGroups: React.FC = () => {
               >
                 {editingGroup.members.map(member => {
                   const isPrimary = member.id === editingPrimaryId;
-                  const entityType = member.custom_fields?.['entity_type'] || (member.id.startsWith('b2c-center') ? 'center' : 'doctor');
+                  const entityType = member.custom_fields?.['entity_type'] || determineEntityType(member);
                   const razonSocial = member.custom_fields?.['Razón Social'] || member.custom_fields?.['Razon Social'] || '';
                   const docNumber = member.custom_fields?.['Documento'] || '';
                   const cmpNumber = member.custom_fields?.['CMP'] || member.custom_fields?.['Colegiatura'] || '';
@@ -1626,38 +3152,56 @@ export const ManageEconomicGroups: React.FC = () => {
                       }}
                     >
                       {/* Top Selection Status Badge */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        {isPrimary ? (
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              color: '#ffffff',
-                              backgroundColor: '#00506E',
-                              padding: '3px 10px',
-                              borderRadius: 'var(--radius-full)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <Star size={11} fill="#ffffff" />
-                            FICHA PRINCIPAL (Visible en mapa)
-                          </span>
-                        ) : (
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              color: 'var(--color-dark-text-secondary)',
-                              backgroundColor: 'rgba(0,0,0,0.04)',
-                              padding: '3px 8px',
-                              borderRadius: 'var(--radius-full)'
-                            }}
-                          >
-                            ↳ Ficha Secundaria
-                          </span>
-                        )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {isPrimary ? (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                color: '#ffffff',
+                                backgroundColor: '#00506E',
+                                padding: '3px 10px',
+                                borderRadius: 'var(--radius-full)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Star size={11} fill="#ffffff" />
+                              FICHA PRINCIPAL (Visible en mapa)
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: 'var(--color-dark-text-secondary)',
+                                backgroundColor: 'rgba(0,0,0,0.04)',
+                                padding: '3px 8px',
+                                borderRadius: 'var(--radius-full)'
+                              }}
+                            >
+                              ↳ Ficha Secundaria
+                            </span>
+                          )}
+
+                          {member.custom_fields?.['_locator_slug'] && (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: 'var(--radius-full)',
+                                backgroundColor: member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                                color: member.custom_fields['_locator_slug'] === 'blissfarma' ? '#0d9488' : '#1d4ed8',
+                                border: `1px solid ${member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                              }}
+                            >
+                              {member.custom_fields['_locator_slug'] === 'blissfarma' ? '💊 Blissfarma' : '🩺 MedicosBliss'}
+                            </span>
+                          )}
+                        </div>
 
                         {/* Radio selection circle */}
                         <div
@@ -2472,6 +4016,59 @@ export const ManageEconomicGroups: React.FC = () => {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Processing Progress Modal Overlay */}
+      {batchProgress && batchProgress.active && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            backdropFilter: 'blur(3px)'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: 'var(--radius-lg)',
+              padding: '28px 32px',
+              maxWidth: '460px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              textAlign: 'center'
+            }}
+          >
+            <RefreshCw size={36} className="animate-spin" style={{ color: '#00506E', margin: '0 auto 16px auto' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-dark-text-primary)', margin: '0 0 8px 0' }}>
+              Procesando en Lote...
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--color-dark-text-secondary)', margin: '0 0 16px 0' }}>
+              {batchProgress.currentName}
+            </p>
+            {/* Progress Bar */}
+            <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--color-dark-bg)', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
+              <div
+                style={{
+                  width: `${batchProgress.total > 0 ? (batchProgress.current / batchProgress.total) * 100 : 0}%`,
+                  height: '100%',
+                  backgroundColor: '#00506E',
+                  transition: 'width 0.2s ease'
+                }}
+              />
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark-text-tertiary)' }}>
+              {batchProgress.current} de {batchProgress.total} completados ({Math.round(batchProgress.total > 0 ? (batchProgress.current / batchProgress.total) * 100 : 0)}%)
             </div>
           </div>
         </div>

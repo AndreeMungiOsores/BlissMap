@@ -8,6 +8,7 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const isPublicRegistrationEnabled = false;
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -142,7 +143,7 @@ export const LoginPage: React.FC = () => {
         </form>
 
         {/* Footer: Registro público inactivo y oculto (preservado sin borrar para futura reactivación) */}
-        {false && (
+        {isPublicRegistrationEnabled && (
           <div style={{
             textAlign: 'center',
             marginTop: '28px',

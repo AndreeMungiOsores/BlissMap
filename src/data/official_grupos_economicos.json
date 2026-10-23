@@ -1,0 +1,4671 @@
+[
+  {
+    "id": "54f55e8d-4595-43a0-9468-3d99b031a343",
+    "idge": "GE-0001",
+    "nombre": "Derma Age",
+    "propietario": "Soky Yndira Del Castillo Cabrera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ad5f8d0e-af12-4f75-9f91-e1e6e6ad057e",
+    "idge": "GE-0002",
+    "nombre": "Natelife",
+    "propietario": "Luciano Augusto Chavez Segovia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "faee6510-d4b5-4334-b892-e1f5cc19c34d",
+    "idge": "GE-0003",
+    "nombre": "Healthy",
+    "propietario": "Teresa Lucila Castillo La Rosa",
+    "rol": "Estetico"
+  },
+  {
+    "id": "36f0ee21-f29c-4c79-8fea-f010005cbac3",
+    "idge": "GE-0004",
+    "nombre": "Beysa",
+    "propietario": "Christian Borda",
+    "rol": "No Medico"
+  },
+  {
+    "id": "11557007-bf85-4ad7-a878-7b69793384c1",
+    "idge": "GE-0005",
+    "nombre": "Happy Esthetic",
+    "propietario": "Sally Susan Garcia Garcia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "51694f9c-e871-46c5-b8f4-325b440a7e2d",
+    "idge": "GE-0006",
+    "nombre": "Derma Beauty",
+    "propietario": "Alicia Milagros Quispe Aguilar",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b33e1f8a-e666-442b-8e67-145ee8163ba7",
+    "idge": "GE-0007",
+    "nombre": "Aquamed",
+    "propietario": "Elaine Chang Crespo",
+    "rol": "Estetico"
+  },
+  {
+    "id": "bd0f82d3-4f71-4560-8a22-d8140a65993a",
+    "idge": "GE-0008",
+    "nombre": "Shinzato",
+    "propietario": "Alberto Carlos Shinzato Uemura",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b8057019-3bfb-46c4-83f1-2f9f4e9ec1a9",
+    "idge": "GE-0009",
+    "nombre": "Grupo Casafranca",
+    "propietario": "Katherine Fernanda Casafranca Serrano",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f1f29df5-5847-446d-993c-bccd0f799fc2",
+    "idge": "GE-0010",
+    "nombre": "Medica Piura",
+    "propietario": "Elizabeth Thomas Gavelan",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "372d6d0c-36fc-4061-a354-dca13a9bf45b",
+    "idge": "GE-0011",
+    "nombre": "Limaderma",
+    "propietario": "Adriana Vanessa Gamarra Luna",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "9705d716-6e44-4446-8d40-3efebb7a4af3",
+    "idge": "GE-0012",
+    "nombre": "Dermavita",
+    "propietario": "Jacqueline Arce Izaguirre",
+    "rol": "Estetico"
+  },
+  {
+    "id": "5296029c-29ab-4c93-a2e0-ebe877e1c4e4",
+    "idge": "GE-0013",
+    "nombre": "Serovi",
+    "propietario": "Marjorie Fiorella Villate Caballero",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "006244f6-d00b-4dd1-a2c3-b3c9a6cd956a",
+    "idge": "GE-0014",
+    "nombre": "Le Rouge",
+    "propietario": "Denisse Lisset Silva Montoya",
+    "rol": "Estetico"
+  },
+  {
+    "id": "79a67b27-7b4b-47dd-bea4-5a2ed7393a24",
+    "idge": "GE-0015",
+    "nombre": "Dr. Piel Dermocentro",
+    "propietario": "Javier Jhony Contreras Zamora",
+    "rol": "No Medico"
+  },
+  {
+    "id": "7963a6df-f20d-41a9-8d23-5c91b3efe3f1",
+    "idge": "GE-0016",
+    "nombre": "Skindel",
+    "propietario": "Crystel Jessenia Araujo Silva",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8e1627fa-a163-47b2-a6a3-255abb461528",
+    "idge": "GE-0017",
+    "nombre": "Dermatologia Y Salud",
+    "propietario": "Marita Antonieta Morgan Cruz",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "032f67d9-b69d-4ac5-a7d1-2df91880b4e4",
+    "idge": "GE-0018",
+    "nombre": "Korimarka",
+    "propietario": "Gary Ccana Ccapatinta",
+    "rol": "No Medico"
+  },
+  {
+    "id": "46c5163f-2a69-4111-8776-d908397c8df5",
+    "idge": "GE-0019",
+    "nombre": "Dermastage",
+    "propietario": "Oscar Arturo Pereda Tejada",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e0c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0020",
+    "nombre": "Dermaglobal",
+    "propietario": "Felipe Enrique Velasquez Valderrama",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e1c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0021",
+    "nombre": "San Gabriel",
+    "propietario": "Silvana Arlette Drexler Rivero",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "e2c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0022",
+    "nombre": "La Luz",
+    "propietario": "Gissela Victoria Navarro",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e3c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0023",
+    "nombre": "Jc Mujica Trauma",
+    "propietario": "Julio César Mujica Koo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e4c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0024",
+    "nombre": "Farmacias Dermatologicas",
+    "propietario": "Carlos Alberto Echevarria Escribens",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e5c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0025",
+    "nombre": "Laserderm",
+    "propietario": "Patricia Guadalupe Cardoza Castillo De Leon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e6c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0026",
+    "nombre": "Carita",
+    "propietario": "Sandra Isabel Encalada Bustinza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e7c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0027",
+    "nombre": "Luigui Alvarez",
+    "propietario": "Luigui Juan Carlos Alvarez Paredes",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e8c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0028",
+    "nombre": "Csc",
+    "propietario": "Catherine Cecilia Cordova Vera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e9c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0029",
+    "nombre": "Uniderma",
+    "propietario": "Fredy Soto Cajamarca",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "eac191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0030",
+    "nombre": "Catolica",
+    "propietario": "Carmela Angelica Tejada Vasquez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "ebc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0031",
+    "nombre": "Rinoderma",
+    "propietario": "Jonathan Javier Rodriguez Garcia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ecc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0032",
+    "nombre": "Dermatienda",
+    "propietario": "Marlon Navarro Vasquez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "edc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0033",
+    "nombre": "Glowshop",
+    "propietario": "Thalia Ivonne Vilca Novoa",
+    "rol": "No Medico"
+  },
+  {
+    "id": "eec191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0034",
+    "nombre": "Clinica Arequipa",
+    "propietario": "Lozada Cerna Lizardo Jose Alfredo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "efc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0035",
+    "nombre": "Consultorios Dr. Betetta",
+    "propietario": "Betetta Paz Luis Edgardo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f0c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0036",
+    "nombre": "Clinica Adventista",
+    "propietario": "Berrios Macedonio Eliana",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f1c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0037",
+    "nombre": "Clínica Amazónica",
+    "propietario": "Sandra Garcia Salas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f2c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0038",
+    "nombre": "Piel Y Laser",
+    "propietario": "Eugenia Marisol Vela Velasquez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f3c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0039",
+    "nombre": "Inversiones Lek",
+    "propietario": "Katia Mirella Escudero Lozano",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f4c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0040",
+    "nombre": "Farmasalud",
+    "propietario": "Daniel Alfredo Ramirez Cueto",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f5c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0041",
+    "nombre": "Ciruderm",
+    "propietario": "Jose Luis Veliz Barandiaran",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f6c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0042",
+    "nombre": "Dermatologica Del Norte",
+    "propietario": "Miguel Enrique Morachimo Rodriguez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f7c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0043",
+    "nombre": "Dermi'K",
+    "propietario": "Monica Carla Aguilar Vargas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f8c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0044",
+    "nombre": "Skin Medic",
+    "propietario": "Elky Olenka Sanchez Moreno",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f9c191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0045",
+    "nombre": "Salud, Belleza Y Laser",
+    "propietario": "Ciro Jesus Rodriguez Aliaga",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "fac191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0046",
+    "nombre": "Dermavip",
+    "propietario": "Edward Jhon Delgado Marquez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "fbc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0047",
+    "nombre": "Dermomedica",
+    "propietario": "Luis Alberto Mariño Loayza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "fcc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0048",
+    "nombre": "Clinica San Lorenzo",
+    "propietario": "Cesar Augusto Medina Rojas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fdc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0049",
+    "nombre": "Tradex",
+    "propietario": "Silvana Sandra Palo Gresia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fec191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0050",
+    "nombre": "Dermolution",
+    "propietario": "Virgilio Aldo Stucchi Garcia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ffc191b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0051",
+    "nombre": "Inversiones Beraca",
+    "propietario": "Ana Ursula Mejia Reyna",
+    "rol": "Estetico"
+  },
+  {
+    "id": "00c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0052",
+    "nombre": "Medglad Servicios Medicos Especializados",
+    "propietario": "Elsa Alejandrina Castro Leon De Cuba",
+    "rol": "No Medico"
+  },
+  {
+    "id": "01c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0053",
+    "nombre": "Elite Skin And Beauty",
+    "propietario": "Gledy Muriel Fernandez Merma",
+    "rol": "Estetico"
+  },
+  {
+    "id": "02c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0054",
+    "nombre": "Clinica Jesus Del Norte",
+    "propietario": "Del Carpio Arenas Jean Paul",
+    "rol": "No Medico"
+  },
+  {
+    "id": "03c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0055",
+    "nombre": "Dermofarma B&B",
+    "propietario": "Julia Maria Del Carmen Barboza Martinez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "04c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0056",
+    "nombre": "Derma Skin Laser - Aquije",
+    "propietario": "Miluska Giovanna Aquije Pomez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "05c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0057",
+    "nombre": "Esthetic Planet Center",
+    "propietario": "Jocelyn Merino",
+    "rol": "No Medico"
+  },
+  {
+    "id": "06c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0058",
+    "nombre": "Roma Servicios Medicos",
+    "propietario": "Zoila Roxana Villa Zapata",
+    "rol": "No Medico"
+  },
+  {
+    "id": "07c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0059",
+    "nombre": "Dermabelleza - Bayona",
+    "propietario": "Mirtha Gisella Bayona Alvarado",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "08c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0060",
+    "nombre": "Servicios Y Representaciones Medicas Almaxi",
+    "propietario": "María Del Carmen Quispe Jara",
+    "rol": "No Medico"
+  },
+  {
+    "id": "09c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0061",
+    "nombre": "Axioma Tec",
+    "propietario": "Erika Fabiola Dapello Petit",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0ac291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0062",
+    "nombre": "Servicios Medicos Financieros",
+    "propietario": "Jose Luis Ballesteros Pun",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0bc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0063",
+    "nombre": "Clinica Continental",
+    "propietario": "Ydelfonso Rodriguez Arce",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0cc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0064",
+    "nombre": "Gastroderm",
+    "propietario": "Claudia Cecilia Tagle Solorzano",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0dc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0065",
+    "nombre": "Botica Salaverry",
+    "propietario": "Percy Jesus Nuñez Villar",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0ec291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0066",
+    "nombre": "Bellesti",
+    "propietario": "Angela Patricia Herrera Lopez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0fc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0067",
+    "nombre": "Medclinic Group",
+    "propietario": "Tania Anita Zegarra Escudero",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "10c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0068",
+    "nombre": "Spa Medical Estetika Center",
+    "propietario": "Elva Giulianna Berrocal Sotomayor",
+    "rol": "No Medico"
+  },
+  {
+    "id": "11c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0069",
+    "nombre": "Clinica La Merced",
+    "propietario": "Cardoza Montenegro Victor David",
+    "rol": "No Medico"
+  },
+  {
+    "id": "12c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0070",
+    "nombre": "B-Beauty",
+    "propietario": "Bertha Alicia Barquinero Fernandez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "13c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0071",
+    "nombre": "Machado Brito Ilgriz Andreina",
+    "propietario": "Luis Giuseppe Marccelo Quiroga Pimentel",
+    "rol": "Estetico"
+  },
+  {
+    "id": "14c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0072",
+    "nombre": "Corporacion Novoa",
+    "propietario": "Oscar Francisco Novoa Rosado",
+    "rol": "Estetico"
+  },
+  {
+    "id": "15c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0073",
+    "nombre": "Crisdan Corporacion",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "16c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0074",
+    "nombre": "Elizin Pediatrica",
+    "propietario": "Elizabeth Zoila Espinal Godoy",
+    "rol": "No Medico"
+  },
+  {
+    "id": "17c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0075",
+    "nombre": "Benavente Cardiología & Molecular Cardiac Imaging",
+    "propietario": "Liliana Socorro Benavente Montoya",
+    "rol": "No Medico"
+  },
+  {
+    "id": "18c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0076",
+    "nombre": "Podo Estetic",
+    "propietario": "Flor De Liz Wendy Giron Palma",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "19c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0077",
+    "nombre": "Natural Center Esthetic",
+    "propietario": "Angela Martha Pérez Ventura",
+    "rol": "No Medico"
+  },
+  {
+    "id": "1ac291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0078",
+    "nombre": "Emca",
+    "propietario": "Emilio Adolfo Carranza Gajardo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "1bc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0079",
+    "nombre": "Cirugia Plastica Ocular",
+    "propietario": "Rocio Del Carmen Ardito Vega",
+    "rol": "Estetico"
+  },
+  {
+    "id": "1cc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0080",
+    "nombre": "Gineuro Health",
+    "propietario": "Nildred Ina Obregon Lopez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "1dc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0081",
+    "nombre": "Dermaclinic Mejía",
+    "propietario": "Raphael Alberto Mejia Granilla",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "1ec291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0082",
+    "nombre": "Medicina Cirugia Y Reconstruccion Integral",
+    "propietario": "Renzo Benigno Peña Collantes",
+    "rol": "No Medico"
+  },
+  {
+    "id": "1fc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0083",
+    "nombre": "Benaval",
+    "propietario": "Miguel Angel Benavente Valdivia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "20c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0084",
+    "nombre": "Empresa De Servicios Medicos Cristo Redentor",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "21c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0085",
+    "nombre": "Instituto Del Laser Y Dermatologia Integral",
+    "propietario": "Lourdes Raquel Diaz Benites",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "22c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0086",
+    "nombre": "Medicina Global Trujillo",
+    "propietario": "Flor Elena Chira Romero",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "23c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0087",
+    "nombre": "Innovaderma",
+    "propietario": "Jesus Manuel Diaz Perez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "24c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0088",
+    "nombre": "A & R Salud Integral",
+    "propietario": "Edgar Omar Aranibar Del Carpio",
+    "rol": "No Medico"
+  },
+  {
+    "id": "25c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0089",
+    "nombre": "Dermaesthetics Medical Center",
+    "propietario": "Gina Zenchenka Serrano Guillen",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "26c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0090",
+    "nombre": "Novo Estetica",
+    "propietario": "Nataly Isabel Meza Guevara",
+    "rol": "Estetico"
+  },
+  {
+    "id": "27c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0091",
+    "nombre": "Valrut Corp",
+    "propietario": "Rutt Norma Quispe Poccomo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "28c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0092",
+    "nombre": "Grupo Jidial",
+    "propietario": "Diana Sofia Cuellar Osorio",
+    "rol": "Estetico"
+  },
+  {
+    "id": "29c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0093",
+    "nombre": "Derma Center Rios",
+    "propietario": "Ruth Elizabeth Rios Zavaleta",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "2ac291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0094",
+    "nombre": "Policlinico Medisur",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "2bc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0095",
+    "nombre": "Centro Especializado Roald Dermatologia Estetica",
+    "propietario": "Roald Otilio Aliaga Salguero",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "2cc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0096",
+    "nombre": "Clinica Integral Dermatologica",
+    "propietario": "Cesar Alfredo Ramos Aguilar",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "2dc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0097",
+    "nombre": "Especialidades Pediatricas",
+    "propietario": "Emil Diaz Pino",
+    "rol": "No Medico"
+  },
+  {
+    "id": "2ec291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0098",
+    "nombre": "Ibn Sina Dermatologia Laser & Estetica",
+    "propietario": "Luzmila Ruth Guerra Figueroa",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "2fc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0099",
+    "nombre": "Medi Esthetic",
+    "propietario": "Alejandra Loayza Vidalon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "30c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0100",
+    "nombre": "Dermoestetica Tincopa",
+    "propietario": "Robert Edgard Tincopa Grados",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "31c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0101",
+    "nombre": "Cdc Y Laser",
+    "propietario": "Olga Esther Paredes Talavera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "32c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0102",
+    "nombre": "Ciruesbelt",
+    "propietario": "Angela Maximiliana Guerra Huari",
+    "rol": "Estetico"
+  },
+  {
+    "id": "33c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0103",
+    "nombre": "Ile De Beaute",
+    "propietario": "Blanca Luz Alva Huapaya",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "34c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0104",
+    "nombre": "Global Medical Science ./Gmscience",
+    "propietario": "Gloria Maria Neyra Mondoñedo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "35c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0105",
+    "nombre": "Alvarez Shintya",
+    "propietario": "Alvarez Shintya",
+    "rol": "No Medico"
+  },
+  {
+    "id": "36c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0106",
+    "nombre": "Hm Aesthetic & Laser",
+    "propietario": "Marissa Salome Charaja Sueldo",
+    "rol": "Estetico"
+  },
+  {
+    "id": "37c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0107",
+    "nombre": "Servicios Generales Monte Alto",
+    "propietario": "Martinez Cancino Carla Rosario",
+    "rol": "No Medico"
+  },
+  {
+    "id": "38c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0108",
+    "nombre": "Thashiderm",
+    "propietario": "Thays Carrisales Mejia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "39c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0109",
+    "nombre": "Conasso Medic",
+    "propietario": "Marisa Janelle Guardian De La Cruz",
+    "rol": "Estetico"
+  },
+  {
+    "id": "3ac291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0110",
+    "nombre": "Servicios Medicos Ocaña",
+    "propietario": "Gloria Maria Ocaña Carrion",
+    "rol": "No Medico"
+  },
+  {
+    "id": "3bc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0111",
+    "nombre": "Derma Line",
+    "propietario": "Christyan Jhonatan Nahum Oyola Farfan",
+    "rol": "No Medico"
+  },
+  {
+    "id": "3cc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0112",
+    "nombre": "Inversiones Multimedic",
+    "propietario": "Tania Lizette Roncal Valdivia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "3dc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0113",
+    "nombre": "Clinica Cerro Colorado",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "3ec291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0114",
+    "nombre": "Dermi Yesset Celis",
+    "propietario": "Cielo Arassely Abregu Sarmiento",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "3fc291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0115",
+    "nombre": "Renova Spa",
+    "propietario": "Cindy Cecile Tellez Amesquita",
+    "rol": "Estetico"
+  },
+  {
+    "id": "40c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0116",
+    "nombre": "Medi Skin",
+    "propietario": "Desiree Elihu Acosta De La Cruz",
+    "rol": "Estetico"
+  },
+  {
+    "id": "41c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0117",
+    "nombre": "Onzamedic",
+    "propietario": "Dora Lisseth Leyton Alva",
+    "rol": "No Medico"
+  },
+  {
+    "id": "42c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0118",
+    "nombre": "Dermamedic Del Sur",
+    "propietario": "Marylu Limache Pacori",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "43c291b6-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0119",
+    "nombre": "Mer Therapy",
+    "propietario": "Mercedes Del Pilar Trigoso Mas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c75e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0120",
+    "nombre": "Cirujanos A Tu Servicio",
+    "propietario": "Giovanny Enrique Linares Carreon",
+    "rol": "No Medico"
+  },
+  {
+    "id": "cb5e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0121",
+    "nombre": "Jv Servicios Y Ventas",
+    "propietario": "Jenny Vargas Bravo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "cf5e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0122",
+    "nombre": "S.M. Medica L & A Esthetic Group",
+    "propietario": "Zamarit Paola Salas Molina",
+    "rol": "Estetico"
+  },
+  {
+    "id": "d55e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0123",
+    "nombre": "D&D Inversiones Medicas",
+    "propietario": "Percy Marcelo Diaz Gazzolo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "d95e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0124",
+    "nombre": "Epss Del Pilar",
+    "propietario": "Edith Nancy Ramirez Villagaray",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "dd5e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0125",
+    "nombre": "Dermatologica Express",
+    "propietario": "Luisa Ursula Rivas Flores",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e35e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0126",
+    "nombre": "Rejuvenece",
+    "propietario": "Linda Victoria Vilchez Limay",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e85e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0127",
+    "nombre": "Grupo Mc Salud",
+    "propietario": "Maria Cristina Martinez Chinchay",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ec5e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0128",
+    "nombre": "Ozono Vital",
+    "propietario": "Carlos Humberto Rosas Zamudio",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f05e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0129",
+    "nombre": "Servicios & Importaciones Art",
+    "propietario": "Arturo Anibal Felix Alvaron",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f55e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0130",
+    "nombre": "Jm Medical Centro De Medicina Estetica",
+    "propietario": "Julio Alberto Moscoso Alarcon",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fb5e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0131",
+    "nombre": "Belladerm",
+    "propietario": "Leonor Maribel Limache Yaringaño",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ff5e99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0132",
+    "nombre": "Merh Derma",
+    "propietario": "Milagros Esther Rios Hidalgo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "035f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0133",
+    "nombre": "Soleil Centro Medico Estetico",
+    "propietario": "Linda Derly Macalupu Goicochea",
+    "rol": "No Medico"
+  },
+  {
+    "id": "085f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0134",
+    "nombre": "Derma Perú Láser",
+    "propietario": "Edmundo Saco Mera",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0e5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0135",
+    "nombre": "Epi-Gnosis Solutions",
+    "propietario": "Claudia Rojas Barona",
+    "rol": "No Medico"
+  },
+  {
+    "id": "125f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0136",
+    "nombre": "Inversiones Comsac & Asociados",
+    "propietario": "Corina Salome Hidalgo Mori",
+    "rol": "No Medico"
+  },
+  {
+    "id": "165f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0137",
+    "nombre": "Cume Centro De Urologia Y Medicina Estetica",
+    "propietario": "Jackeline Vanessa Salazar Montano",
+    "rol": "Estetico"
+  },
+  {
+    "id": "1b5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0138",
+    "nombre": "Dermacuore",
+    "propietario": "Christian Nolte Rickards",
+    "rol": "No Medico"
+  },
+  {
+    "id": "205f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0139",
+    "nombre": "Soulage International",
+    "propietario": "Ivan Medrano Barrera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "255f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0140",
+    "nombre": "Mahurton Asociados",
+    "propietario": "Arnaldo Jose Hurtado Leon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "295f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0141",
+    "nombre": "Eo Stetics",
+    "propietario": "Hector Eduardo Ortega Meza",
+    "rol": "Estetico"
+  },
+  {
+    "id": "2e5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0142",
+    "nombre": "Mederm",
+    "propietario": "Denise Gabrielle Durand Buse",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "335f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0143",
+    "nombre": "Advanced Aesthetic Medicine",
+    "propietario": "Joana Paola Bernedo Alcazar",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "385f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0144",
+    "nombre": "Clinica Arteaga & Oviedo",
+    "propietario": "Roberto Homero Oviedo Pecho",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "3c5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0145",
+    "nombre": "Centro Bravo Medicina Estetica",
+    "propietario": "Jose Carlos Bravo Castillo Rojo",
+    "rol": "Estetico"
+  },
+  {
+    "id": "415f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0146",
+    "nombre": "Esteticone Corp",
+    "propietario": "Erick Medina Escalanta",
+    "rol": "No Medico"
+  },
+  {
+    "id": "455f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0147",
+    "nombre": "Dermanorte",
+    "propietario": "Aldo Augusto Ramirez Moya",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "4b5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0148",
+    "nombre": "Vitalaser",
+    "propietario": "Tania Lizette Roncal Valdivia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "4f5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0149",
+    "nombre": "Amaderma",
+    "propietario": "Angelica Matilde Rivera Sullca",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "545f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0150",
+    "nombre": "Derma Skin Laser - Perez",
+    "propietario": "Kateryn Michelle Perez Willis",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "585f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0151",
+    "nombre": "Vinci Esthetique",
+    "propietario": "Cecilia Nathaly Merino Valera",
+    "rol": "No Medico"
+  },
+  {
+    "id": "5e5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0152",
+    "nombre": "Dermatologia Cubana",
+    "propietario": "Jose Luis Ballesteros Pun",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "625f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0153",
+    "nombre": "Dharma Sumaq",
+    "propietario": "Rocío Ayquipa",
+    "rol": "No Medico"
+  },
+  {
+    "id": "675f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0154",
+    "nombre": "Arlylu",
+    "propietario": "Cesar Augusto Hernandez Bazan",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6b5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0155",
+    "nombre": "Dermedicals",
+    "propietario": "Iraheny Del Carmen Alvires Freitez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6f5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0156",
+    "nombre": "Consultorio Medico Pediatrico Wawitos",
+    "propietario": "Nadiuska Violeta Rosas Chang",
+    "rol": "Estetico"
+  },
+  {
+    "id": "755f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0157",
+    "nombre": "Derma Piel",
+    "propietario": "Patricia Karen Paucar Lescano",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7a5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0158",
+    "nombre": "Dra Jannell Obregon",
+    "propietario": "Jannell Obregon Alzamora",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7e5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0159",
+    "nombre": "Jaqueline Imagen",
+    "propietario": "Yuliana Zaragoza Alarcon Quispe",
+    "rol": "No Medico"
+  },
+  {
+    "id": "825f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0160",
+    "nombre": "Farmapiel",
+    "propietario": "Jackelyn Montero Pacora De Patron",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "885f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0161",
+    "nombre": "Susy Joy Dermatology",
+    "propietario": "Susy Mei Joy Way Bueno",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8d5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0162",
+    "nombre": "Consultores Bepal",
+    "propietario": "Gerardo David Calderon Escobedo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "915f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0163",
+    "nombre": "Consultorios Tello",
+    "propietario": "Maria Del Carmen Tello Flores",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "955f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0164",
+    "nombre": "Semzoderm",
+    "propietario": "Edwin De La Torre Venegas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "995f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0165",
+    "nombre": "Perfection",
+    "propietario": "Yherson Jhames Mendoza Abanto",
+    "rol": "No Medico"
+  },
+  {
+    "id": "9d5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0166",
+    "nombre": "Servicios Medicos Derma Puerto",
+    "propietario": "Pierina Laida Chavez Valera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a15f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0167",
+    "nombre": "Rpc Servicios Medicos",
+    "propietario": "Reynaldo Alberto Pomar Morante",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a55f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0168",
+    "nombre": "Health Quality Company",
+    "propietario": "Carmen Marlenne Prada Alvarado",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a95f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0169",
+    "nombre": "Rosales Medicina Cubana",
+    "propietario": "Marcos Antonio Rosales Pool",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ad5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0170",
+    "nombre": "Centro Estetico Aldanna",
+    "propietario": "Marco Antonio Casallo Poma",
+    "rol": "No Medico"
+  },
+  {
+    "id": "b15f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0171",
+    "nombre": "Consorcio Duo",
+    "propietario": "Carlos Valentin Rodriguez Rodriguez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "b55f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0172",
+    "nombre": "Dermedic Lamb",
+    "propietario": "Elizabeth Guevara Sanchez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b95f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0173",
+    "nombre": "Surgiplast",
+    "propietario": "Favio Vinicio Urdaneta Rubio",
+    "rol": "No Medico"
+  },
+  {
+    "id": "bd5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0174",
+    "nombre": "Rubimedic International Health",
+    "propietario": "Rubi Lucero Llallico Manrique",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "c15f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0175",
+    "nombre": "Dialdec Soluciones",
+    "propietario": "Zelika Liz Kumakawa Saavedra",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "c55f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0176",
+    "nombre": "Ics Dermatologia",
+    "propietario": "Ingrid Carolina Seclen Benavides",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ca5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0177",
+    "nombre": "Makeover Aesthetic",
+    "propietario": "Valery Room Basabe",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ce5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0178",
+    "nombre": "C & L Piel Y Salud",
+    "propietario": "Claudia Nataly Castillo Ruiz",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d35f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0180",
+    "nombre": "Syraderm Centro Dermatologico Especializado",
+    "propietario": "Synthia Elizabeth Rabanal Florian",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d55f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0181",
+    "nombre": "Gb Medicine",
+    "propietario": "Gissele Maria Baca Medina",
+    "rol": "Estetico"
+  },
+  {
+    "id": "da5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0182",
+    "nombre": "Santadina",
+    "propietario": "Karem Bustamante Gonzales",
+    "rol": "No Medico"
+  },
+  {
+    "id": "df5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0183",
+    "nombre": "B&S Negocios Peru",
+    "propietario": "Renzo Almeyda",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e25f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0184",
+    "nombre": "Rejuveness Dermato Cirugia Estetica Laser",
+    "propietario": "Thomas Xavier Guzman Espinoza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e75f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0185",
+    "nombre": "Centro De Especialidades Medicas Latinoamericano",
+    "propietario": "Oryana Paola Meza Lazo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "eb5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0186",
+    "nombre": "Dermatelier",
+    "propietario": "Carmen Cecilia Guerra Arias",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ef5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0187",
+    "nombre": "Bioestetica Llirod",
+    "propietario": "Llirod Ravello Tina Luciana",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f45f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0188",
+    "nombre": "Clínica Estética Loor",
+    "propietario": "Joha Loor Loor",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f75f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0189",
+    "nombre": "Corporacion Belaestetic",
+    "propietario": "Zumaeta Sanchez Yheny Marlit",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fb5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0190",
+    "nombre": "Medhealtec",
+    "propietario": "Greck Dickson Ayala Gaspar",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "ff5f99b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0191",
+    "nombre": "Dermalone",
+    "propietario": "Patricia Del Carmen Chavez De Paz Villanueva",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "046099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0192",
+    "nombre": "Arbus Servicios Generales",
+    "propietario": "Liz Mariana Hurtado Cerron",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "086099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0193",
+    "nombre": "Armos Med",
+    "propietario": "Carolina Ivette Margarita Moscol Yabar",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0c6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0194",
+    "nombre": "Imebelle",
+    "propietario": "Edward Constantino Serrano Vilca",
+    "rol": "No Medico"
+  },
+  {
+    "id": "0f6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0195",
+    "nombre": "Dervimed",
+    "propietario": "Jenny Vanessa Lopez Vereau",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "146099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0196",
+    "nombre": "Med Elite",
+    "propietario": "Roberto Alexander Rodriguez Zuñiga",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "186099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0197",
+    "nombre": "Medipiel Peru",
+    "propietario": "Reyes Becerra Mayra",
+    "rol": "No Medico"
+  },
+  {
+    "id": "1c6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0198",
+    "nombre": "Dermamed Laser Tacna",
+    "propietario": "Nelly Marvelia Vegas Jaramillo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "206099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0199",
+    "nombre": "Facial Center",
+    "propietario": "Janish Alberto Mao Cabrejos Valderrama",
+    "rol": "Estetico"
+  },
+  {
+    "id": "246099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0200",
+    "nombre": "Soluciones Medicas Punto Pe",
+    "propietario": "Melissa Gladys Onofre Apaza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "286099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0201",
+    "nombre": "Dermify",
+    "propietario": "Viviana Claudia Bueno Gomez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "2c6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0202",
+    "nombre": "Derma Suarez",
+    "propietario": "Pavel Esteban Suarez Quispe",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "306099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0203",
+    "nombre": "Distribuidora Y Servicios Medicos Derma",
+    "propietario": "Anghella Lisseti Guarniz Lozano",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "336099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0204",
+    "nombre": "Clinica De Ozonoterapia Y Medicina Estética Arrieta",
+    "propietario": "Mayra Mariel Emperatriz Arrieta Sanchez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "366099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0205",
+    "nombre": "Centro Estetico Soto Lopez",
+    "propietario": "Soto Lopez Stefany Milagros",
+    "rol": "No Medico"
+  },
+  {
+    "id": "396099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0206",
+    "nombre": "Medical Biohealth",
+    "propietario": "Sol Ynkill Bengoa Fuentes",
+    "rol": "Estetico"
+  },
+  {
+    "id": "3b6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0207",
+    "nombre": "Munnay Centro Medico",
+    "propietario": "Marilia Lizeth Villanueva Aliaga",
+    "rol": "Estetico"
+  },
+  {
+    "id": "3d6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0208",
+    "nombre": "Concepto Piel",
+    "propietario": "Cinthya Pamela Rodriguez Gordillo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "3f6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0209",
+    "nombre": "Nossa Skin Clinica Dermatologica",
+    "propietario": "Bety Sandoval",
+    "rol": "No Medico"
+  },
+  {
+    "id": "416099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0210",
+    "nombre": "Hof Medical",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "426099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0211",
+    "nombre": "Centro Medonc 982",
+    "propietario": "Gonzalo Javier Ziegler Rodriguez",
+    "rol": "Oncologo"
+  },
+  {
+    "id": "436099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0212",
+    "nombre": "Servicios Medicos Generales California",
+    "propietario": "Wendy Dayanara Angulo Angulo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "446099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0213",
+    "nombre": "Clinica Santa Rosa Moquegua",
+    "propietario": "Walter Alexander Jove Vildoso",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "456099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0214",
+    "nombre": "Guichell Revilla Servicios Medicos",
+    "propietario": "Guichell Marie Revilla Robinson",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "466099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0215",
+    "nombre": "He&Ga Medic",
+    "propietario": "Ericka Rosalbina Roca Gonzales",
+    "rol": "No Medico"
+  },
+  {
+    "id": "476099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0216",
+    "nombre": "D & K Medical Clinic",
+    "propietario": "Karina Patricia Baca Huillca",
+    "rol": "No Medico"
+  },
+  {
+    "id": "486099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0217",
+    "nombre": "Style Medical",
+    "propietario": "Gladys Sofia Chau Segura",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "496099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0218",
+    "nombre": "Dermoesthetic San Pablo",
+    "propietario": "Maria Dolores Delia Martha Martina Orrego Puyo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "4a6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0219",
+    "nombre": "Jjcb Derma Estetica",
+    "propietario": "Jacqueline Judith Cabanillas Becerra",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "4b6099b0-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0220",
+    "nombre": "Nual Corp",
+    "propietario": "Kael Stiver Nuñez Alarcon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b53aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0221",
+    "nombre": "Jl Dermatology",
+    "propietario": "Jacqueline Veronica Arevalo Martinez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b63aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0222",
+    "nombre": "Phisalud",
+    "propietario": "Victor Roger Valdivia Cabrera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b73aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0223",
+    "nombre": "Rj Dermatologia",
+    "propietario": "Rosario Elena Jaime Cusi",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b83aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0224",
+    "nombre": "Yunna Salud Y Estetica",
+    "propietario": "Jackelin Janette Chacma Lara",
+    "rol": "Estetico"
+  },
+  {
+    "id": "b93aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0225",
+    "nombre": "Dermatologia Salud Integral",
+    "propietario": "Daysi Lisslett Timana Palacios",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ba3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0226",
+    "nombre": "Servicios Dermatologicos Especializados Cap",
+    "propietario": "Cromwell Enrique Angulo Prentice",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "bb3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0227",
+    "nombre": "Arc Dermatologia",
+    "propietario": "Maria Del Carmen Tello Flores",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "bc3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0228",
+    "nombre": "Skinisima Dermatología Integra",
+    "propietario": "Gilda Mancini Garcia",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "bd3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0229",
+    "nombre": "Confianza Belleza",
+    "propietario": "Alejandro Marx Lenin Pajuelo La Rosa",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "be3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0230",
+    "nombre": "Centro De Bariatria Endoscopica",
+    "propietario": "Rosa Elizabeth Bueno Sanchez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "bf3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0231",
+    "nombre": "Grupo Dvn",
+    "propietario": "Diana Diaz Morey",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c03aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0232",
+    "nombre": "Luar Medicina Estetica Regenerativa Peru",
+    "propietario": "Miguel Alexander Quintanilla Balbin",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c13aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0233",
+    "nombre": "Clínica Derma Esthetic - Jaramillo",
+    "propietario": "Juan Mariano Jaramillo Dueñas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "c23aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0234",
+    "nombre": "Zenova Medic",
+    "propietario": "Indira Reyes Huertas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c33aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0235",
+    "nombre": "Centro De Estetica Integral Slim Body",
+    "propietario": "Yesenia Araceli Quispe Cruz",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c43aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0236",
+    "nombre": "Clínica Kara",
+    "propietario": "Jenny",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c53aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0237",
+    "nombre": "Zaza Med Laser Center",
+    "propietario": "Isabel Del Carmen Arango Chang",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c63aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0238",
+    "nombre": "Dra. Giuliana Peching",
+    "propietario": "Giuliana Teresa Peching Chiong",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "c73aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0239",
+    "nombre": "Gonzales Medicina Estetica",
+    "propietario": "Edith Cristina Rivera Gonzales",
+    "rol": "Estetico"
+  },
+  {
+    "id": "c83aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0240",
+    "nombre": "Servicios Medicos Zaga",
+    "propietario": "Lucero Zaga Barrientos",
+    "rol": "Estetico"
+  },
+  {
+    "id": "c93aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0241",
+    "nombre": "Medicina & Laser",
+    "propietario": "Miguel Angel Alfaro Ludeña",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ca3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0242",
+    "nombre": "Dermallure",
+    "propietario": "Nirima Poleth Arpasi Huanca",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "cb3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0243",
+    "nombre": "Inception Hair Medical Center",
+    "propietario": "Yeremmi Anghelin Caceres Calderon",
+    "rol": "Estetico"
+  },
+  {
+    "id": "cc3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0244",
+    "nombre": "Dermatologia Rivera",
+    "propietario": "Amanda Yovanka Rivera Bustamante",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "cd3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0245",
+    "nombre": "Plusderma",
+    "propietario": "Dayer Larrea Gallegos",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ce3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0246",
+    "nombre": "Dermarin",
+    "propietario": "Luis Angel Diaz Marin",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "cf3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0247",
+    "nombre": "Harmony Face",
+    "propietario": "Yezenia Alcida Pariona Sihuin",
+    "rol": "Estetico"
+  },
+  {
+    "id": "d03aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0248",
+    "nombre": "Derma Infinit",
+    "propietario": "Cesar Augusto Vargas Angulo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d13aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0249",
+    "nombre": "Grupo Zenya",
+    "propietario": "Evelyn Sharon Cusimayta Usca",
+    "rol": "Medico"
+  },
+  {
+    "id": "d23aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0250",
+    "nombre": "Centro Estetico Lisru",
+    "propietario": "Lourdes Aita Reyes",
+    "rol": "Estetico"
+  },
+  {
+    "id": "d33aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0251",
+    "nombre": "Dutra Da Silva Elves",
+    "propietario": "Elves Dultra Da Silva",
+    "rol": "No Medico"
+  },
+  {
+    "id": "d43aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0252",
+    "nombre": "Cruz Ballona Medical",
+    "propietario": "Oscar Luis Cruz Ballona",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d53aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0253",
+    "nombre": "Nevus Clinic",
+    "propietario": "Carmen Marlenne Prada Alvarado",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d63aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0254",
+    "nombre": "Sense Salud",
+    "propietario": "Gilda Corina Elvira Perez Zegarra",
+    "rol": "Estetico"
+  },
+  {
+    "id": "d73aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0255",
+    "nombre": "Dermo & Plastica",
+    "propietario": "David Elias Yauri Larrazabal",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d83aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0256",
+    "nombre": "Dermatologia Clinica Integral",
+    "propietario": "Brunella Clarisa Raymundo Villalva",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d93aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0257",
+    "nombre": "Zai Estetica Y Salud",
+    "propietario": "Almeyda Flores Renzo Armel",
+    "rol": "No Medico"
+  },
+  {
+    "id": "da3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0258",
+    "nombre": "Jk & C Corp",
+    "propietario": "Johanna Katherine Peceros Escalante",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "db3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0259",
+    "nombre": "Corporación Smart Salud",
+    "propietario": "Laura Esther Pereda Seclen",
+    "rol": "Estetico"
+  },
+  {
+    "id": "dc3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0260",
+    "nombre": "Brenda Dolly del Carpio Calderón",
+    "propietario": "Brenda Dolly Del Carpio Calderon",
+    "rol": "Estetico"
+  },
+  {
+    "id": "dd3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0261",
+    "nombre": "Corporation Grupo Sandoval",
+    "propietario": "Fiorella Alejandra Sandoval Perez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "de3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0262",
+    "nombre": "Alopecia: Centro Internacional De Tricologia",
+    "propietario": "Maria Belen Peña Borja",
+    "rol": "Estetico"
+  },
+  {
+    "id": "df3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0263",
+    "nombre": "Derma Esthetic Solutions",
+    "propietario": "Hoshe Lee Joo Fernández",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e03aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0264",
+    "nombre": "Cirugia Plastica Y Medicina Estetica Dr. Christian Saravia",
+    "propietario": "Christian Oscar Saravia Cancino",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e13aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0265",
+    "nombre": "Gs Medic Group",
+    "propietario": "Gisselle Dalila De Fatima Sanchez Silva",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e23aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0266",
+    "nombre": "Rejuvenecimiento Facial Inmediato Peru",
+    "propietario": "Marielizabeth Narvaja Valdiviezo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e33aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0267",
+    "nombre": "Dermacare Salud",
+    "propietario": "Paola Maria Lucia Chavez Tarazona",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e43aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0268",
+    "nombre": "Nanda Skin & Beauty",
+    "propietario": "Vanessa Nolasco",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e53aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0269",
+    "nombre": "Dermaskin Clinic",
+    "propietario": "Pamela Ines Bernedo Huaman",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e63aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0270",
+    "nombre": "Salud Integral Dm",
+    "propietario": "Hilda Milagros Deza Mendoza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e73aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0271",
+    "nombre": "Dra. Karen Saucedo",
+    "propietario": "Karen Lisset Saucedo Seminario",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e83aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0272",
+    "nombre": "Corporacion Medica Valderma",
+    "propietario": "Silvia Trinidad Puma Chutas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e93aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0273",
+    "nombre": "Revela Medicina Estetica Especializada",
+    "propietario": "Nicole Victoria Santillan Vera; Edinson Méndez",
+    "rol": "Estetico / No Medico"
+  },
+  {
+    "id": "ea3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0274",
+    "nombre": "Dermia - Risoul",
+    "propietario": "Jenny Janeth Zapana Alarcon",
+    "rol": "Estetico"
+  },
+  {
+    "id": "eb3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0275",
+    "nombre": "Lorien Clinic",
+    "propietario": "Pilar Alue Valencia Peña",
+    "rol": "Estetico"
+  },
+  {
+    "id": "ec3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0276",
+    "nombre": "The Beauty Concept",
+    "propietario": "Sebastian Brayan Suarez Marcos",
+    "rol": "Estetico"
+  },
+  {
+    "id": "ed3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0277",
+    "nombre": "Contreras Medic",
+    "propietario": "Angelica Contreras Zegarra",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ee3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0278",
+    "nombre": "Lima Derm - Chevarría",
+    "propietario": "Jampierre Fabricio Chevarria Figueroa",
+    "rol": "Estetico"
+  },
+  {
+    "id": "ef3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0279",
+    "nombre": "Impacta Medicina Estetica",
+    "propietario": "Paula Fernanda Castillo Silva",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f03aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0280",
+    "nombre": "Q'Ara La Casita De La Piel",
+    "propietario": "Tania Yesenia Torres Rios",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f13aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0281",
+    "nombre": "Servicios Medicos Especializados Medical Clinic Peru",
+    "propietario": "Wendy Rocio Espinoza Vera",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f23aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0282",
+    "nombre": "Corporacion Medica Maklau",
+    "propietario": "Claudia Luciana Coronado Gutiérrez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f33aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0283",
+    "nombre": "Neuroderm S",
+    "propietario": "Elizabeth Caytuiro Soto",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f43aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0284",
+    "nombre": "Distribuidora De Productos Farmaceuticos & Dermatologicos",
+    "propietario": "Karel Rios Paredes",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f53aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0285",
+    "nombre": "Golden Clinic",
+    "propietario": "Kiara Nicole De Fatima Saavedra Olaya",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f63aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0286",
+    "nombre": "Reluxe Rr",
+    "propietario": "Regis Andre Cabre Villanueva",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f73aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0287",
+    "nombre": "Centro Ginecologico Y De Medicina Estetica Afrodita",
+    "propietario": "Yoselin Adriana Colina Gasperi",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f83aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0288",
+    "nombre": "Cornejo Hermanos Asociados",
+    "propietario": "Evelyn Rocio Cornejo Injante",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f93aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0289",
+    "nombre": "Sakura Medical Group",
+    "propietario": "Marcus Kevin Villanueva Mendoza",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fa3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0290",
+    "nombre": "Logistimport",
+    "propietario": "Soledad Quispe Choquemamani",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fb3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0291",
+    "nombre": "Biosmart",
+    "propietario": "Mario Cabani",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fc3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0292",
+    "nombre": "Grupo Skinplus",
+    "propietario": "Eric Junior Lopez Hernandez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fd3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0293",
+    "nombre": "Mediexpert Solutions",
+    "propietario": "Luis Zapata; Davida Liviac",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fe3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0294",
+    "nombre": "Noviu Especialistas",
+    "propietario": "Fiorella Naydu Suyo Prieto",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ff3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0295",
+    "nombre": "Corporacion Skingroup",
+    "propietario": "Madeleine Giselle Carranza Osorio",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "003ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0296",
+    "nombre": "Svelta Mediclinic",
+    "propietario": "Cesar Arcangel Maydana Vilca",
+    "rol": "Estetico"
+  },
+  {
+    "id": "013ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0297",
+    "nombre": "Justonline",
+    "propietario": "Carlos Vidal",
+    "rol": "No Medico"
+  },
+  {
+    "id": "023ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0298",
+    "nombre": "Corporacion Medica Jym",
+    "propietario": "Elizabeth Martha Chumbile Andia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "033ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0299",
+    "nombre": "Cirugia Plastica Jackeline Anicama",
+    "propietario": "Jackeline Lizbeth Anicama Mendoza",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "043ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0300",
+    "nombre": "Doctora Gabriela Coa",
+    "propietario": "Gabriela Lisbeth Coa Ron",
+    "rol": "Estetico"
+  },
+  {
+    "id": "053ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0301",
+    "nombre": "Sistemas De Administracion Hospitalaria",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "063ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0302",
+    "nombre": "Centro Medico De Bienestar Natural",
+    "propietario": "Milla Flores Diana Rosa",
+    "rol": "No Medico"
+  },
+  {
+    "id": "073ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0303",
+    "nombre": "Clínica Vinali",
+    "propietario": "Maria Alejandra Clavijo Molleda",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "083ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0304",
+    "nombre": "Promo Italia",
+    "propietario": "Cuentas Andia Patricia Marianella",
+    "rol": "No Medico"
+  },
+  {
+    "id": "093ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0305",
+    "nombre": "Grupo Riap",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "0a3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0306",
+    "nombre": "Global Piel",
+    "propietario": "Elsa Maria Gordillo Alarcon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0b3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0307",
+    "nombre": "Obgyn Solutions",
+    "propietario": "Inyutin Borys",
+    "rol": "No Medico"
+  },
+  {
+    "id": "0c3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0308",
+    "nombre": "Servicios Medicos Especializados Mundo Dermatologico",
+    "propietario": "Julissa Jeannette Castañeda Ramos",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0d3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0309",
+    "nombre": "Grupo Tecura",
+    "propietario": "Ricardo Daniel Torres Cardozo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0e3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0310",
+    "nombre": "Mk Corporacion De Importacion",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "0f3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0311",
+    "nombre": "Servicios Medicos Familiar Suarez",
+    "propietario": "Caycho Sotelo Fresia Mercedes",
+    "rol": "No Medico"
+  },
+  {
+    "id": "103ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0312",
+    "nombre": "Blue-Derm",
+    "propietario": "Jorge Kevin Asto Altamirano",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "113ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0313",
+    "nombre": "Medicina Estetica Y Rejuvenecimiento Facial",
+    "propietario": "Paula Valeria Urrunaga Poma",
+    "rol": "Estetico"
+  },
+  {
+    "id": "123ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0314",
+    "nombre": "Mystik Centro Estetica",
+    "propietario": "Huayne Diaz Tania Mariela",
+    "rol": "No Medico"
+  },
+  {
+    "id": "133ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0315",
+    "nombre": "Candia Caro",
+    "propietario": "Elldy Juana Candia Caro",
+    "rol": "Estetico"
+  },
+  {
+    "id": "143ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0316",
+    "nombre": "Dermac Skinboutique",
+    "propietario": "Melanie Mac Pherson Zeña",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "153ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0317",
+    "nombre": "Inaesthetics",
+    "propietario": "Inga Berrospi Fiorella",
+    "rol": "No Medico"
+  },
+  {
+    "id": "163ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0318",
+    "nombre": "Centre Of Medicine Aesthetic & Anti-Aging Peña Freitas",
+    "propietario": "Pierre Augusto Peña Freitas",
+    "rol": "Medico"
+  },
+  {
+    "id": "173ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0319",
+    "nombre": "Doctores Nasser",
+    "propietario": "Nairuz Chaya Nasser",
+    "rol": "No Medico"
+  },
+  {
+    "id": "183ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0320",
+    "nombre": "Divine Harmony",
+    "propietario": "Jean Dennis Mendoza Ramos",
+    "rol": "No Medico"
+  },
+  {
+    "id": "513aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0321",
+    "nombre": "Soluciones Quirurgicas & Bariatricas",
+    "propietario": "Juan Alberto Garcia Quiñones",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "523aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0322",
+    "nombre": "Elevee Esthetique",
+    "propietario": "Jordan Astudillo Maria Ana",
+    "rol": "No Medico"
+  },
+  {
+    "id": "533aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0323",
+    "nombre": "Lévir. Cirugía Plástica Y Estética",
+    "propietario": "Blany Levir Aguilar Cochas",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "543aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0324",
+    "nombre": "Beyond",
+    "propietario": "Maira Mulder Orbegoso",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "553aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0325",
+    "nombre": "Centro De Medicina Estética Montero",
+    "propietario": "Alberto Montero Perez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "563aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0326",
+    "nombre": "Pediatria Integrando",
+    "propietario": "Roberto Carlos Somocurcio Somocurcio",
+    "rol": "Estetico"
+  },
+  {
+    "id": "573aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0327",
+    "nombre": "D'Luxe Sthetic Medical Center",
+    "propietario": "Hector Fabrizio Escusel Torres",
+    "rol": "Estetico"
+  },
+  {
+    "id": "583aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0328",
+    "nombre": "Harmonyc",
+    "propietario": "Pascual Medina Labaut",
+    "rol": "Estetico"
+  },
+  {
+    "id": "593aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0329",
+    "nombre": "Clinica Zegarra",
+    "propietario": "Walter Frank Zegarra Avila",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "5a3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0330",
+    "nombre": "Dermagold Clinic",
+    "propietario": "Marisol De La Cruz Estrada",
+    "rol": "Estetico"
+  },
+  {
+    "id": "5b3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0331",
+    "nombre": "Centro Médico Mont Sinai",
+    "propietario": "Cesar Augusto Carlos Coronado",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "5c3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0332",
+    "nombre": "Gabu Medical",
+    "propietario": "Sharonss Victoria Garrote Buendia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "5d3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0333",
+    "nombre": "CONSTRUESTETIC",
+    "propietario": "Jorge Rafael Correa Rojas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "5e3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0334",
+    "nombre": "Darmed. Centro Médico",
+    "propietario": "Jose Luis Garcia Saravia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "5f3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0335",
+    "nombre": "Piel Y Salud",
+    "propietario": "Aldo Daniel Galvez Canseco",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "603aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0336",
+    "nombre": "Dermasol",
+    "propietario": "Julia Patricia Pancorbo Mendoza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "613aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0337",
+    "nombre": "Cedmec",
+    "propietario": "Norma Isabel Matute Salazar",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "623aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0338",
+    "nombre": "Somos Medic",
+    "propietario": "Alisson Stefany Vela Cabanillas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "633aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0339",
+    "nombre": "Dra. Rubi Tello",
+    "propietario": "Rubi Del Sol Tello Arroyo",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "643aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0340",
+    "nombre": "Di Corpo",
+    "propietario": "Hugo Sánchez Ferrer Silva",
+    "rol": "No Medico"
+  },
+  {
+    "id": "653aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0341",
+    "nombre": "Clínica Especializada Santa Rosa",
+    "propietario": "Heidy Jackeline Villanueva Mori",
+    "rol": "Estetico"
+  },
+  {
+    "id": "663aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0342",
+    "nombre": "Perfectia",
+    "propietario": "Milagros La Torre",
+    "rol": "No Medico"
+  },
+  {
+    "id": "673aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0343",
+    "nombre": "Biosalud Patron",
+    "propietario": "Jackelyn Montero Pacora De Patron",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "683aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0344",
+    "nombre": "Biosense",
+    "propietario": "Edher Roberto Oncebay Medrano",
+    "rol": "Estetico"
+  },
+  {
+    "id": "693aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0345",
+    "nombre": "Dermabelle Perú - Arroyo",
+    "propietario": "Denisse Ines Karen Arroyo De Los Santos",
+    "rol": "No Medico"
+  },
+  {
+    "id": "6a3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0346",
+    "nombre": "Bibo Medicina Estética",
+    "propietario": "Gretchen Cecilia Lavado Hinojosa Detorres",
+    "rol": "No Medico"
+  },
+  {
+    "id": "6b3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0347",
+    "nombre": "Neglox Clinic",
+    "propietario": "Shyntia Sharon Rosales Contreras",
+    "rol": "No Medico"
+  },
+  {
+    "id": "6c3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0348",
+    "nombre": "Skin Dermatologia",
+    "propietario": "Natalia Del Pilar Rafael Robles",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6d3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0349",
+    "nombre": "Bolognesi Medical",
+    "propietario": "Reynaldo Vizcarra Rojas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "6e3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0350",
+    "nombre": "Bariaesthetic",
+    "propietario": "Shirley Isabel Pantoja Campos",
+    "rol": "No Medico"
+  },
+  {
+    "id": "6f3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0351",
+    "nombre": "Medilaboris",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "703aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0352",
+    "nombre": "Qf Farmacia Magistral",
+    "propietario": "Ortiz Contreras Antonio",
+    "rol": "No Medico"
+  },
+  {
+    "id": "713aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0353",
+    "nombre": "Cmc Atenea",
+    "propietario": "Angela Alexandra Yanque Muñoz",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "723aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0354",
+    "nombre": "Nooma",
+    "propietario": "Marina Leboso Ruiz",
+    "rol": "No Medico"
+  },
+  {
+    "id": "733aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0355",
+    "nombre": "Radiant Estética",
+    "propietario": "Luis Miguel Torres Sanchez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "743aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0356",
+    "nombre": "Evolve Medicina Estetica",
+    "propietario": "Ana Fiorella Retis Huapaya",
+    "rol": "No Medico"
+  },
+  {
+    "id": "753aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0357",
+    "nombre": "Dc Salud",
+    "propietario": "Angie Ciriani Alarco",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "763aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0358",
+    "nombre": "Clínica Ama",
+    "propietario": "Juan Manuel Pantoja Campos",
+    "rol": "No Medico"
+  },
+  {
+    "id": "773aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0359",
+    "nombre": "Grupo Multimarca Peru",
+    "propietario": "Elver Santit Esteban",
+    "rol": "No Medico"
+  },
+  {
+    "id": "783aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0360",
+    "nombre": "Cirujana No Invasiva",
+    "propietario": "Mary Carmen Rivero Perez",
+    "rol": "Medico"
+  },
+  {
+    "id": "793aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0361",
+    "nombre": "Vitalitá",
+    "propietario": "Olga Cecilia Bianchi Diaz",
+    "rol": "Estetico"
+  },
+  {
+    "id": "7a3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0362",
+    "nombre": "Ariadna Aesthetic Skin",
+    "propietario": "Francys Ariadna Pacheco Castro",
+    "rol": "Estetico"
+  },
+  {
+    "id": "7b3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0363",
+    "nombre": "Praxis Medical",
+    "propietario": "Percy Jesus Nuñez Villar",
+    "rol": "Estetico"
+  },
+  {
+    "id": "7c3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0364",
+    "nombre": "Rojas Dematologos Asociados",
+    "propietario": "Liliana Monica Rojas Hinostroza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7d3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0365",
+    "nombre": "Derma Perú - Narváez",
+    "propietario": "Rosa Angelica Narvaez Carrasco",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7e3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0366",
+    "nombre": "Doctor Buho",
+    "propietario": "Klaus Nolte Rickards",
+    "rol": "Estetico"
+  },
+  {
+    "id": "7f3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0367",
+    "nombre": "Derma Therapy Medic",
+    "propietario": "Maricarmen Del Pilar Montalvo Untiveros",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "803aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0368",
+    "nombre": "Bl Medicina Estética",
+    "propietario": "Brisbany Bustamante López",
+    "rol": "No Medico"
+  },
+  {
+    "id": "813aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0369",
+    "nombre": "Servicios Médicos Nj",
+    "propietario": "Alejandra Judith Núñez Talavera",
+    "rol": "No Medico"
+  },
+  {
+    "id": "823aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0370",
+    "nombre": "Grupo Vitacentro",
+    "propietario": "Cheryl Jazmin Del Castillo Garcia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "833aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0371",
+    "nombre": "R&J Derm",
+    "propietario": "Raul Jesus Reina Abrigo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "843aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0372",
+    "nombre": "Nua Est. Consc",
+    "propietario": "Lucia Ruiz Burneo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "853aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0373",
+    "nombre": "Gamarra Salud",
+    "propietario": "Marcela Alejandra Villar Curahua",
+    "rol": "No Medico"
+  },
+  {
+    "id": "863aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0374",
+    "nombre": "Kavai",
+    "propietario": "Valeria Kalieska Barrios Arroyo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "873aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0375",
+    "nombre": "Centro Medico Ocupac. San Juan",
+    "propietario": "Lisbeth Janina Rojas Meza",
+    "rol": "Estetico"
+  },
+  {
+    "id": "883aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0376",
+    "nombre": "Essenza Med",
+    "propietario": "Ana Katherin Lindo Cavero",
+    "rol": "Estetico"
+  },
+  {
+    "id": "893aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0377",
+    "nombre": "D'León",
+    "propietario": "Leon Rojas Vivano",
+    "rol": "No Medico"
+  },
+  {
+    "id": "8a3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0378",
+    "nombre": "Ziba",
+    "propietario": "Uriel Gengis Honores Warthon",
+    "rol": "No Medico"
+  },
+  {
+    "id": "8b3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0379",
+    "nombre": "Centro Dermatologico Bellatin",
+    "propietario": "Maria Fernanda Bellatin Caillaux",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8c3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0380",
+    "nombre": "Botica Dermagin",
+    "propietario": "Roxana Margot Diaz Olivet",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8d3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0381",
+    "nombre": "E & V Beauty",
+    "propietario": "Maria Violeta Canchahuaman Muñoz",
+    "rol": "Estetico"
+  },
+  {
+    "id": "8e3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0382",
+    "nombre": "Christian Palacios Dermatología",
+    "propietario": "Christian Andre Palacios Curay",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8f3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0383",
+    "nombre": "Dermocosmiatria Am",
+    "propietario": "Donaire Castillo Jaque",
+    "rol": "Estetico"
+  },
+  {
+    "id": "903aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0384",
+    "nombre": "Rejuvena",
+    "propietario": "Luis Jhordan Jair Bolaños Vargas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "913aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0385",
+    "nombre": "Servicios Medicos V & N",
+    "propietario": "Vanessa Milagros Niño Luna",
+    "rol": "No Medico"
+  },
+  {
+    "id": "923aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0386",
+    "nombre": "Dermaactive-Dr. Julio Peramas",
+    "propietario": "Julio Armando Peramas Bustamante",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "933aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0387",
+    "nombre": "Takeshia Bella",
+    "propietario": "Enma Isabel Takeko Shima Toribio",
+    "rol": "Estetico"
+  },
+  {
+    "id": "943aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0388",
+    "nombre": "Med&Cos",
+    "propietario": "Basilio Junior Caso Bernal",
+    "rol": "No Medico"
+  },
+  {
+    "id": "953aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0389",
+    "nombre": "Skinology",
+    "propietario": "Domingo Eduardo Sanchez Cangahuala",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "963aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0390",
+    "nombre": "Dermadise",
+    "propietario": "Gisela Pilar Aire Farfan",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "973aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0391",
+    "nombre": "Divina Medicina Estetica Y Cirugia Plastica",
+    "propietario": "Diana Miriam Espinal Cacsire",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "983aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0392",
+    "nombre": "Servicios Medicos Gomez Salud",
+    "propietario": "Leyla Bettina Ballesteros Patiño",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "993aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0393",
+    "nombre": "Corporación Médica Wm",
+    "propietario": "Elizabeth Doris Mayeshiro Ikeho",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "9a3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0394",
+    "nombre": "Nc Healthcare & Beauty Company",
+    "propietario": "Nathaly Coveñas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "9b3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0395",
+    "nombre": "Encinas Estetica Medica",
+    "propietario": "Ambar Encinas Sanchez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "9c3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0396",
+    "nombre": "Rdsp",
+    "propietario": "Ronny Orlando De Souza Peixoto Luna",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "9d3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0397",
+    "nombre": "Rimedic Irl",
+    "propietario": "Brayan Omar Rivera Serna",
+    "rol": "Estetico"
+  },
+  {
+    "id": "9e3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0398",
+    "nombre": "Harmonie Derm",
+    "propietario": "Naira Valentina Paredes Cantaro",
+    "rol": "No Medico"
+  },
+  {
+    "id": "9f3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0399",
+    "nombre": "Skin Experts Peru",
+    "propietario": "Daniel Alfredo Huillca Huerta",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a03aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0400",
+    "nombre": "Crysta Estetica Integral",
+    "propietario": "Cristhyan Valdiviezo Samillan",
+    "rol": "No Medico"
+  },
+  {
+    "id": "a13aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0401",
+    "nombre": "Mediklinik",
+    "propietario": "Dennis Steve Vargas Torres",
+    "rol": "Estetico"
+  },
+  {
+    "id": "a23aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0402",
+    "nombre": "Corporación Anvama",
+    "propietario": "Marian Yelina Meza Beltrán",
+    "rol": "No Medico"
+  },
+  {
+    "id": "a33aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0403",
+    "nombre": "Dermaclinic - Vicuña",
+    "propietario": "Dora Lucia Vicuña Rios",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a43aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0404",
+    "nombre": "Dermiss",
+    "propietario": "Edwin Flavio Merma Zuniga",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a53aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0405",
+    "nombre": "Dermocentro La Piel",
+    "propietario": "Teddy Jordan Nuñez Contreras",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a63aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0406",
+    "nombre": "Lumiere Medicina Estética",
+    "propietario": "Andrea Celeste Concha Chirinos",
+    "rol": "Estetico"
+  },
+  {
+    "id": "a73aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0407",
+    "nombre": "Inshallah",
+    "propietario": "Eduardo Ramzi Mubarak Shehadeh",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a83aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0408",
+    "nombre": "Maho Studio & Café",
+    "propietario": "Fiorella Alejandra Sandoval Perez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "a93aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0409",
+    "nombre": "Estiloklam",
+    "propietario": "Nadia Korey Fukumoto Chavez",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "aa3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0410",
+    "nombre": "Ludherma",
+    "propietario": "Wilber Guilio Pari Quispe",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ab3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0411",
+    "nombre": "Servicios Médicos Herrera Taquia",
+    "propietario": "Elvia Benedicta Herrera Taquia",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ac3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0412",
+    "nombre": "Varua",
+    "propietario": "Avila Cruzado Yessica Gioviely",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ad3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0413",
+    "nombre": "Qarafarma",
+    "propietario": "Cynthia Ayme Angeles Blumen",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ae3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0414",
+    "nombre": "Gc Dermatologos",
+    "propietario": "Evelyn Giuliana Castro Vargas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "af3aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0415",
+    "nombre": "Valeroderma",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "b03aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0416",
+    "nombre": "Moderma",
+    "propietario": "Karla Fiorella Aguilar Garcia",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b13aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0417",
+    "nombre": "Novoderma",
+    "propietario": "Guillermo Daniel Navarro Robinson",
+    "rol": "Estetico"
+  },
+  {
+    "id": "b23aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0418",
+    "nombre": "Busso La Rosa",
+    "propietario": "Maria Isabel Busso La Rosa",
+    "rol": "No Medico"
+  },
+  {
+    "id": "b33aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0419",
+    "nombre": "Aura Estetica Integral",
+    "propietario": "Marysabel Vania Ramal Huamani",
+    "rol": "No Medico"
+  },
+  {
+    "id": "b43aa7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0420",
+    "nombre": "Luvak Derm",
+    "propietario": "Katherine Noelia Obregon Candela",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "eb3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0421",
+    "nombre": "Clinica Urologica Uronis",
+    "propietario": "Ronald Lauro Retuerto Marticorena",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ed3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0422",
+    "nombre": "Grh Dermatologia",
+    "propietario": "Gabrielle Roberth",
+    "rol": "No Medico"
+  },
+  {
+    "id": "ef3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0423",
+    "nombre": "Pama Consultorio Médico",
+    "propietario": "Javier Rusbaldo Angeles Mejia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f13ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0424",
+    "nombre": "Dervax",
+    "propietario": "Cynthia Elizabeth Chavarry Rabanal",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f33ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0425",
+    "nombre": "Claudia Mercedes Cirugia Plast",
+    "propietario": "Claudia Mercedes Otiniano",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f53ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0426",
+    "nombre": "Armonia & Belleza Centro De Estetica Integral",
+    "propietario": "Jose Luis Huamani Llamocca",
+    "rol": "No Medico"
+  },
+  {
+    "id": "f73ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0427",
+    "nombre": "Centelaser",
+    "propietario": "Doris Apolonia Fuentes Rivera Reyes",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "f93ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0428",
+    "nombre": "Carmen Noriega",
+    "propietario": "Carmen Noriega",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fc3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0429",
+    "nombre": "Inversiones Integrales & Proyectos Gl",
+    "propietario": "Ghanddy Esther Larrea Monteza",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fe3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0430",
+    "nombre": "Dermak",
+    "propietario": "Gabrielle Roberth Hellriegel",
+    "rol": "No Medico"
+  },
+  {
+    "id": "003ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0431",
+    "nombre": "Jn Dermatologia",
+    "propietario": "Jeanette Geraldine Nuñez Borda",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "023ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0432",
+    "nombre": "Centro Dermatologico Padilla",
+    "propietario": "Yanina Dina Padilla Tresierra",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "043ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0433",
+    "nombre": "Cms Estetica",
+    "propietario": "Carla Pierina Marino Segura",
+    "rol": "Estetico"
+  },
+  {
+    "id": "063ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0434",
+    "nombre": "Simetria Estetica Medica",
+    "propietario": "Maryorith Stefanny Lazo Narrea",
+    "rol": "Estetico"
+  },
+  {
+    "id": "083ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0435",
+    "nombre": "Servicios Medicos Vasquez Lapel",
+    "propietario": "Fernando Javier Vásquez Lapel",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "0a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0436",
+    "nombre": "Asoc. Paz Holandesa",
+    "propietario": "Susana Mercedes Guillen Pinto",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0437",
+    "nombre": "Mediestetica Imperial",
+    "propietario": "Sime Coronel Fiorella Alejandra",
+    "rol": "No Medico"
+  },
+  {
+    "id": "0e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0438",
+    "nombre": "Estetica Mch",
+    "propietario": "Marisa Chavez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "103ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0439",
+    "nombre": "Centro Medico Santa Victoria",
+    "propietario": "Suggeily Flores Leon",
+    "rol": "No Medico"
+  },
+  {
+    "id": "123ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0440",
+    "nombre": "Lon'S Cirugia Plastica Y Medicina Estetica Laser",
+    "propietario": "Fiorella Briceño Gonzales",
+    "rol": "No Medico"
+  },
+  {
+    "id": "143ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0441",
+    "nombre": "Dermatologia Lrt",
+    "propietario": "Lourdes Milagros Rodriguez Temoche",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "163ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0442",
+    "nombre": "Maxi Medic",
+    "propietario": "Cardenas Núñez Johnny Maik",
+    "rol": "No Medico"
+  },
+  {
+    "id": "183ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0443",
+    "nombre": "Centro Okara Salud",
+    "propietario": "Martha Vidalón",
+    "rol": "No Medico"
+  },
+  {
+    "id": "1a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0444",
+    "nombre": "Dermis Balance Luxe",
+    "propietario": "Bruno Iván Pardo Ortiz",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "1c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0445",
+    "nombre": "Clinica Especializada Samedic",
+    "propietario": "Maribel Eugenia Salas Choque",
+    "rol": "Estetico"
+  },
+  {
+    "id": "1e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0446",
+    "nombre": "Prime Aesthetic & Plastic Surgery",
+    "propietario": "Johanna Edith Sanchez Siancas",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "203ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0447",
+    "nombre": "Clinica Medica Rhinoplasty Rejuvenecer",
+    "propietario": "Gustavo Alexander Ponce Abarca",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "223ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0448",
+    "nombre": "Dr. Piel",
+    "propietario": "Robert Edwin Zegarra Del Carpio",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "243ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0449",
+    "nombre": "Medical Stetic Dermatología Y Cirugía Estética",
+    "propietario": "Vanessa Bolaños Vascones",
+    "rol": "No Medico"
+  },
+  {
+    "id": "263ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0450",
+    "nombre": "Policlinico De La Piel Ica",
+    "propietario": "Carlos Enrique Velarde Yañez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "283ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0451",
+    "nombre": "Botica D'Ermak'Ing",
+    "propietario": "Jaqueline Torres Pezo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "2a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0452",
+    "nombre": "Medical Astridjenn",
+    "propietario": "Maria Glenny Herrera Flores",
+    "rol": "No Medico"
+  },
+  {
+    "id": "2c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0453",
+    "nombre": "Reverse Esthetic",
+    "propietario": "Mercedes Lamas Gutierrez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "2e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0454",
+    "nombre": "Hck Medical",
+    "propietario": "Yacqueline Calderon Lujan",
+    "rol": "No Medico"
+  },
+  {
+    "id": "303ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0455",
+    "nombre": "Plastica Vigo",
+    "propietario": "Dyana Rebaza Díaz",
+    "rol": "No Medico"
+  },
+  {
+    "id": "323ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0456",
+    "nombre": "Nüva Longevidad Y Estética",
+    "propietario": "Osdalis Andreina Osteicoechea Gonzalez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "343ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0457",
+    "nombre": "Dra. Lady Segovia (Grupo Médico Rs)",
+    "propietario": "José Miguel Rouik Méndez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "363ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0458",
+    "nombre": "Sermedic Alania",
+    "propietario": "Andrea Carolina Lombano Rodriguez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "383ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0459",
+    "nombre": "Clínica Internacional",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  },
+  {
+    "id": "3a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0460",
+    "nombre": "Cynthia Vivianne Flores Inestroza De Arce",
+    "propietario": "Cynthia Vivianne Flores Inestroza De Arce",
+    "rol": "No Medico"
+  },
+  {
+    "id": "3c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0461",
+    "nombre": "Martha Denise Gonzales Giron",
+    "propietario": "Martha Denise Gonzales Giron",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "3e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0462",
+    "nombre": "Enoelia Moscol Cordova",
+    "propietario": "Enoelia Moscol Cordova",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "403ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0463",
+    "nombre": "Maria Del Rosario Velarde Lavado De Sanchez",
+    "propietario": "Maria Del Rosario Velarde Lavado De Sanchez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "423ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0464",
+    "nombre": "Sonia Antonio Chumpitaz",
+    "propietario": "Sonia Antonio Chumpitaz",
+    "rol": "Medico"
+  },
+  {
+    "id": "443ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0465",
+    "nombre": "Yovana Emperatriz Galvez Acevedo",
+    "propietario": "Yovana Emperatriz Galvez Acevedo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "463ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0466",
+    "nombre": "Ernesto Jesus Egoavil Torres",
+    "propietario": "Ernesto Jesús Egoávil Torres",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "483ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0467",
+    "nombre": "Jose Rodrigo Guerra Bravo De Rueda",
+    "propietario": "Jose Rodrigo Guerra Bravo De Rueda",
+    "rol": "No Medico"
+  },
+  {
+    "id": "4a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0468",
+    "nombre": "Leandro Eleuterio Morgan Zavaleta",
+    "propietario": "Leandro Eleuterio Morgan Zavaleta",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "4c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0469",
+    "nombre": "Abriojo Mac Lean Carlos Humberto Julio",
+    "propietario": "Carlos Humberto Julio Abriojo Mac Lean",
+    "rol": "Estetico"
+  },
+  {
+    "id": "4e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0470",
+    "nombre": "Patricia Bolaños Zubizarreta",
+    "propietario": "Patricia Bolaños Zubizarreta",
+    "rol": "Estetico"
+  },
+  {
+    "id": "503ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0471",
+    "nombre": "Juan Yhomtom Alegre Giraldo",
+    "propietario": "Juan Yhomtom Alegre Giraldo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "523ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0472",
+    "nombre": "Ronald Gamarra Garcia",
+    "propietario": "Ronald Gamarra Garcia",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "543ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0473",
+    "nombre": "Perez Postigo Valencia Rolando",
+    "propietario": "Rolando Perez Postigo Valencia",
+    "rol": "Estetico"
+  },
+  {
+    "id": "563ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0474",
+    "nombre": "Milton David Ramirez Espinola",
+    "propietario": "Milton David Ramirez Espinola",
+    "rol": "Estetico"
+  },
+  {
+    "id": "583ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0475",
+    "nombre": "Vanesa Deyssi Sanchez Moreno",
+    "propietario": "Vanesa Deyssi Sanchez Moreno",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "5a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0476",
+    "nombre": "Mariela Dina Tejada Malaga",
+    "propietario": "Mariela Dina Tejada Malaga",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "5c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0477",
+    "nombre": "Liz Karen Cevallos Riva",
+    "propietario": "Liz Karen Cevallos Riva",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "5e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0478",
+    "nombre": "Luis Alberto Garcia Carrion",
+    "propietario": "Luis Alberto Garcia Carrion",
+    "rol": "Estetico"
+  },
+  {
+    "id": "603ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0479",
+    "nombre": "Wilson Francisco Quispe Mayta",
+    "propietario": "Wilson Francisco Quispe Mayta",
+    "rol": "No Medico"
+  },
+  {
+    "id": "623ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0480",
+    "nombre": "Helen Pamela Perez Apaza",
+    "propietario": "Helen Pamela Perez Apaza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "643ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0481",
+    "nombre": "Silvana Elvira Vasquez Cuentas",
+    "propietario": "Silvana Elvira Vasquez Cuentas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "663ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0482",
+    "nombre": "Lisset Catherine Guerra Arana",
+    "propietario": "Lisset Catherine Guerra Arana",
+    "rol": "No Medico"
+  },
+  {
+    "id": "683ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0483",
+    "nombre": "Olivia Mercedes De La Cruz Laura",
+    "propietario": "Olivia Mercedes De La Cruz Laura",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0484",
+    "nombre": "Deisi Rosario Checya Mendoza",
+    "propietario": "Deisi Rosario Checya Mendoza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0485",
+    "nombre": "Romina Alexandra Caycho Porta",
+    "propietario": "Romina Alexandra Caycho Porta",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0486",
+    "nombre": "Ursula Natalia Merino Senekowitsch",
+    "propietario": "Ursula Natalia Merino Senekowitsch",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "713ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0487",
+    "nombre": "Claudia Angelica Balbin Navarro",
+    "propietario": "Claudia Angelica Balbin Navarro",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "733ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0488",
+    "nombre": "Cynthia Lisseth Malo Aquino",
+    "propietario": "Cynthia Lisseth Malo Aquino",
+    "rol": "Estetico"
+  },
+  {
+    "id": "743ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0489",
+    "nombre": "Sergio Alejandro Meza Guevara",
+    "propietario": "Sergio Alejandro Meza Guevara",
+    "rol": "Medico"
+  },
+  {
+    "id": "773ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0490",
+    "nombre": "Maricielo Padilla Ferrer",
+    "propietario": "Maricielo Padilla Ferrer",
+    "rol": "Medico"
+  },
+  {
+    "id": "793ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0491",
+    "nombre": "Sarita Elena Salazar Abad",
+    "propietario": "Sarita Elena Salazar Abad",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0492",
+    "nombre": "Astrid Tauma Arrué",
+    "propietario": "Astrid Tauma Arrué",
+    "rol": "Medico"
+  },
+  {
+    "id": "7e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0493",
+    "nombre": "Piero Jose De Fina Vallejos",
+    "propietario": "Piero Jose De Fina Vallejos",
+    "rol": "Medico"
+  },
+  {
+    "id": "813ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0494",
+    "nombre": "Maria Kathy Delgado Torres",
+    "propietario": "Maria Kathy Delgado Torres",
+    "rol": "Estetico"
+  },
+  {
+    "id": "843ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0495",
+    "nombre": "Maricielo Victoria Huamán Cabrera",
+    "propietario": "Maricielo Victoria Huamán Cabrera",
+    "rol": "No Medico"
+  },
+  {
+    "id": "873ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0496",
+    "nombre": "John Dexter Sigüenza Asmad",
+    "propietario": "John Dexter Sigüenza Asmad",
+    "rol": "Medico"
+  },
+  {
+    "id": "8a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0497",
+    "nombre": "Tatiana Melissa Laure Velasquez",
+    "propietario": "Tatiana Melissa Laure Velasquez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0498",
+    "nombre": "Susy Janiree Altamirano Galvez",
+    "propietario": "Susy Janiree Altamirano Galvez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "903ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0499",
+    "nombre": "Joanna Sandra Alvarez Diaz",
+    "propietario": "Joanna Sandra Alvarez Diaz",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "933ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0500",
+    "nombre": "Asterio Teofilo Albines Bernal",
+    "propietario": "Asterio Teofilo Albines Bernal",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "963ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0501",
+    "nombre": "Silvia Marcela Albines Trelles",
+    "propietario": "Silvia Marcela Albines Trelles",
+    "rol": "Estetico"
+  },
+  {
+    "id": "993ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0502",
+    "nombre": "Lucie Alina Puell Ramirez",
+    "propietario": "Lucie Alina Puell Ramirez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "9c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0503",
+    "nombre": "Maria Ynes Jesus Molina",
+    "propietario": "Maria Ynes Jesus Molina",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "9f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0504",
+    "nombre": "Giuliana Del Pilar Sanchez Hanampa",
+    "propietario": "Giuliana Del Pilar Sanchez Hanampa",
+    "rol": "No Medico"
+  },
+  {
+    "id": "a23ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0505",
+    "nombre": "Alex Antonio Hurtado Pinedo",
+    "propietario": "Alex Antonio Hurtado Pinedo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a53ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0506",
+    "nombre": "Maribel Visaga Zambrano",
+    "propietario": "Maribel Visaga Zambrano",
+    "rol": "Medico"
+  },
+  {
+    "id": "a83ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0507",
+    "nombre": "Luis Enrique La Rosa Linares",
+    "propietario": "Luis Enrique La Rosa Linares",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ab3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0508",
+    "nombre": "Roberto Carlos Alayo Jave",
+    "propietario": "Roberto Carlos Alayo Jave",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ae3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0509",
+    "nombre": "Maricela Del Pilar Vasquez Bautista",
+    "propietario": "Maricela Del Pilar Vasquez Bautista",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b03ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0510",
+    "nombre": "Zheleny Rocio Claudio Ramos",
+    "propietario": "Zheleny Rocio Claudio Ramos",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b23ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0511",
+    "nombre": "Teresa Andia Salazar",
+    "propietario": "Teresa Andia Salazar",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b43ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0512",
+    "nombre": "Anadela Lourdes Laura Vilca",
+    "propietario": "Anadela Lourdes Laura Vilca",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "b63ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0513",
+    "nombre": "Carina Angelica Prado Rivera",
+    "propietario": "Carina Angelica Prado Rivera",
+    "rol": "Medico"
+  },
+  {
+    "id": "b83ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0514",
+    "nombre": "Gisella Denise Valdivia Cervantes",
+    "propietario": "Gisella Denise Valdivia Cervantes",
+    "rol": "Estetico"
+  },
+  {
+    "id": "ba3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0515",
+    "nombre": "Alejandro Medrano Barrera",
+    "propietario": "Alejandro Medrano Barrera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "bc3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0516",
+    "nombre": "Mora Wu Erika Carmen",
+    "propietario": "Mora Wu Erika Carmen",
+    "rol": "No Medico"
+  },
+  {
+    "id": "be3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0517",
+    "nombre": "Maria Eugenia Guadalupe Plazolles Delgado",
+    "propietario": "Maria Eugenia Guadalupe Plazolles Delgado",
+    "rol": "No Medico"
+  },
+  {
+    "id": "bf3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0518",
+    "nombre": "Yaquelin Condori Fernandez",
+    "propietario": "Yaquelin Condori Fernandez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "c13ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0519",
+    "nombre": "Edgar Gustavo Mora Chavez",
+    "propietario": "Edgar Gustavo Mora Chavez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c33ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0520",
+    "nombre": "Yssela Milagros Blas Acuña",
+    "propietario": "Yssela Milagros Blas Acuña",
+    "rol": "No Medico"
+  },
+  {
+    "id": "e13ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0521",
+    "nombre": "Lucy Angelica Bartolo Cuba",
+    "propietario": "Lucy Angelica Bartolo Cuba",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e23ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0522",
+    "nombre": "Yeinmy Pinto Romero",
+    "propietario": "Yeinmy Pinto Romero",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e33ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0523",
+    "nombre": "Melissa Massiel Palacios Alcantara",
+    "propietario": "Melissa Massiel Palacios Alcantara",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e43ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0524",
+    "nombre": "Lisbeth Fhiorella Soto Albarran",
+    "propietario": "Lisbeth Fhiorella Soto Albarran",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e53ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0525",
+    "nombre": "Carmen Sophia Pittman Ramirez",
+    "propietario": "Carmen Sophia Pittman Ramirez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "e63ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0526",
+    "nombre": "Caceres Yucra Montaño Harold Jose",
+    "propietario": "Harold Jose Caceres Yucra Montaño",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e73ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0527",
+    "nombre": "Dianelizabet Deborath Barreto Palomino",
+    "propietario": "Dianelizabet Deborath Barreto Palomino",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e83ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0528",
+    "nombre": "Maria Pilar Alegria Asto",
+    "propietario": "Maria Pilar Alegria Asto",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "e93ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0529",
+    "nombre": "Helen Johanni Salinas Vega",
+    "propietario": "Helen Johanni Salinas Vega",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ea3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0530",
+    "nombre": "Carmen Lorena Carrera Ballon",
+    "propietario": "Carmen Lorena Carrera Ballon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ec3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0531",
+    "nombre": "Renato Alonso Farfan Pinto",
+    "propietario": "Renato Alonso Farfan Pinto",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ee3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0532",
+    "nombre": "Clara Elena Rosales Cubas",
+    "propietario": "Clara Elena Rosales Cubas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f03ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0533",
+    "nombre": "Areli Valdivia Oporto",
+    "propietario": "Areli Valdivia Oporto",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f23ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0534",
+    "nombre": "Dayana Lucero Zevallos Gonzales",
+    "propietario": "Dayana Lucero Zevallos Gonzales",
+    "rol": "Medico"
+  },
+  {
+    "id": "f43ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0535",
+    "nombre": "Sharmely Del Rosario Arias Rossel",
+    "propietario": "Sharmely Del Rosario Arias Rossel",
+    "rol": "Estetico"
+  },
+  {
+    "id": "f63ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0536",
+    "nombre": "Stephany Grace Paredes Quintanilla",
+    "propietario": "Stephany Grace Paredes Quintanilla",
+    "rol": "Medico"
+  },
+  {
+    "id": "f83ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0537",
+    "nombre": "Maria Alejandra Delgado Linares",
+    "propietario": "Maria Alejandra Delgado Linares",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fa3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0538",
+    "nombre": "Julissa Georgette Caldas Pereda",
+    "propietario": "Julissa Georgette Caldas Pereda",
+    "rol": "No Medico"
+  },
+  {
+    "id": "fb3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0539",
+    "nombre": "Lizette Filida Jurado Gonzales",
+    "propietario": "Lizette Filida Jurado Gonzales",
+    "rol": "Estetico"
+  },
+  {
+    "id": "fd3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0540",
+    "nombre": "Luis Carlos Montes Del Aguila",
+    "propietario": "Luis Carlos Montes Del Aguila",
+    "rol": "Medico"
+  },
+  {
+    "id": "ff3ba7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0541",
+    "nombre": "Williams Iii Luza Anaya",
+    "propietario": "Williams Iii Luza Anaya",
+    "rol": "Estetico"
+  },
+  {
+    "id": "013ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0542",
+    "nombre": "Katia Paola Venegas Carrion",
+    "propietario": "Katia Paola Venegas Carrion",
+    "rol": "No Medico"
+  },
+  {
+    "id": "033ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0543",
+    "nombre": "Marilyn Gucci Garcia Cardenas",
+    "propietario": "Marilyn Gucci Garcia Cardenas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "053ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0544",
+    "nombre": "Solano Ballona Piero Renzo",
+    "propietario": "Solano Ballona Piero Renzo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "073ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0545",
+    "nombre": "Ramon De Jesus Albornoz Bello",
+    "propietario": "Ramon De Jesus Albornoz Bello",
+    "rol": "Estetico"
+  },
+  {
+    "id": "093ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0546",
+    "nombre": "Karlys Rosmely Montero Muñoz",
+    "propietario": "Karlys Rosmely Montero Muñoz",
+    "rol": "Medico"
+  },
+  {
+    "id": "0b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0547",
+    "nombre": "Kheylyn Diaz Correa",
+    "propietario": "Kheylyn Diaz Correa",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0548",
+    "nombre": "Tafur Horna Max Ignacio -",
+    "propietario": "Max Ignacio Tafur Horna",
+    "rol": "Estetico"
+  },
+  {
+    "id": "0f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0549",
+    "nombre": "Sialer Vildozola Maria Del Carmen -",
+    "propietario": "Maria Del Carmen Sialer Vildozola",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "113ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0550",
+    "nombre": "Martinez Castro Guisela -",
+    "propietario": "Guisela Martinez Castro",
+    "rol": "Estetico"
+  },
+  {
+    "id": "133ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0551",
+    "nombre": "Rivas Guevara Juan Alipio -",
+    "propietario": "Juan Alipio Rivas Guevara",
+    "rol": "Estetico"
+  },
+  {
+    "id": "153ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0552",
+    "nombre": "Postigo Meza Gabriel Alfredo Guillermo -",
+    "propietario": "Postigo Meza Gabriel Alfredo Guillermo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "173ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0553",
+    "nombre": "Jackeline Abarca Olazabal",
+    "propietario": "Jackeline Abarca Olazabal",
+    "rol": "No Medico"
+  },
+  {
+    "id": "193ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0554",
+    "nombre": "Gargatt Montalvo Mariela Nicolasa -",
+    "propietario": "Mariela Nicolasa Gargatt Montalvo",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "1b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0555",
+    "nombre": "Bedia Serrano Gloria Lissett -",
+    "propietario": "Gloria Lissett Bedia Serrano",
+    "rol": "Estetico"
+  },
+  {
+    "id": "1d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0556",
+    "nombre": "Rodriguez Jimenez Omaira Elizabeth -",
+    "propietario": "Omaira Elizabeth Rodriguez Jimenez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "1f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0557",
+    "nombre": "Arguedas Huaman Maritza Oriele -",
+    "propietario": "Arguedas Huaman Maritza Oriele",
+    "rol": "No Medico"
+  },
+  {
+    "id": "213ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0558",
+    "nombre": "Ramos-Borjas Arana Marleny Crisanta -",
+    "propietario": "Ramos-Borjas Arana Marleny Crisanta",
+    "rol": "No Medico"
+  },
+  {
+    "id": "233ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0559",
+    "nombre": "Samaniego Quintana Ramiro Augusto -",
+    "propietario": "Ramiro Augusto Samaniego Quintana",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "253ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0560",
+    "nombre": "Huamani Llantoy Rudid Rebeca -",
+    "propietario": "Rudid Rebeca Huamani Llantoy",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "273ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0561",
+    "nombre": "Leon Herrera Jocelyn Carol -",
+    "propietario": "Jocelyn Carol Leon Herrera",
+    "rol": "Medico"
+  },
+  {
+    "id": "293ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0562",
+    "nombre": "Silva Medina Frank Edinson -",
+    "propietario": "Frank Edinson Silva Medina",
+    "rol": "Estetico"
+  },
+  {
+    "id": "2b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0563",
+    "nombre": "Surichaqui Loayza Jessica Pilar -",
+    "propietario": "Surichaqui Loayza Jessica Pilar",
+    "rol": "No Medico"
+  },
+  {
+    "id": "2d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0564",
+    "nombre": "Mendez Alegria Alexander Aldo -",
+    "propietario": "Alexander Aldo Mendez Alegria",
+    "rol": "Medico"
+  },
+  {
+    "id": "2f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0565",
+    "nombre": "Reyes Rodriguez Manuel Sebastian Nicolas -",
+    "propietario": "Manuel Sebastian Nicolas Reyes Rodriguez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "313ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0566",
+    "nombre": "Quinto Malca Wendy Maria Victoria -",
+    "propietario": "Wendy Maria Victoria Quinto Malca",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "333ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0567",
+    "nombre": "Garcia Iza Alejandro",
+    "propietario": "Alejandro Garcia Iza",
+    "rol": "Estetico"
+  },
+  {
+    "id": "353ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0568",
+    "nombre": "Cecilia Ivette Risco Colquicocha",
+    "propietario": "Cecilia Ivette Risco Colquicocha",
+    "rol": "Estetico"
+  },
+  {
+    "id": "373ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0569",
+    "nombre": "Monteza Espinoza Mirian Daiman",
+    "propietario": "Monteza Espinoza Mirian Daiman",
+    "rol": "No Medico"
+  },
+  {
+    "id": "393ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0570",
+    "nombre": "DRA Andrea Infantes",
+    "propietario": "Kelly Andrea Infantes Albino",
+    "rol": "No Medico"
+  },
+  {
+    "id": "3b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0571",
+    "nombre": "Julia Elena García Cavero",
+    "propietario": "Julia Elena Garcia Cavero",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "3d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0572",
+    "nombre": "Ivonne Del Carmen Campodonico Chuquisengo",
+    "propietario": "Ivonne Del Carmen Campodonico Chuquisengo",
+    "rol": "Estetico"
+  },
+  {
+    "id": "3f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0573",
+    "nombre": "Carlos Andrés Barreto Leiva",
+    "propietario": "Carlos Andres Barreto Leiva",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "413ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0574",
+    "nombre": "André Mundaca Cordova",
+    "propietario": "André Mundaca Cordova",
+    "rol": "No Medico"
+  },
+  {
+    "id": "433ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0575",
+    "nombre": "Milagros Del Rosario Zea Tapia",
+    "propietario": "Milagros Del Rosario Zea Tapia",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "453ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0576",
+    "nombre": "Yohnar Oscco Cárdenas",
+    "propietario": "Yohnar Oscco Cardenas",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "473ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0577",
+    "nombre": "Noemi Cecilia Anci Paredes",
+    "propietario": "Noemi Cecilia Anci Paredes",
+    "rol": "No Medico"
+  },
+  {
+    "id": "493ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0578",
+    "nombre": "Madeleine Solmira Rivera Castro",
+    "propietario": "Madeleine Solmira Rivera Castro",
+    "rol": "Estetico"
+  },
+  {
+    "id": "4b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0579",
+    "nombre": "Tatiana Miranda Albitres",
+    "propietario": "Tatiana Del Pilar Miranda Albitres",
+    "rol": "Estetico"
+  },
+  {
+    "id": "4d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0580",
+    "nombre": "Licette Denisse Méndez Zelaya",
+    "propietario": "Licette Denisse Méndez Zelaya",
+    "rol": "No Medico"
+  },
+  {
+    "id": "4f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0581",
+    "nombre": "Alessandra Ines Salinas Caceda",
+    "propietario": "Alessandra Ines Salinas Caceda",
+    "rol": "No Medico"
+  },
+  {
+    "id": "513ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0582",
+    "nombre": "Pedro Joel Olortegui Sanchez",
+    "propietario": "Pedro Joel Olortegui Sanchez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "533ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0583",
+    "nombre": "Lucero Del Rosario Asto Velasquez",
+    "propietario": "Lucero Del Rosario Asto Velasquez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "553ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0584",
+    "nombre": "Cynthia Estefany Pacherrez Cordova",
+    "propietario": "Cynthia Estefany Pacherrez Cordova",
+    "rol": "Estetico"
+  },
+  {
+    "id": "573ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0585",
+    "nombre": "Vanessa Elvira Díaz León",
+    "propietario": "Vanessa Elvira Díaz León",
+    "rol": "No Medico"
+  },
+  {
+    "id": "593ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0586",
+    "nombre": "Jorge Luis Rojas Lopez",
+    "propietario": "Jorge Luis Rojas Lopez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "5b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0587",
+    "nombre": "Ana Claudia Gomez Garcia",
+    "propietario": "Ana Claudia Gomez Garcia",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "5d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0588",
+    "nombre": "Mayli Lilia Alcalde Torres",
+    "propietario": "Mayli Lilia Alcalde Torres",
+    "rol": "No Medico"
+  },
+  {
+    "id": "5f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0589",
+    "nombre": "Marleny Sialer Rodriguez",
+    "propietario": "Marleny Sialer Rodriguez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "613ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0590",
+    "nombre": "Isel Elide Huerta Coronel",
+    "propietario": "Isel Elide Huerta Coronel",
+    "rol": "Estetico"
+  },
+  {
+    "id": "633ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0591",
+    "nombre": "Sofía Andrea Chanduví Urcia",
+    "propietario": "Sofía Andrea Chanduví Urcia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "653ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0592",
+    "nombre": "Cesar Guillermo Zanabria Armas",
+    "propietario": "Cesar Guillermo Zanabria Armas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "673ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0593",
+    "nombre": "Martha Pizarro De La Cruz",
+    "propietario": "Martha Pizarro De La Cruz",
+    "rol": "No Medico"
+  },
+  {
+    "id": "693ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0594",
+    "nombre": "Ramón Enrique Ruesta Berdejo",
+    "propietario": "Ramón Enrique Ruesta Berdejo",
+    "rol": "No Medico"
+  },
+  {
+    "id": "6b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0595",
+    "nombre": "Adela Margarita Vargas Rojas",
+    "propietario": "Adela Margarita Vargas Rojas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "6d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0596",
+    "nombre": "Kattia Alexandra Mendez Cepeda",
+    "propietario": "Kattia Alexandra Mendez Cepeda",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "6f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0597",
+    "nombre": "Rodriguez Alva Danitsa",
+    "propietario": "Danitsa Rodriguez Alva",
+    "rol": "Estetico"
+  },
+  {
+    "id": "703ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0598",
+    "nombre": "Andrea Michelle Colmenares Colmenares",
+    "propietario": "Andrea Michelle Colmenares Colmenares",
+    "rol": "No Medico"
+  },
+  {
+    "id": "723ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0599",
+    "nombre": "Karen Milagros Rojas Neyra",
+    "propietario": "Karen Milagros Rojas Neyra",
+    "rol": "No Medico"
+  },
+  {
+    "id": "753ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0600",
+    "nombre": "Karen Yohanna Angeles Chumbiriza",
+    "propietario": "Karen Yohanna Angeles Chumbiriza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "763ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0601",
+    "nombre": "Stephanie Carola Ampuero Concha",
+    "propietario": "Stephanie Carola Ampuero Concha",
+    "rol": "No Medico"
+  },
+  {
+    "id": "783ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0602",
+    "nombre": "Noelia Palomino Contreras",
+    "propietario": "Noelia Leydi Palomino Contreras",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0603",
+    "nombre": "Erika Romero Sandoval",
+    "propietario": "Erika Andrea Romero Sandoval",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0604",
+    "nombre": "Liseth Victorio Huaman",
+    "propietario": "Liseth Victorio Huaman",
+    "rol": "No Medico"
+  },
+  {
+    "id": "803ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0605",
+    "nombre": "Claudia Marlene Vicuña Rios",
+    "propietario": "Claudia Marlene Vicuña Rios",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "833ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0606",
+    "nombre": "Alexandra Liliana Ghiggo Flores",
+    "propietario": "Alexandra Liliana Ghiggo Flores",
+    "rol": "No Medico"
+  },
+  {
+    "id": "863ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0607",
+    "nombre": "Anthony Elver Villanueva Rodriguez",
+    "propietario": "Anthony Elver Villanueva Rodriguez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "893ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0608",
+    "nombre": "Norma Rocio Rojas Aquino",
+    "propietario": "Norma Rocio Rojas Aquino",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8c3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0609",
+    "nombre": "Fabricio Agip Arnao",
+    "propietario": "Fabricio Agip Arnao",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0610",
+    "nombre": "Ana Matilde Rodríguez Guzmán",
+    "propietario": "Ana Matilde Rodriguez Guzman",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "923ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0611",
+    "nombre": "Soriano Rosas Franklin Nelush Alberto",
+    "propietario": "Franklin Nelush Alberto Soriano Rosas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "953ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0612",
+    "nombre": "Percy Muñoz Salas",
+    "propietario": "Percy Muñoz Salas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "983ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0613",
+    "nombre": "Almendra Selene Jurado Canales",
+    "propietario": "Almendra Selene Jurado Canales",
+    "rol": "No Medico"
+  },
+  {
+    "id": "9b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0614",
+    "nombre": "Patricia Giovana Ahumada Alvarez",
+    "propietario": "Patricia Giovana Ahumada Alvarez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "9e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0615",
+    "nombre": "Yanina Martina Tello Torres",
+    "propietario": "Yanina Martina Tello Torres",
+    "rol": "Estetico"
+  },
+  {
+    "id": "a13ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0616",
+    "nombre": "Liz Rocio Toribio Salazar",
+    "propietario": "Liz Rocio Toribio Salazar",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a43ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0617",
+    "nombre": "Carmen Marisol Yabar Prieto",
+    "propietario": "Carmen Marisol Yabar Prieto",
+    "rol": "Estetico"
+  },
+  {
+    "id": "a73ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0618",
+    "nombre": "Ninoska Tuco Esquivel",
+    "propietario": "Ninoska Tuco Esquivel",
+    "rol": "Estetico"
+  },
+  {
+    "id": "aa3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0619",
+    "nombre": "Esmeralda Rubi Castañeda Ramirez",
+    "propietario": "Esmeralda Rubi Castañeda Ramirez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ad3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0620",
+    "nombre": "Alejandra Lucero Flores Ruelas",
+    "propietario": "Alejandra Lucero Flores Ruelas",
+    "rol": "Estetico"
+  },
+  {
+    "id": "7a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0621",
+    "nombre": "Carmen Rosa Rojas Del Carpio",
+    "propietario": "Carmen Rosa Rojas Del Carpio",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "7f3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0622",
+    "nombre": "Patricia Lanchipa Yokota",
+    "propietario": "Patricia Monica Lanchipa Yokota",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "823ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0623",
+    "nombre": "Grupo Boutique de la Piel",
+    "propietario": "Bertha Elaine Alcalde Rodriguez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "853ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0624",
+    "nombre": "Grupo Rojas Salazar Lenin",
+    "propietario": "Rojas Salazar Lenin",
+    "rol": "No Medico"
+  },
+  {
+    "id": "883ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0625",
+    "nombre": "Valdiviezo Clinic",
+    "propietario": "Junior Valdiviezo Rosales",
+    "rol": "No Medico"
+  },
+  {
+    "id": "8b3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0626",
+    "nombre": "ROJAS MEZA EDUARDO RODOLFO",
+    "propietario": "Eduardo Rodolfo Rojas Meza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "8e3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0627",
+    "nombre": "MOYANO MOQUILLAZA JOSE RUBIN",
+    "propietario": "Jose Rubin Moyano Moquillaza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "913ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0628",
+    "nombre": "QUISPE CENCIA EOS MAVI",
+    "propietario": "Quispe Cencia Eos Mavi",
+    "rol": "No Medico"
+  },
+  {
+    "id": "943ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0629",
+    "nombre": "MAGUIÑA GARCIA PAVEL ENRIQUE",
+    "propietario": "Maguiña Garcia Pavel Enrique",
+    "rol": "No Medico"
+  },
+  {
+    "id": "973ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0630",
+    "nombre": "AROSTEGUI ARAGON FREDY",
+    "propietario": "Fredy Arostegui Aragon",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "9a3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0631",
+    "nombre": "CINTHIA IVE BIBEROS BENDEZU",
+    "propietario": "Cinthia Ive Biberos Bendezu",
+    "rol": "Estetico"
+  },
+  {
+    "id": "9d3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0632",
+    "nombre": "Sofía Andrea Chaduví Urcia",
+    "propietario": "Sofía Andrea Chaduví Urcia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "a03ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0633",
+    "nombre": "Aldo Lizárraga",
+    "propietario": "Aldo Gabriel Lizarraga Guerrero",
+    "rol": "Estetico"
+  },
+  {
+    "id": "a33ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0634",
+    "nombre": "NATALIA DEL PILAR SOTO HOYOS",
+    "propietario": "Natalia Del Pilar Soto Hoyos",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "a63ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0635",
+    "nombre": "Selena Merma Guerra",
+    "propietario": "Selena Merma Guerra",
+    "rol": "No Medico"
+  },
+  {
+    "id": "a93ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0636",
+    "nombre": "DERMATOLOGA E.I.R.L.",
+    "propietario": "Lourdes Ana Angeles Paredes",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ac3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0637",
+    "nombre": "AUDI DERM SERVICIOS MEDICOS E.I.R.L.",
+    "propietario": "Eliana Loza Salinas",
+    "rol": "No Medico"
+  },
+  {
+    "id": "af3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0638",
+    "nombre": "OTINO MEDIC E.I.R.L.",
+    "propietario": "Sandra Milagros Vílchez Montoya",
+    "rol": "No Medico"
+  },
+  {
+    "id": "b13ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0639",
+    "nombre": "Fabricio Ordaya Núñez",
+    "propietario": "Fabricio Ulises Ordaya Nuñez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "b33ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0640",
+    "nombre": "VITALITY MEDICAL AESTHETICS E.I.R.L.",
+    "propietario": "Rosa Paola Venero Quizinga",
+    "rol": "Estetico"
+  },
+  {
+    "id": "b53ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0641",
+    "nombre": "TU DOC ESTHETIC NOVA S.A.C.",
+    "propietario": "Carlos Marlon Cordero Tenorio",
+    "rol": "No Medico"
+  },
+  {
+    "id": "b73ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0642",
+    "nombre": "MOGROVEJO OLIVA VIRGINIA MILAGROS",
+    "propietario": "Virginia Milagros Mogrovejo Oliva",
+    "rol": "Estetico"
+  },
+  {
+    "id": "b93ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0643",
+    "nombre": "NOUVA VITA MEDICINA ESTETICA Y SALUD INTEGRAL SOCIEDAD ANONIMA CERRADA",
+    "propietario": "Cecilia Bejar Alagon",
+    "rol": "Estetico"
+  },
+  {
+    "id": "bb3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0644",
+    "nombre": "FUENTES RIVERA VALLADARES JIMMY BELTRAN",
+    "propietario": "Jimmy Beltran Fuentes Rivera Valladares",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "bd3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0645",
+    "nombre": "C Y J INVERSIONES MEDICAS E.I.R.L.",
+    "propietario": "Camila Odiaga Tejerina",
+    "rol": "Estetico"
+  },
+  {
+    "id": "c03ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0646",
+    "nombre": "MEDICINA DE ESPECIALIDADES SRL",
+    "propietario": "Edgar Genaro Alvarez Llanos",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "c23ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0647",
+    "nombre": "CLINIC BELLEZA DINAMICA S.A.C.",
+    "propietario": "Etoile Angelina Silveira Ramirez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "c43ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0648",
+    "nombre": "LUIS ALONSO CUBA PLASENCIA",
+    "propietario": "Luis Alonso Cuba Plasencia",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c53ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0649",
+    "nombre": "Catherine Saavedra Florez",
+    "propietario": "Catherine Saavedra Florez",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c63ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0650",
+    "nombre": "Melissa Torres Latorre",
+    "propietario": "Melissa Jackeline Torres Latorre",
+    "rol": "No Medico"
+  },
+  {
+    "id": "c73ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0651",
+    "nombre": "Walter Alfredo Paredes Vasquez",
+    "propietario": "Walter Alfredo Paredes Vasquez",
+    "rol": "Estetico"
+  },
+  {
+    "id": "c83ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0652",
+    "nombre": "Dra. Natividad Sánchez Siña",
+    "propietario": "Natividad Ines Sanchez Siña",
+    "rol": "Estetico"
+  },
+  {
+    "id": "c93ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0653",
+    "nombre": "Dra. Miryan Dávila Ramírez",
+    "propietario": "Miryan Lilian Eliana Davila Ramirez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ca3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0654",
+    "nombre": "Ingrith Macedo Choquehuanca",
+    "propietario": "Ingrith Macedo Choquehuanca",
+    "rol": "No Medico"
+  },
+  {
+    "id": "cb3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0655",
+    "nombre": "María del Rosario Fernández Torreblanca",
+    "propietario": "María Del Rosario Fernández Torreblanca",
+    "rol": "No Medico"
+  },
+  {
+    "id": "cc3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0656",
+    "nombre": "Pamela Cecilia David Pacheco",
+    "propietario": "Pamela Cecilia David Pacheco",
+    "rol": "Estetico"
+  },
+  {
+    "id": "cd3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0657",
+    "nombre": "Álvaro Miranda Cortez",
+    "propietario": "Alvaro David Miranda Cortez",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "ce3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0658",
+    "nombre": "Alejandra Rimachi Ytusaca",
+    "propietario": "Alejandra Deysi Rimachi Ytusaca",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "cf3ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0659",
+    "nombre": "Elvis Rosello Subia",
+    "propietario": "Elvis Gerardo Rosello Subia",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d03ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0660",
+    "nombre": "Ana Patricia Yolanda Pun Chinarro",
+    "propietario": "Ana Patricia Yolanda Pun Chinarro",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d13ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0661",
+    "nombre": "TEJADA ESPINOZA EVA ISABEL",
+    "propietario": "Eva Isabel Tejada Espinoza",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d23ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0662",
+    "nombre": "SARAVIA CANCINO LADY VANESSA",
+    "propietario": "Lady Vanessa Saravia Cancino",
+    "rol": "Cirujano Plastico"
+  },
+  {
+    "id": "d33ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0663",
+    "nombre": "JARA ALBARRACIN CINDY MIRELLA",
+    "propietario": "Cindy Mirella Jara Albarracin",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d43ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0664",
+    "nombre": "ROSAS RUIZ SERGIO ADALID",
+    "propietario": "Rosas Ruiz Sergio Adalid",
+    "rol": "No Medico"
+  },
+  {
+    "id": "d53ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0665",
+    "nombre": "VIVANCO MONSALVE MARIA SARITA",
+    "propietario": "Vivanco Monsalve Maria Sarita",
+    "rol": "No Medico"
+  },
+  {
+    "id": "d63ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0666",
+    "nombre": "ESCATE HERRERA MARIA ANGELICA",
+    "propietario": "Maria Angelica Escate Herrera",
+    "rol": "Dermatologo"
+  },
+  {
+    "id": "d73ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0667",
+    "nombre": "Ivamed",
+    "propietario": "Jorge Luis Mejia Barrios",
+    "rol": "Estetico"
+  },
+  {
+    "id": "d83ca7bc-1bb9-f111-aaae-00224837cd6c",
+    "idge": "GE-0668",
+    "nombre": "Techmedicperu Import",
+    "propietario": "Desconocido",
+    "rol": "Desconocido"
+  }
+]

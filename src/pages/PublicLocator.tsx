@@ -5,6 +5,8 @@ import { LocatorMap } from '../components/LocatorMap';
 import localDoctorsData from '../data/doctors_data.json';
 import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../services/b2bApiService';
 import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../services/b2cApiService';
+import { determineEntityType } from '../utils/entityUtils';
+import { isSamePhysicalVenue, isGenericCityAddress } from '../services/groupService';
 import logoImg from '../assets/logo.png';
 import { 
   Search, 
@@ -70,6 +72,8 @@ interface LocationItem {
   published?: boolean;
   /** Doctors or sub-locations linked to this location (centers only). */
   linked_entities?: LocationItem[];
+  /** Other physical branches belonging to the same economic group */
+  group_branches?: LocationItem[];
 }
 
 interface LocatorData {
@@ -351,6 +355,28 @@ export const PublicLocator: React.FC = () => {
             
           if (locationsData) {
             dbLocations = locationsData;
+
+            // Fetch any cross-locator member locations referenced in grupo_economico_ids
+            const missingGeMemberIds = new Set<string>();
+            locationsData.forEach((loc: any) => {
+              if (Array.isArray(loc.grupo_economico_ids)) {
+                loc.grupo_economico_ids.forEach((mid: string) => {
+                  if (mid && !locationsData.some((existing: any) => existing.id === mid)) {
+                    missingGeMemberIds.add(mid);
+                  }
+                });
+              }
+            });
+
+            if (missingGeMemberIds.size > 0) {
+              const { data: crossLocatorMembers } = await supabase
+                .from('bm_locations')
+                .select('*')
+                .in('id', Array.from(missingGeMemberIds));
+              if (crossLocatorMembers && crossLocatorMembers.length > 0) {
+                dbLocations = [...dbLocations, ...crossLocatorMembers];
+              }
+            }
           }
         }
 
@@ -481,6 +507,7 @@ export const PublicLocator: React.FC = () => {
             return {
               ...apiLoc,
               ...override,
+              id: apiLoc.id,
               name: override.name || apiLoc.name,
               address: override.address || apiLoc.address,
               lat: newLat,
@@ -495,13 +522,20 @@ export const PublicLocator: React.FC = () => {
               custom_fields: { 
                 ...(apiLoc.custom_fields || {}), 
                 ...(override.custom_fields || {}),
-                entity_type: override.custom_fields?.['entity_type'] || apiLoc.custom_fields?.['entity_type'] || (apiLoc.id.startsWith('b2c-center') ? 'center' : 'doctor')
+                db_id: override.id,
+                entity_type: override.custom_fields?.['entity_type'] || apiLoc.custom_fields?.['entity_type'] || determineEntityType({ ...apiLoc, ...override, custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) } })
               },
               published: override.published !== undefined ? override.published : true,
               grupo_economico_ids: override.grupo_economico_ids || null,
             };
           }
-          return apiLoc;
+          return {
+            ...apiLoc,
+            custom_fields: {
+              ...(apiLoc.custom_fields || {}),
+              entity_type: apiLoc.custom_fields?.['entity_type'] || determineEntityType(apiLoc)
+            }
+          };
         });
 
         // Build sets of RUCs and Razones Sociales already represented to avoid duplicate orphan entries
@@ -522,8 +556,18 @@ export const PublicLocator: React.FC = () => {
           const dbRS = customDbLoc.custom_fields?.['Razón Social'] || customDbLoc.custom_fields?.['Razon Social'] || '';
           const cleanDbRS = cleanRS(dbRS);
 
-          if (dbDocNum && mergedRucSet.has(dbDocNum)) return;
-          if (cleanDbRS && mergedRSSet.has(cleanDbRS)) return;
+          // If RUC or RS matches an existing location, only discard if it's the SAME physical venue.
+          // Multi-branch locations with the same RUC at distinct addresses must be preserved!
+          const isSameIdentity = (dbDocNum && mergedRucSet.has(dbDocNum)) || (cleanDbRS && mergedRSSet.has(cleanDbRS));
+          if (isSameIdentity) {
+            const sameVenueExists = mergedLocations.some(ml => {
+              const mlDoc = (ml.custom_fields?.['Documento'] || '').replace(/\D/g, '');
+              const mlRS = cleanRS(ml.custom_fields?.['Razón Social'] || ml.custom_fields?.['Razon Social'] || '');
+              const matchesIdent = (dbDocNum && mlDoc === dbDocNum) || (cleanDbRS && mlRS === cleanDbRS);
+              return matchesIdent && isSamePhysicalVenue(ml.address, customDbLoc.address, ml.lat, ml.lng, customDbLoc.lat, customDbLoc.lng);
+            });
+            if (sameVenueExists) return;
+          }
 
           mergedLocations.unshift({
             ...customDbLoc,
@@ -532,30 +576,227 @@ export const PublicLocator: React.FC = () => {
             grupo_economico_ids: customDbLoc.grupo_economico_ids || null,
             custom_fields: {
               ...(customDbLoc.custom_fields || {}),
-              entity_type: customDbLoc.custom_fields?.['entity_type'] || 
-                (customDbLoc.custom_fields?.['Colegiatura'] || customDbLoc.custom_fields?.['CMP'] ? 'doctor' : 'center')
+              entity_type: customDbLoc.custom_fields?.['entity_type'] || determineEntityType(customDbLoc)
             }
           } as LocationItem);
         });
 
         // ── Grupo Económico: merge products and hide secondary members on public map ────
         const groupSecondaryIdsPublic = new Set<string>();
+        const seenGeCodesPublic = new Map<string, string>();
         mergedLocations.forEach(loc => {
           if (!loc.grupo_economico_ids || loc.grupo_economico_ids.length === 0) return;
+          const geCode = loc.custom_fields?.['crb7e_idge'];
+          if (geCode) {
+            const existingPrimary = seenGeCodesPublic.get(geCode);
+            if (existingPrimary && existingPrimary !== loc.id) {
+              groupSecondaryIdsPublic.add(loc.id);
+              return;
+            }
+            seenGeCodesPublic.set(geCode, loc.id);
+          }
           // This location is the primary — collect its members
           const memberLocs = mergedLocations.filter(
             m => loc.grupo_economico_ids!.includes(m.id) && m.id !== loc.id
           );
           // Merge all products (deduplicated by name)
           const allProds = [...(loc.products || []), ...memberLocs.flatMap(m => m.products || [])];
-          const dedupedProds = Array.from(new Map(allProds.map(p => [p.name, p])).values());
-          loc.products = dedupedProds;
+          const prodMap = new Map<string, ProductItem>();
+          allProds.forEach(p => {
+            const existing = prodMap.get(p.name);
+            if (existing) {
+              prodMap.set(p.name, {
+                ...existing,
+                qty: (existing.qty || 0) + (p.qty || 0),
+                last_date: (!existing.last_date || (p.last_date && p.last_date > existing.last_date)) ? p.last_date : existing.last_date
+              });
+            } else {
+              prodMap.set(p.name, { ...p });
+            }
+          });
+          loc.products = Array.from(prodMap.values());
+
+          // Cascada de Branding y Contacto (Logo, Redes Sociales, Teléfono, Web)
+          if (!loc.image_url) {
+            loc.image_url = memberLocs.find(m => m.image_url)?.image_url || null;
+          }
+          if (!loc.website) {
+            loc.website = memberLocs.find(m => m.website)?.website || null;
+          }
+          if (!loc.phone) {
+            loc.phone = memberLocs.find(m => m.phone)?.phone || null;
+          }
+          if (!loc.email) {
+            loc.email = memberLocs.find(m => m.email)?.email || null;
+          }
+          if (!loc.facebook) {
+            loc.facebook = memberLocs.find(m => m.facebook)?.facebook || null;
+          }
+          if (!loc.instagram) {
+            loc.instagram = memberLocs.find(m => m.instagram)?.instagram || null;
+          }
           // Combine RUCs in Documento field
           const allRucs = [loc.custom_fields?.['Documento'], ...memberLocs.map(m => m.custom_fields?.['Documento'])]
             .filter(Boolean).join(' | ');
           if (allRucs) loc.custom_fields = { ...(loc.custom_fields || {}), 'Documento': allRucs };
           // Mark secondary members for exclusion
-          memberLocs.forEach(m => groupSecondaryIdsPublic.add(m.id));
+          // ── Discriminación de sedes físicas reales (sucursales) vs duplicados de facturación/misma dirección ──
+          const physicalBranches: LocationItem[] = [];
+
+          memberLocs.forEach(m => {
+            // 1. Descartar si no tiene coordenadas GPS válidas
+            if (!m.lat || !m.lng || (m.lat === 0 && m.lng === 0)) {
+              groupSecondaryIdsPublic.add(m.id);
+              return;
+            }
+
+            // 2. Descartar si la dirección es genérica a nivel ciudad ("Lima, Perú", "Trujillo, Perú")
+            if (isGenericCityAddress(m.address)) {
+              groupSecondaryIdsPublic.add(m.id);
+              return;
+            }
+
+            // 3. Descartar si coincide con el mismo local físico que la sede principal (mismo edificio o <200m)
+            if (isSamePhysicalVenue(loc.address, m.address, loc.lat, loc.lng, m.lat, m.lng)) {
+              groupSecondaryIdsPublic.add(m.id);
+              return;
+            }
+
+            // 4. Descartar si coincide con otra sucursal secundaria ya procesada para este grupo
+            const isDuplicateBranch = physicalBranches.some(b =>
+              isSamePhysicalVenue(b.address, m.address, b.lat, b.lng, m.lat, m.lng)
+            );
+            if (isDuplicateBranch) {
+              groupSecondaryIdsPublic.add(m.id);
+              return;
+            }
+
+            // 5. Descartar si está explícitamente despublicada
+            if (m.published === false) {
+              groupSecondaryIdsPublic.add(m.id);
+              return;
+            }
+
+            // ✅ SUCURSAL FÍSICA INDEPENDIENTE VÁLIDA: Renderiza su propio pin en el mapa público
+            // Cascada de branding corporativo desde la Sede Principal (Insignia)
+            if (!m.image_url) m.image_url = loc.image_url;
+            if (!m.website) m.website = loc.website;
+            if (!m.facebook) m.facebook = loc.facebook;
+            if (!m.instagram) m.instagram = loc.instagram;
+            if (!m.description) m.description = loc.description;
+            if (!m.phone && loc.phone) m.phone = loc.phone;
+            if (!m.email && loc.email) m.email = loc.email;
+
+            // Catálogo unificado de productos para el grupo si la sucursal no tiene propios
+            if (!m.products || m.products.length === 0) {
+              m.products = loc.products;
+            }
+
+            m.custom_fields = {
+              ...(m.custom_fields || {}),
+              entity_type: m.custom_fields?.['entity_type'] || loc.custom_fields?.['entity_type'] || 'center',
+              parent_ge_id: loc.id,
+              parent_ge_name: loc.name,
+              is_branch: 'true'
+            };
+
+            physicalBranches.push(m);
+          });
+
+          // Vincular sedes entre sí para navegación bidireccional en el perfil
+          if (physicalBranches.length > 0) {
+            loc.group_branches = physicalBranches;
+            physicalBranches.forEach(branch => {
+              branch.group_branches = [loc, ...physicalBranches.filter(b => b.id !== branch.id)];
+            });
+          }
+        });
+
+        // ── Affiliations Rehydration: Reconnect doctors and centers based on manual custom_fields ────
+        const parseIdList = (val: any): string[] => {
+          if (!val) return [];
+          if (Array.isArray(val)) return val;
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed;
+          } catch {
+            return String(val).split(',').map(s => s.trim()).filter(Boolean);
+          }
+          return [];
+        };
+
+        const secondaryToPrimaryMap = new Map<string, string>();
+        mergedLocations.forEach(loc => {
+          if (loc.grupo_economico_ids && loc.grupo_economico_ids.length > 0) {
+            loc.grupo_economico_ids.forEach(secId => {
+              if (secId !== loc.id) {
+                secondaryToPrimaryMap.set(secId, loc.id);
+              }
+            });
+          }
+        });
+
+        const locLookup = new Map<string, LocationItem>();
+        mergedLocations.forEach(l => {
+          locLookup.set(l.id, l);
+          if (l.custom_fields?.['db_id']) {
+            locLookup.set(l.custom_fields['db_id'], l);
+          }
+        });
+
+        mergedLocations.forEach(loc => {
+          const rawCenters = loc.custom_fields?.['centros_afiliados_ids'];
+          if (rawCenters !== undefined) {
+            const cids = parseIdList(rawCenters);
+            const dedupedMap = new Map<string, LocationItem>();
+            cids.forEach(cid => {
+              const canonicalId = groupSecondaryIdsPublic.has(cid)
+                ? (secondaryToPrimaryMap.get(cid) || cid)
+                : cid;
+              const target = locLookup.get(canonicalId);
+              if (target && !dedupedMap.has(target.id)) {
+                dedupedMap.set(target.id, target);
+              }
+            });
+            loc.linked_entities = Array.from(dedupedMap.values());
+          } else if (loc.linked_entities && loc.linked_entities.length > 0) {
+            // If linked_entities came from API/pre-merge, normalize secondary to primary and deduplicate
+            const dedupedMap = new Map<string, LocationItem>();
+            loc.linked_entities.forEach(ent => {
+              const canonicalId = groupSecondaryIdsPublic.has(ent.id)
+                ? (secondaryToPrimaryMap.get(ent.id) || ent.id)
+                : ent.id;
+              const target = locLookup.get(canonicalId) || ent;
+              if (!dedupedMap.has(target.id)) {
+                dedupedMap.set(target.id, target);
+              }
+            });
+            loc.linked_entities = Array.from(dedupedMap.values());
+          }
+
+          const rawDoctors = loc.custom_fields?.['medicos_afiliados_ids'];
+          if (rawDoctors !== undefined) {
+            const dids = parseIdList(rawDoctors);
+            const dedupedMap = new Map<string, LocationItem>();
+            dids.forEach(did => {
+              const target = locLookup.get(did);
+              if (target && !dedupedMap.has(target.id)) {
+                dedupedMap.set(target.id, target);
+              }
+            });
+            loc.linked_entities = Array.from(dedupedMap.values());
+
+            // Inherit products for medical center from its doctors if center has none
+            if ((!loc.products || loc.products.length === 0) && loc.linked_entities.length > 0) {
+              const prodMap = new Map<string, any>();
+              loc.linked_entities.forEach(d => {
+                (d.products || []).forEach(p => {
+                  if (!prodMap.has(p.name)) prodMap.set(p.name, p);
+                });
+              });
+              loc.products = Array.from(prodMap.values());
+            }
+          }
         });
 
         // ── Brand Visibility Filter: Hide products and locations of excluded brands ────
@@ -952,17 +1193,63 @@ export const PublicLocator: React.FC = () => {
     return 1.0;
   }, [locator]);
 
-  // Locations rendered on the map, ensuring selected location is always included
+  // Locations rendered on the map, ensuring selected location and its linked entities are always included
   const mapLocations = useMemo(() => {
     const base = locator?.slug === 'blissfarma'
       ? processedLocations.filter(loc => loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0) && !loc.tags?.includes('Sin ubicación exacta'))
       : (isSelectionActive ? processedLocations : []);
 
     if (selectedLocationId) {
-      const selectedItem = processedLocations.find(l => l.id === selectedLocationId) || locations.find(l => l.id === selectedLocationId);
-      if (selectedItem && selectedItem.lat && selectedItem.lng && (selectedItem.lat !== 0 || selectedItem.lng !== 0)) {
-        if (!base.some(l => l.id === selectedItem.id)) {
-          return [...base, selectedItem];
+      let selectedItem = processedLocations.find(l => l.id === selectedLocationId || l.custom_fields?.['db_id'] === selectedLocationId) ||
+        locations.find(l => l.id === selectedLocationId || l.custom_fields?.['db_id'] === selectedLocationId);
+      if (!selectedItem) {
+        for (const loc of locations) {
+          if (loc.linked_entities) {
+            const match = loc.linked_entities.find(e => e.id === selectedLocationId || e.custom_fields?.['db_id'] === selectedLocationId);
+            if (match) {
+              selectedItem = match;
+              break;
+            }
+          }
+        }
+      }
+      if (selectedItem) {
+        const extraLocations: LocationItem[] = [];
+        if (selectedItem.lat && selectedItem.lng && (selectedItem.lat !== 0 || selectedItem.lng !== 0)) {
+          if (!base.some(l => l.id === selectedItem.id)) {
+            extraLocations.push(selectedItem);
+          }
+        }
+        if (selectedItem.linked_entities && selectedItem.linked_entities.length > 0) {
+          const secondaryIds = new Set<string>();
+          locations.forEach(loc => {
+            if (loc.grupo_economico_ids && loc.grupo_economico_ids.length > 0) {
+              loc.grupo_economico_ids.forEach(sid => {
+                if (sid !== loc.id) secondaryIds.add(sid);
+              });
+            }
+          });
+
+          selectedItem.linked_entities.forEach(linked => {
+            // Exclude secondary members of economic groups from pushing duplicate pins
+            if (secondaryIds.has(linked.id)) {
+              return;
+            }
+            if (linked.lat && linked.lng && (linked.lat !== 0 || linked.lng !== 0)) {
+              const isMatch = (l: LocationItem) =>
+                l.id === linked.id ||
+                (Math.abs((l.lat || 0) - (linked.lat || 0)) < 0.0001 &&
+                 Math.abs((l.lng || 0) - (linked.lng || 0)) < 0.0001 &&
+                 l.name.trim().toLowerCase() === linked.name.trim().toLowerCase());
+
+              if (!base.some(isMatch) && !extraLocations.some(isMatch)) {
+                extraLocations.push(linked);
+              }
+            }
+          });
+        }
+        if (extraLocations.length > 0) {
+          return [...base, ...extraLocations];
         }
       }
     }
@@ -1481,9 +1768,22 @@ export const PublicLocator: React.FC = () => {
 
           {/* Results View: Conditional Dedicated Detail View vs General Cards List */}
         {(() => {
-          const selectedLocation = selectedLocationId 
-            ? (processedLocations.find(l => l.id === selectedLocationId) || locations.find(l => l.id === selectedLocationId))
+          let selectedLocation = selectedLocationId 
+            ? (processedLocations.find(l => l.id === selectedLocationId || l.custom_fields?.['db_id'] === selectedLocationId) || 
+               locations.find(l => l.id === selectedLocationId || l.custom_fields?.['db_id'] === selectedLocationId))
             : null;
+
+          if (!selectedLocation && selectedLocationId) {
+            for (const loc of locations) {
+              if (loc.linked_entities) {
+                const match = loc.linked_entities.find(e => e.id === selectedLocationId || e.custom_fields?.['db_id'] === selectedLocationId);
+                if (match) {
+                  selectedLocation = match;
+                  break;
+                }
+              }
+            }
+          }
 
           // -------------------------------------------------------------
           // 1. DEDICATED SINGLE-LOCATION DETAIL VIEW (When a comercio is selected)
@@ -1970,6 +2270,111 @@ export const PublicLocator: React.FC = () => {
                   </div>
                 )}
 
+                {/* 🏢 OTRAS SEDES DE ESTE GRUPO ECONÓMICO */}
+                {selectedLocation.group_branches && selectedLocation.group_branches.length > 0 && (
+                  <section
+                    aria-label="Otras sedes de este grupo económico"
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '20px',
+                      padding: '16px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#00506E', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Building2 size={13} style={{ color: '#1EC8AA' }} /> OTRAS SEDES DE ESTE GRUPO ({selectedLocation.group_branches.length})
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                        Toca una sede para ubicarla en el mapa
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedLocation.group_branches.map((branch) => {
+                        const isHeadquarters = !branch.custom_fields?.['is_branch'];
+                        return (
+                          <button
+                            key={branch.id}
+                            type="button"
+                            aria-label={`Ver ${branch.name} en ${branch.address}`}
+                            onClick={() => {
+                              if (entityFilter !== 'all') {
+                                setEntityFilter('center');
+                              }
+                              setSelectedLocationId(branch.id);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '10px 12px',
+                              borderRadius: '14px',
+                              border: '1.5px solid #E2E8F0',
+                              backgroundColor: '#F8FAFC',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              width: '100%',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(30, 200, 170, 0.08)';
+                              e.currentTarget.style.borderColor = 'rgba(30, 200, 170, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#F8FAFC';
+                              e.currentTarget.style.borderColor = '#E2E8F0';
+                            }}
+                          >
+                            <div style={{
+                              width: '38px',
+                              height: '38px',
+                              borderRadius: '10px',
+                              backgroundColor: isHeadquarters ? 'rgba(0, 80, 110, 0.08)' : 'rgba(30, 200, 170, 0.12)',
+                              border: isHeadquarters ? '1.5px solid rgba(0, 80, 110, 0.18)' : '1.5px solid rgba(30, 200, 170, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: isHeadquarters ? '#00506E' : '#1EC8AA',
+                              flexShrink: 0,
+                            }}>
+                              <Building2 size={20} />
+                            </div>
+
+                            <div style={{ flexGrow: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 800, color: '#00506E', lineHeight: '1.3' }}>
+                                  {toTitleCase(branch.name)}
+                                </span>
+                                <span style={{
+                                  fontSize: '9px',
+                                  fontWeight: 800,
+                                  padding: '1px 6px',
+                                  borderRadius: '10px',
+                                  backgroundColor: isHeadquarters ? '#00506E' : '#E2E8F0',
+                                  color: isHeadquarters ? '#FFFFFF' : '#475569',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  {isHeadquarters ? 'Sede Principal' : 'Sucursal'}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {branch.address}
+                              </div>
+                            </div>
+
+                            <ChevronRight size={16} style={{ color: '#1EC8AA', flexShrink: 0 }} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
                 {/* Encuéntralo en — for doctor entities with linked sedes / centers */}
                 {selectedLocation.custom_fields?.['entity_type'] === 'doctor' && (() => {
                   const linkedSedes = selectedLocation.linked_entities || [];
@@ -2222,9 +2627,20 @@ export const PublicLocator: React.FC = () => {
                           )}
 
                           <div style={{ minWidth: 0, flexGrow: 1 }}>
-                            <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#00506E', margin: 0, lineHeight: '1.35', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                              {toTitleCase(loc.name)}
-                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#00506E', margin: 0, lineHeight: '1.35', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                {toTitleCase(loc.name)}
+                              </h4>
+                              {loc.custom_fields?.['is_branch'] === 'true' ? (
+                                <span style={{ fontSize: '9px', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(30, 200, 170, 0.12)', color: '#00506E' }}>
+                                  Sucursal
+                                </span>
+                              ) : loc.group_branches && loc.group_branches.length > 0 ? (
+                                <span style={{ fontSize: '9px', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(0, 80, 110, 0.08)', color: '#00506E' }}>
+                                  {loc.group_branches.length + 1} Sedes
+                                </span>
+                              ) : null}
+                            </div>
                             <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {loc.address}
                             </p>

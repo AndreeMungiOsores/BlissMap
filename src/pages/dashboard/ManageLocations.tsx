@@ -27,6 +27,7 @@ import {
 
 import { fetchB2BSalesLocations } from '../../services/b2bApiService';
 import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../../services/b2cApiService';
+import { determineEntityType } from '../../utils/entityUtils';
 import apiGeocodedCoords from '../../data/api_geocoded_coords.json';
 import excelGeocodedOverrides from '../../data/excel_geocoded_overrides.json';
 
@@ -322,7 +323,7 @@ export const ManageLocations: React.FC = () => {
             custom_fields: { 
               ...(apiLoc.custom_fields || {}), 
               ...(override.custom_fields || {}),
-              entity_type: override.custom_fields?.['entity_type'] || apiLoc.custom_fields?.['entity_type'] || (apiLoc.id.startsWith('b2c-center') ? 'center' : 'doctor')
+              entity_type: override.custom_fields?.['entity_type'] || apiLoc.custom_fields?.['entity_type'] || determineEntityType({ ...apiLoc, ...override, custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) } })
             },
             published: override.published !== undefined ? override.published : true,
             grupo_economico_ids: override.grupo_economico_ids || null,
@@ -331,6 +332,10 @@ export const ManageLocations: React.FC = () => {
 
         return {
           ...apiLoc,
+          custom_fields: {
+            ...(apiLoc.custom_fields || {}),
+            entity_type: apiLoc.custom_fields?.['entity_type'] || determineEntityType(apiLoc)
+          },
           is_manual_override: false,
           published: true,
           grupo_economico_ids: null,
@@ -366,8 +371,7 @@ export const ManageLocations: React.FC = () => {
           grupo_economico_ids: customDbLoc.grupo_economico_ids || null,
           custom_fields: {
             ...(customDbLoc.custom_fields || {}),
-            entity_type: customDbLoc.custom_fields?.['entity_type'] || 
-              (customDbLoc.custom_fields?.['Colegiatura'] || customDbLoc.custom_fields?.['CMP'] ? 'doctor' : 'center')
+            entity_type: customDbLoc.custom_fields?.['entity_type'] || determineEntityType(customDbLoc)
           }
         } as LocationItem);
       });

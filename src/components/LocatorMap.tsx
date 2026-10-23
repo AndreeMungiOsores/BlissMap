@@ -113,8 +113,20 @@ const FitMapBounds: React.FC<{
         : [];
 
       if (validSedes.length > 1) {
-        const bounds = L.latLngBounds(validSedes.map(s => [s.lat, s.lng]));
-        map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
+        const lats = validSedes.map(s => s.lat);
+        const lngs = validSedes.map(s => s.lng);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        const isNearby = (maxLat - minLat < 0.003) && (maxLng - minLng < 0.003);
+
+        if (isNearby) {
+          map.setView([lats[0], lngs[0]], 16, { animate: true });
+        } else {
+          const bounds = L.latLngBounds(validSedes.map(s => [s.lat, s.lng]));
+          map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
+        }
 
         map.once('moveend', () => {
           const isMobile = window.innerWidth <= 768;
@@ -191,13 +203,14 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   zoomControl = false,
   initialCenterToLima = false
 }) => {
-  const selectedLocation = locations.find(loc => loc.id === selectedLocationId) || null;
+  const selectedLocation = locations.find(loc => loc.id === selectedLocationId || loc.custom_fields?.['db_id'] === selectedLocationId) || null;
 
   // Leaflet Dynamic Colored Pin SVG / Custom image loader
   const getLeafletIcon = (locId: string) => {
-    const isDirectlySelected = locId === selectedLocationId;
+    const isDirectlySelected = locId === selectedLocationId ||
+      Boolean(selectedLocation && (selectedLocation.id === locId || selectedLocation.custom_fields?.['db_id'] === locId));
     const isLinkedSede = selectedLocation?.custom_fields?.['entity_type'] === 'doctor' &&
-      Boolean(selectedLocation.linked_entities?.some(s => s.id === locId));
+      Boolean(selectedLocation.linked_entities?.some(s => s.id === locId || s.custom_fields?.['db_id'] === locId));
     const isActive = isDirectlySelected || isLinkedSede;
     const finalColor = markerColor;
     const currentScale = Math.min(Math.max(Number(markerScale) || 1.0, 0.5), 3.0);

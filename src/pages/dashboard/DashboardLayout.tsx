@@ -12,7 +12,8 @@ import {
   Menu, 
   X, 
   User,
-  Plus
+  Plus,
+  Stethoscope
 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 
@@ -328,6 +329,16 @@ export const DashboardLayout: React.FC = () => {
                     >
                       <Building2 size={18} />
                       Grupos Económicos
+                    </Link>
+                  </li>
+                  <li>
+                    <Link 
+                      to="/dashboard/affiliations" 
+                      className={`sidebar-item ${isActive('/dashboard/affiliations') ? 'active' : ''}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Stethoscope size={18} />
+                      Afiliaciones (Médicos y Sedes)
                     </Link>
                   </li>
                   <li>

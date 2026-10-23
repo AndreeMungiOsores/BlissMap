@@ -8,6 +8,7 @@ import { fetchB2BSalesLocations } from './b2bApiService';
 import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from './b2cApiService';
 import localDoctorsData from '../data/doctors_data.json';
 import { cleanRS, isRSMatch } from '../utils/stringUtils';
+import { determineEntityType } from '../utils/entityUtils';
 import type { LocationItem } from './groupService';
 import type { Locator } from '../pages/dashboard/DashboardLayout';
 
@@ -32,7 +33,7 @@ export const fetchLocatorLocations = async (
   }
 
   // 1. Fetch live/cached API locations (B2B for default locators, or B2C+B2B mix for Blissfarma)
-  let apiLocations: LocationItem[] = [];
+  let apiLocations: LocationItem[];
 
   if (activeLocator.slug === 'blissfarma') {
     const [b2cResult, b2bResult] = await Promise.all([
@@ -166,6 +167,7 @@ export const fetchLocatorLocations = async (
       return {
         ...apiLoc,
         ...override,
+        id: apiLoc.id,
         name: effectiveName,
         address: override.address || apiLoc.address,
         lat: newLat,
@@ -181,11 +183,12 @@ export const fetchLocatorLocations = async (
         custom_fields: {
           ...(apiLoc.custom_fields || {}),
           ...(override.custom_fields || {}),
+          db_id: override.id,
           'Nombre Comercial': effectiveName,
           entity_type:
             override.custom_fields?.['entity_type'] ||
             apiLoc.custom_fields?.['entity_type'] ||
-            (apiLoc.id.startsWith('b2c-center') ? 'center' : 'doctor'),
+            determineEntityType({ ...apiLoc, ...override, custom_fields: { ...(apiLoc.custom_fields || {}), ...(override.custom_fields || {}) } }),
         },
         published: override.published !== undefined ? override.published : true,
         grupo_economico_ids: override.grupo_economico_ids || null,
@@ -194,6 +197,10 @@ export const fetchLocatorLocations = async (
 
     return {
       ...apiLoc,
+      custom_fields: {
+        ...(apiLoc.custom_fields || {}),
+        entity_type: apiLoc.custom_fields?.['entity_type'] || determineEntityType(apiLoc),
+      },
       is_manual_override: false,
       published: true,
       grupo_economico_ids: null,
@@ -230,11 +237,81 @@ export const fetchLocatorLocations = async (
         ...(customDbLoc.custom_fields || {}),
         entity_type:
           customDbLoc.custom_fields?.['entity_type'] ||
-          (customDbLoc.custom_fields?.['Colegiatura'] || customDbLoc.custom_fields?.['CMP']
-            ? 'doctor'
-            : 'center'),
+          determineEntityType(customDbLoc),
       },
     } as LocationItem);
+  });
+
+  // Rehydrate linked_entities from manual affiliations (centros_afiliados_ids & medicos_afiliados_ids)
+  const parseIdList = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return String(val).split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  // Build secondary to primary group mapping
+  const secondaryToPrimaryMap = new Map<string, string>();
+  mergedList.forEach(loc => {
+    if (loc.grupo_economico_ids && loc.grupo_economico_ids.length > 0) {
+      loc.grupo_economico_ids.forEach(secId => {
+        if (secId !== loc.id) {
+          secondaryToPrimaryMap.set(secId, loc.id);
+        }
+      });
+    }
+  });
+
+  const locLookup = new Map<string, LocationItem>();
+  mergedList.forEach(l => {
+    locLookup.set(l.id, l);
+    if (l.custom_fields?.['db_id']) {
+      locLookup.set(l.custom_fields['db_id'], l);
+    }
+  });
+
+  mergedList.forEach(loc => {
+    const rawCenters = loc.custom_fields?.['centros_afiliados_ids'];
+    if (rawCenters !== undefined) {
+      const cids = parseIdList(rawCenters);
+      const dedupedMap = new Map<string, LocationItem>();
+      cids.forEach(cid => {
+        const canonicalId = secondaryToPrimaryMap.get(cid) || cid;
+        const target = locLookup.get(canonicalId);
+        if (target && !dedupedMap.has(target.id)) {
+          dedupedMap.set(target.id, target);
+        }
+      });
+      loc.linked_entities = Array.from(dedupedMap.values());
+    }
+
+    const rawDoctors = loc.custom_fields?.['medicos_afiliados_ids'];
+    if (rawDoctors !== undefined) {
+      const dids = parseIdList(rawDoctors);
+      const dedupedMap = new Map<string, LocationItem>();
+      dids.forEach(did => {
+        const target = locLookup.get(did);
+        if (target && !dedupedMap.has(target.id)) {
+          dedupedMap.set(target.id, target);
+        }
+      });
+      loc.linked_entities = Array.from(dedupedMap.values());
+
+      if ((!loc.products || loc.products.length === 0) && loc.linked_entities.length > 0) {
+        const prodMap = new Map<string, any>();
+        loc.linked_entities.forEach(d => {
+          (d.products || []).forEach(p => {
+            if (!prodMap.has(p.name)) prodMap.set(p.name, p);
+          });
+        });
+        loc.products = Array.from(prodMap.values());
+      }
+    }
   });
 
   const filtered = mergedList.filter(

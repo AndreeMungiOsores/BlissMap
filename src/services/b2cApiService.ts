@@ -33,12 +33,11 @@ import localB2CData from '../data/b2c_data.json';
 const B2C_API_BASE = '/api/b2c-erp';
 const B2C_API_DIRECT = 'https://blisscorp.niuxpro.com/e/action/33_json/16_vtab2cmed/receive';
 const API_KEY = 'TV1_TST0001_pqXvN0a1b2c3d4e5f7';
-const CACHE_KEY_B2C = 'blissmap_b2c_api_v6';
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
 /** Default Lima coordinates for placeholder filtering. */
 const DEFAULT_LAT = -12.046374;
 const DEFAULT_LNG = -77.042793;
+const CACHE_KEY_B2C = 'blissmap_b2c_api_v7';
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 // ─── Raw API response types ───────────────────────────────────────────────────
 
@@ -208,40 +207,100 @@ const matchStreetAndNumber = (addr1: string, addr2: string): boolean => {
 };
 
 /**
+ * Strips legal entity tokens and generic health business keywords to isolate the unique distinctive name.
+ */
+const cleanCorporateName = (str: string): string => {
+  return (str || '')
+    .toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(S\.?A\.?C\.?|S\.?A\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?|SOCIEDAD ANONIMA CERRADA|SOCIEDAD ANONIMA|CORPORACION MEDICA|CENTRO MEDICO|POLICLINICO|CLINICA|CONSULTORIO|ASOCIACION|GRUPO)\b/g, '')
+    .replace(/[^A-Z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+/**
+ * Fallback to match street name and urbanización/city when house numbers differ or are missing.
+ */
+const matchStreetNameFallback = (addr1: string, addr2: string): boolean => {
+  if (!addr1 || !addr2) return false;
+  const norm = (s: string) => s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(calle|cal|cl|av|avenida|jr|jiron|pasaje|psje|nro|numero|int|interior|dpto|departamento|urb|urbanizacion|lote|mza|mz|piso|of|oficina)\b\.?/g, ' ')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words1 = norm(addr1).split(' ').filter(t => !/^\d+$/.test(t) && t.length >= 4);
+  const words2 = new Set(norm(addr2).split(' ').filter(t => !/^\d+$/.test(t)));
+  const matched = words1.filter(w => words2.has(w));
+  return matched.length >= 2;
+};
+
+/**
  * Resolves coordinates for a B2C medical center by comparing against known B2B coordinates
- * using name and address similarity plus street & number verification.
+ * using exact street & number, distinctive corporate name, high address similarity, or street-name fallback.
  */
 const resolveCenterCoordinates = (
   centroName: string,
   direccionCentro: string,
   knownIndex: GeocodedReference[]
 ): { lat: number; lng: number } | null => {
-  let bestMatch: GeocodedReference | null = null;
-  let bestScore = 0;
-
-  for (const item of knownIndex) {
-    if (item.name) {
-      const simName = nameSimilarity(centroName, item.name);
-      if (simName > bestScore) {
-        bestScore = simName;
-        bestMatch = item;
-      }
-    }
-    if (direccionCentro && item.address) {
-      if (matchStreetAndNumber(direccionCentro, item.address)) {
+  // 1. Street and Number match (highest precision)
+  if (direccionCentro) {
+    for (const item of knownIndex) {
+      if (item.address && matchStreetAndNumber(direccionCentro, item.address)) {
         return { lat: item.lat, lng: item.lng };
       }
+    }
+  }
+
+  // 2. High distinctive name similarity (after stripping generic corporate stop-words)
+  const cleanName = cleanCorporateName(centroName);
+  if (cleanName.length >= 4) {
+    let bestNameMatch: GeocodedReference | null = null;
+    let bestNameScore = 0;
+    for (const item of knownIndex) {
+      if (!item.name) continue;
+      const itemClean = cleanCorporateName(item.name);
+      if (itemClean.length < 4) continue;
+      const sim = nameSimilarity(cleanName, itemClean);
+      if (sim > bestNameScore) {
+        bestNameScore = sim;
+        bestNameMatch = item;
+      }
+    }
+    // High threshold of 0.82 prevents generic corporate cross-matches across different cities
+    if (bestNameScore >= 0.82 && bestNameMatch) {
+      return { lat: bestNameMatch.lat, lng: bestNameMatch.lng };
+    }
+  }
+
+  // 3. High address similarity (>= 0.82)
+  if (direccionCentro) {
+    let bestAddrMatch: GeocodedReference | null = null;
+    let bestAddrScore = 0;
+    for (const item of knownIndex) {
+      if (!item.address) continue;
       const simAddr = nameSimilarity(direccionCentro, item.address);
-      if (simAddr > 0.78 && simAddr > bestScore) {
-        bestScore = simAddr;
-        bestMatch = item;
+      if (simAddr > bestAddrScore) {
+        bestAddrScore = simAddr;
+        bestAddrMatch = item;
+      }
+    }
+    if (bestAddrScore >= 0.82 && bestAddrMatch) {
+      return { lat: bestAddrMatch.lat, lng: bestAddrMatch.lng };
+    }
+  }
+
+  // 4. Street name + Urbanización match on same street
+  if (direccionCentro) {
+    for (const item of knownIndex) {
+      if (item.address && matchStreetNameFallback(direccionCentro, item.address)) {
+        return { lat: item.lat, lng: item.lng };
       }
     }
   }
 
-  if (bestScore >= 0.70 && bestMatch) {
-    return { lat: bestMatch.lat, lng: bestMatch.lng };
-  }
   return null;
 };
 
@@ -336,7 +395,7 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
   const { fechaDesde, fechaHasta } = getDynamicDateRange();
   const queryStr = `?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
 
-  let payload: B2CApiResponse | null = null;
+  let payload: B2CApiResponse;
   try {
     let response: Response;
     try {
@@ -484,9 +543,16 @@ export const fetchB2CLocations = async (): Promise<B2CLocationsResult> => {
     const rawAddress = (med.direccion || '').trim() || centroAddress;
     const address = cleanSpanishText(rawAddress) || 'Lima, Perú';
 
-    // Resolve coordinates: first check center, then doctor document/name
-    const firstCentroKey = centros.length > 0 ? toSlug((centros[0].centro || '').trim()) : '';
-    const centroCoords = firstCentroKey ? (centerCoordsByKey.get(firstCentroKey) || null) : null;
+    // Resolve coordinates: check all associated centers, then doctor document/name
+    let centroCoords: { lat: number; lng: number } | null = null;
+    for (const c of centros) {
+      const k = toSlug((c.centro || '').trim());
+      const coords = centerCoordsByKey.get(k);
+      if (coords) {
+        centroCoords = coords;
+        break;
+      }
+    }
     const resolvedDoctorCoords = resolveDoctorCoordinates(
       med.medico || '',
       med.nro_doc_med || '',
