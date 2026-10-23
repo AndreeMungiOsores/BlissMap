@@ -115,7 +115,7 @@ export const ManageEconomicGroups: React.FC = () => {
   }, [isScopeDropdownOpen]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'active'>('suggestions');
+  const [activeTab, setActiveTab] = useState<'active' | 'suggestions'>('active');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
@@ -1216,41 +1216,10 @@ export const ManageEconomicGroups: React.FC = () => {
           paddingBottom: '4px'
         }}
       >
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div role="tablist" aria-label="Secciones de grupos económicos" style={{ display: 'flex', gap: '8px' }}>
           <button
-            onClick={() => setActiveTab('suggestions')}
-            style={{
-              padding: '10px 18px',
-              fontSize: '14px',
-              fontWeight: 700,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'suggestions' ? '2px solid var(--color-primary)' : '2px solid transparent',
-              color: activeTab === 'suggestions' ? 'var(--color-primary)' : 'var(--color-dark-text-secondary)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <AlertCircle size={16} />
-            Sugerencias de Agrupación
-            <span
-              style={{
-                backgroundColor: suggestedGroups.length > 0 ? '#ca8a04' : 'var(--color-dark-border)',
-                color: suggestedGroups.length > 0 ? 'white' : 'var(--color-dark-text-secondary)',
-                fontSize: '11px',
-                fontWeight: 700,
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)'
-              }}
-            >
-              {suggestedGroups.length}
-            </span>
-          </button>
-
-          <button
+            role="tab"
+            aria-selected={activeTab === 'active'}
             onClick={() => setActiveTab('active')}
             style={{
               padding: '10px 18px',
@@ -1280,6 +1249,41 @@ export const ManageEconomicGroups: React.FC = () => {
               }}
             >
               {activeGroups.length}
+            </span>
+          </button>
+
+          <button
+            role="tab"
+            aria-selected={activeTab === 'suggestions'}
+            onClick={() => setActiveTab('suggestions')}
+            style={{
+              padding: '10px 18px',
+              fontSize: '14px',
+              fontWeight: 700,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              borderBottom: activeTab === 'suggestions' ? '2px solid var(--color-primary)' : '2px solid transparent',
+              color: activeTab === 'suggestions' ? 'var(--color-primary)' : 'var(--color-dark-text-secondary)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <AlertCircle size={16} />
+            Sugerencias de Agrupación
+            <span
+              style={{
+                backgroundColor: suggestedGroups.length > 0 ? '#ca8a04' : 'var(--color-dark-border)',
+                color: suggestedGroups.length > 0 ? 'white' : 'var(--color-dark-text-secondary)',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-full)'
+              }}
+            >
+              {suggestedGroups.length}
             </span>
           </button>
         </div>
