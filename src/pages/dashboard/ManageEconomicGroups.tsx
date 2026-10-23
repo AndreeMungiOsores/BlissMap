@@ -270,6 +270,61 @@ export const ManageEconomicGroups: React.FC = () => {
     if (loading || locations.length === 0 || dbSanitizedRef.current) return;
     dbSanitizedRef.current = true;
 
+    // Helper to evaluate if a b2c-cmp- doctor is an alien insertion into target's group
+    const isAlienDoctor = (target: LocationItem, memberId: string): boolean => {
+      if (!memberId.startsWith('b2c-cmp-')) return false;
+      const injectedCmp = memberId.replace('b2c-cmp-', '').replace(/^0+/, '');
+      const injectedLoc = locations.find(loc => loc.id === memberId);
+
+      // If target is a doctor entity with an assigned CMP, check CMP equivalence
+      const ownCmp = (target.custom_fields?.['Colegiatura'] || target.custom_fields?.['CMP'] || (target.id.startsWith('b2c-cmp-') ? target.id.replace('b2c-cmp-', '') : '')).replace(/\D/g, '').replace(/^0+/, '');
+      if (ownCmp) {
+        return injectedCmp !== ownCmp;
+      }
+
+      // If target is a center / clinic:
+      // 1. NOT alien if they share the same official CRM GE code
+      const targetGe = target.custom_fields?.['crb7e_idge'];
+      const injectedGe = injectedLoc?.custom_fields?.['crb7e_idge'];
+      if (targetGe && injectedGe && targetGe === injectedGe) {
+        return false;
+      }
+
+      // 2. NOT alien if doctor name matches the center's proprietor
+      const targetProp = target.custom_fields?.['crb7e_propietarioge'];
+      if (targetProp && injectedLoc) {
+        const docToks = getDoctorTokens(injectedLoc);
+        const propToks = normalizePersonTokens(targetProp);
+        if (docToks.length >= 2 && propToks.length >= 2) {
+          const res = evaluatePersonMatch(docToks, propToks);
+          if (res.isMatch && !res.isConflict) return false;
+        }
+      }
+
+      // 3. NOT alien if the center explicitly lists this doctor in custom_fields
+      const targetMedicos = target.custom_fields?.['Médicos'] || target.custom_fields?.['Médico'] || '';
+      if (injectedLoc && targetMedicos && targetMedicos.toLowerCase().includes(injectedLoc.name.toLowerCase())) {
+        return false;
+      }
+
+      // 4. ALIEN if the doctor belongs to a DIFFERENT official GE code
+      if (targetGe && injectedGe && targetGe !== injectedGe) {
+        return true;
+      }
+
+      // 5. ALIEN if the doctor directly conflicts with the center's proprietor
+      if (targetProp && injectedLoc) {
+        const docToks = getDoctorTokens(injectedLoc);
+        const propToks = normalizePersonTokens(targetProp);
+        if (docToks.length >= 2 && propToks.length >= 2) {
+          const res = evaluatePersonMatch(docToks, propToks);
+          if (res.isConflict) return true;
+        }
+      }
+
+      return false;
+    };
+
     // Detect clusters with conflicting doctors or misattributed GE tags
     const contaminated = locations.filter(l => {
       if (l.grupo_economico_ids && l.grupo_economico_ids.length > 1) {
@@ -311,14 +366,8 @@ export const ManageEconomicGroups: React.FC = () => {
       // Detect Dra. Violeta Muñoz contaminated with Dra. Tello / Apagüeño
       if (l.id === 'erp-doc-skinbliss-20615634051-e-v-beauty-skin-med-s-a-c-s' && l.grupo_economico_ids?.some(id => id.includes('apag-e-o') || id.includes('20609870835'))) return true;
       // Detect alien b2c-cmp- doctor IDs injected into grupo_economico_ids
-      if (l.grupo_economico_ids?.some(id => id.startsWith('b2c-cmp-'))) {
-        const ownCmp = (l.custom_fields?.['Colegiatura'] || l.custom_fields?.['CMP'] || (l.id.startsWith('b2c-cmp-') ? l.id.replace('b2c-cmp-', '') : '')).replace(/\D/g, '').replace(/^0+/, '');
-        const hasAlien = l.grupo_economico_ids.some(id => {
-          if (!id.startsWith('b2c-cmp-')) return false;
-          const injectedCmp = id.replace('b2c-cmp-', '').replace(/^0+/, '');
-          return !ownCmp || injectedCmp !== ownCmp;
-        });
-        if (hasAlien) return true;
+      if (l.grupo_economico_ids?.some(id => isAlienDoctor(l, id))) {
+        return true;
       }
       // Detect Dermabeauty Center E.I.R.L. with duplicate RUC
       if (l.id === 'b2c-center-dermabeauty-center-e-i-r-l' && l.custom_fields?.['Documento'] !== '20612515884') return true;
@@ -543,13 +592,8 @@ export const ManageEconomicGroups: React.FC = () => {
             }
 
             // Specifically purge alien b2c-cmp- doctor IDs from grupo_economico_ids
-            if (target.grupo_economico_ids?.some(id => id.startsWith('b2c-cmp-'))) {
-              const ownCmp = (target.custom_fields?.['Colegiatura'] || target.custom_fields?.['CMP'] || (target.id.startsWith('b2c-cmp-') ? target.id.replace('b2c-cmp-', '') : '')).replace(/\D/g, '').replace(/^0+/, '');
-              const cleanIds = target.grupo_economico_ids.filter(id => {
-                if (!id.startsWith('b2c-cmp-')) return true;
-                const injectedCmp = id.replace('b2c-cmp-', '').replace(/^0+/, '');
-                return ownCmp && injectedCmp === ownCmp;
-              });
+            if (target.grupo_economico_ids?.some(id => isAlienDoctor(target, id))) {
+              const cleanIds = target.grupo_economico_ids.filter(id => !isAlienDoctor(target, id));
 
               if (cleanIds.length !== target.grupo_economico_ids.length) {
                 await supabase
