@@ -27,7 +27,8 @@ import {
   Receipt,
   Store,
   Users,
-  Filter
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import {
   type LocationItem,
@@ -162,7 +163,14 @@ export const ManageEconomicGroups: React.FC = () => {
   };
     const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    text: string;
+    action?: {
+      label: string;
+      onClick: () => void;
+    };
+  } | null>(null);
 
   // Modal Edit Active Group state
   const [editingGroup, setEditingGroup] = useState<ActiveGroup | null>(null);
@@ -878,17 +886,59 @@ export const ManageEconomicGroups: React.FC = () => {
       m => m.id !== memberId && !(excludedSuggestionMembers[baseKey] || []).includes(m.id)
     ).length;
 
+    const handleUndo = () => {
+      setExcludedSuggestionMembers(prev => {
+        const next = { ...prev };
+        delete next[baseKey];
+        try {
+          localStorage.setItem('bm_excluded_suggestion_members', JSON.stringify(next));
+        } catch (err) {
+          console.error(err);
+        }
+        return next;
+      });
+      setNotification({
+        type: 'success',
+        text: `Se restauró la sugerencia de "${group.officialGe?.nombre || group.name}".`
+      });
+    };
+
     if (remainingCount < 2) {
       setNotification({
         type: 'success',
-        text: `"${memberName}" fue retirada de la sugerencia. Como solo queda 1 ficha, la sugerencia se ha descartado.`
+        text: `"${memberName}" fue retirada de la sugerencia. Como solo queda 1 ficha, la sugerencia se ha descartado.`,
+        action: {
+          label: 'Deshacer',
+          onClick: handleUndo
+        }
       });
     } else {
       setNotification({
         type: 'success',
-        text: `"${memberName}" fue excluida de este grupo. Ahora puedes unificar las ${remainingCount} fichas restantes.`
+        text: `"${memberName}" fue excluida de este grupo. Ahora puedes unificar las ${remainingCount} fichas restantes.`,
+        action: {
+          label: 'Deshacer',
+          onClick: handleUndo
+        }
       });
     }
+  };
+
+  const totalDismissedSuggestions = Object.keys(excludedSuggestionMembers).length + ignoredGroupKeys.size;
+
+  const handleResetDismissedSuggestions = () => {
+    setExcludedSuggestionMembers({});
+    setIgnoredGroupKeys(new Set());
+    try {
+      localStorage.removeItem('bm_excluded_suggestion_members');
+      localStorage.removeItem('bm_ignored_group_keys');
+    } catch (err) {
+      console.error('Error clearing dismissed suggestions from localStorage:', err);
+    }
+    setNotification({
+      type: 'success',
+      text: 'Se han restablecido todas las sugerencias descartadas e ignoradas.'
+    });
   };
 
   const handleUnify = async (group: SuggestedGroup) => {
@@ -1296,17 +1346,47 @@ export const ManageEconomicGroups: React.FC = () => {
             backgroundColor: notification.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
             border: `1px solid ${notification.type === 'success' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
             color: notification.type === 'success' ? '#15803d' : '#b91c1c',
-            fontSize: '14px'
+            fontSize: '14px',
+            flexWrap: 'wrap'
           }}
         >
-          {notification.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-          <span style={{ flex: 1, fontWeight: 500 }}>{notification.text}</span>
-          <button
-            onClick={() => setNotification(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 'bold' }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
+            {notification.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span style={{ fontWeight: 500 }}>{notification.text}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notification.action && (
+              <button
+                type="button"
+                onClick={notification.action.onClick}
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid currentColor',
+                  backgroundColor: 'transparent',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'opacity 0.15s ease'
+                }}
+              >
+                <RotateCcw size={12} />
+                {notification.action.label}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setNotification(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 'bold', padding: '4px' }}
+              aria-label="Cerrar notificación"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -1395,8 +1475,41 @@ export const ManageEconomicGroups: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Search and Scope Filter Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Quick Search, Scope Filter, and Reset Dismissed */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {totalDismissedSuggestions > 0 && (
+            <button
+              type="button"
+              onClick={handleResetDismissedSuggestions}
+              title="Restablecer sugerencias que fueron ignoradas o fichas excluidas"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-dark-border)',
+                backgroundColor: 'var(--color-dark-surface)',
+                color: 'var(--color-dark-text-secondary)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-dark-bg)';
+                e.currentTarget.style.color = 'var(--color-dark-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-dark-surface)';
+                e.currentTarget.style.color = 'var(--color-dark-text-secondary)';
+              }}
+            >
+              <RotateCcw size={12} />
+              <span>Restablecer descartadas ({totalDismissedSuggestions})</span>
+            </button>
+          )}
           <div style={{ position: 'relative', minWidth: '240px' }}>
             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-dark-text-tertiary)' }} />
             <input
@@ -1640,15 +1753,28 @@ export const ManageEconomicGroups: React.FC = () => {
                   ? 'Intenta con otro término de búsqueda o limpia el filtro.'
                   : 'Todas las ubicaciones con direcciones coincidentes ya están unificadas o no presentan similitudes automáticas.'}
               </p>
-              {activeGroups.length > 0 && !search && (
-                <button
-                  onClick={() => setActiveTab('active')}
-                  className="btn btn-secondary"
-                  style={{ marginTop: '16px', fontSize: '13px' }}
-                >
-                  Ver {activeGroups.length} grupo(s) activo(s)
-                </button>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+                {activeGroups.length > 0 && !search && (
+                  <button
+                    onClick={() => setActiveTab('active')}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '13px' }}
+                  >
+                    Ver {activeGroups.length} grupo(s) activo(s)
+                  </button>
+                )}
+                {totalDismissedSuggestions > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleResetDismissedSuggestions}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <RotateCcw size={13} />
+                    Restablecer {totalDismissedSuggestions} sugerencia(s) descartada(s)
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
