@@ -131,6 +131,14 @@ export const ManageEconomicGroups: React.FC = () => {
       return new Set();
     }
   });
+  const [excludedSuggestionMembers, setExcludedSuggestionMembers] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem('bm_excluded_suggestion_members');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [selectedPrimaries, setSelectedPrimaries] = useState<Record<string, string>>({});
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
     const [cardActiveTab, setCardActiveTab] = useState<Record<string, 'billing' | 'sedes' | 'staff' | 'products'>>({});
@@ -707,8 +715,30 @@ export const ManageEconomicGroups: React.FC = () => {
   // Derived: Suggested groups
   const suggestedGroups = useMemo(() => {
     const raw = detectPossibleGroups(locations);
-    return raw.filter(g => !ignoredGroupKeys.has([...g.ids].sort().join('|')));
-  }, [locations, ignoredGroupKeys]);
+    return raw
+      .map(g => {
+        const baseKey = g.officialGe ? `ge-${g.officialGe.idge}` : [...g.ids].sort().join('|');
+        const excludedIds = new Set(excludedSuggestionMembers[baseKey] || []);
+        if (excludedIds.size === 0) return g;
+
+        const filteredMembers = g.members.filter(m => !excludedIds.has(m.id));
+        if (filteredMembers.length < 2) return null;
+
+        const filteredIds = filteredMembers.map(m => m.id);
+        const primaryStillExists = filteredMembers.some(m => m.id === g.primaryId);
+        const primaryId = primaryStillExists ? g.primaryId : filteredMembers[0].id;
+
+        return {
+          ...g,
+          ids: filteredIds,
+          members: filteredMembers,
+          primaryId,
+          rucs: filteredMembers.map(m => m.custom_fields?.['Documento'] || '').filter(Boolean)
+        };
+      })
+      .filter((g): g is SuggestedGroup => g !== null)
+      .filter(g => !ignoredGroupKeys.has([...g.ids].sort().join('|')));
+  }, [locations, ignoredGroupKeys, excludedSuggestionMembers]);
 
   // Derived: Active unified groups
   const activeGroups = useMemo(() => {
@@ -826,6 +856,39 @@ export const ManageEconomicGroups: React.FC = () => {
       }
       return next;
     });
+  };
+
+  const handleExcludeMemberFromSuggestion = (group: SuggestedGroup, memberId: string) => {
+    const baseKey = group.officialGe ? `ge-${group.officialGe.idge}` : [...group.ids].sort().join('|');
+    const memberName = group.members.find(m => m.id === memberId)?.name || 'La ficha';
+
+    setExcludedSuggestionMembers(prev => {
+      const existing = prev[baseKey] || [];
+      if (existing.includes(memberId)) return prev;
+      const updated = { ...prev, [baseKey]: [...existing, memberId] };
+      try {
+        localStorage.setItem('bm_excluded_suggestion_members', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Error saving excluded suggestion members to localStorage:', err);
+      }
+      return updated;
+    });
+
+    const remainingCount = group.members.filter(
+      m => m.id !== memberId && !(excludedSuggestionMembers[baseKey] || []).includes(m.id)
+    ).length;
+
+    if (remainingCount < 2) {
+      setNotification({
+        type: 'success',
+        text: `"${memberName}" fue retirada de la sugerencia. Como solo queda 1 ficha, la sugerencia se ha descartado.`
+      });
+    } else {
+      setNotification({
+        type: 'success',
+        text: `"${memberName}" fue excluida de este grupo. Ahora puedes unificar las ${remainingCount} fichas restantes.`
+      });
+    }
   };
 
   const handleUnify = async (group: SuggestedGroup) => {
@@ -1907,16 +1970,55 @@ export const ManageEconomicGroups: React.FC = () => {
                                   )}
                                 </div>
 
-                                {/* Radio circle */}
-                                <div
-                                  style={{
-                                    width: '18px',
-                                    height: '18px',
-                                    borderRadius: '50%',
-                                    border: isPrimary ? '5px solid #00506E' : '2px solid var(--color-dark-border)',
-                                    backgroundColor: 'white'
-                                  }}
-                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {/* Exclude / Remove button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleExcludeMemberFromSuggestion(group, member.id);
+                                    }}
+                                    title="Quitar esta ficha de la sugerencia (no se unificará con las demás)"
+                                    aria-label={`Quitar ${member.name} de este grupo`}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      padding: '3px 8px',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      borderRadius: 'var(--radius-full)',
+                                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                                      backgroundColor: 'rgba(239, 68, 68, 0.06)',
+                                      color: '#dc2626',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+                                      e.currentTarget.style.borderColor = '#dc2626';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.06)';
+                                      e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                    }}
+                                  >
+                                    <X size={12} />
+                                    <span>Quitar de este grupo</span>
+                                  </button>
+
+                                  {/* Radio circle */}
+                                  <div
+                                    style={{
+                                      width: '18px',
+                                      height: '18px',
+                                      borderRadius: '50%',
+                                      border: isPrimary ? '5px solid #00506E' : '2px solid var(--color-dark-border)',
+                                      backgroundColor: 'white'
+                                    }}
+                                    title={isPrimary ? 'Ficha principal seleccionada' : 'Haz clic para seleccionar como ficha principal'}
+                                  />
+                                </div>
                               </div>
 
                               {/* Card Content Header */}

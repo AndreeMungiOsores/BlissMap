@@ -188,12 +188,11 @@ function scoreMatch(loc: LocationItem, item: GeWithTokens): number {
   // ──────────────────────────────────────────────────────────────────────────
   // TIER 1: Doctor / Propietario match
   // ──────────────────────────────────────────────────────────────────────────
-  const locDocToks = normalizePersonTokens(
-    loc.custom_fields?.['Médico'] ||
-    loc.custom_fields?.['Medicos'] ||
-    loc.custom_fields?.['Doctor'] ||
-    loc.custom_fields?.['Contacto']
-  );
+  const locDocToks = getDoctorTokens(loc);
+  const isDoctorEntity =
+    loc.custom_fields?.['entity_type'] === 'doctor' ||
+    loc.tags?.includes('Médico') ||
+    loc.id.startsWith('b2c-cmp-');
 
   let personScore = 0;
   if (locDocToks.length > 0 && item.propPersonTokens.length > 0) {
@@ -211,8 +210,17 @@ function scoreMatch(loc: LocationItem, item: GeWithTokens): number {
     }
   }
 
+  // Doctor entities (individual practitioners) are NOT corporate brands:
+  // they must NEVER match via Tier 2 Commercial/Brand matching.
+  // Matching an individual doctor's personal name against GE commercial names
+  // causes severe false-positive mergers whenever two unrelated doctors share
+  // common Peruvian surnames or first names (e.g., "Alvarez", "Rojas", "Patricia").
+  if (isDoctorEntity) {
+    return personScore;
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
-  // TIER 2: Commercial / Brand Name match
+  // TIER 2: Commercial / Brand Name match (Centers, Clinics, Pharmacies, Labs)
   // ──────────────────────────────────────────────────────────────────────────
   let brandScore = 0;
   const locNames = [
@@ -547,10 +555,32 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
 
   // Add official CRM groups with 2 or more locations
   geBuckets.forEach(({ ge, locs }) => {
-    if (locs.length >= 2) {
-      locs.forEach(l => used.add(l.id));
+    // Conflict Veto Filter: Ensure no conflicting doctors are grouped under this GE
+    const propToks = normalizePersonTokens(ge.propietario);
+    const validLocs = locs.filter(loc => {
+      const docToks = getDoctorTokens(loc);
+      if (docToks.length >= 2 && propToks.length >= 2) {
+        const res = evaluatePersonMatch(docToks, propToks);
+        if (res.isConflict || !res.isMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
 
-      const allProducts = locs.flatMap(p => p.products || []);
+    // Also ensure no mutual doctor conflicts between remaining members
+    const conflictFreeLocs: LocationItem[] = [];
+    for (const loc of validLocs) {
+      const hasConflict = conflictFreeLocs.some(existing => areDoctorsConflicting(existing, loc));
+      if (!hasConflict) {
+        conflictFreeLocs.push(loc);
+      }
+    }
+
+    if (conflictFreeLocs.length >= 2) {
+      conflictFreeLocs.forEach(l => used.add(l.id));
+
+      const allProducts = conflictFreeLocs.flatMap(p => p.products || []);
       const uniqueProducts = new Map<string, ProductItem>();
       allProducts.forEach(p => {
         const existing = uniqueProducts.get(p.name);
@@ -566,7 +596,7 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
       });
 
       // Best primary: priority to valid coordinates, then image, then product count
-      const defaultPrimary = locs.reduce((best, cur) => {
+      const defaultPrimary = conflictFreeLocs.reduce((best, cur) => {
         const curScore =
           (cur.lat && cur.lng && (cur.lat !== 0 || cur.lng !== 0) ? 50 : 0) +
           (cur.image_url ? 20 : 0) +
@@ -576,15 +606,15 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
           (best.image_url ? 20 : 0) +
           (best.products?.length || 0) * 5;
         return curScore >= bestScore ? cur : best;
-      }, locs[0]);
+      }, conflictFreeLocs[0]);
 
       groups.push({
-        ids: locs.map(p => p.id),
+        ids: conflictFreeLocs.map(p => p.id),
         name: defaultPrimary.name,
         address: defaultPrimary.address,
         totalProducts: uniqueProducts.size,
-        rucs: locs.map(p => p.custom_fields?.['Documento'] || '').filter(Boolean),
-        members: locs,
+        rucs: conflictFreeLocs.map(p => p.custom_fields?.['Documento'] || '').filter(Boolean),
+        members: conflictFreeLocs,
         primaryId: defaultPrimary.id,
         officialGe: ge,
       });
