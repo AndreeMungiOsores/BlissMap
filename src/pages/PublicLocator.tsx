@@ -86,6 +86,8 @@ interface LocatorData {
   marker_color: string;
   marker_image_url: string | null;
   marker_scale?: number | null;
+  /** Draw each location's logo/photo on the map instead of the generic pin (default: on). */
+  show_location_logos?: boolean | null;
   search_placeholder: string;
   distance_unit: string;
   hidden_brands?: string[] | null;
@@ -2710,6 +2712,7 @@ export const PublicLocator: React.FC = () => {
           markerColor={locator.marker_color}
           markerImageUrl={locator.marker_image_url}
           markerScale={effectiveMarkerScale}
+          showLocationLogos={locator.show_location_logos !== false}
           initialCenterToLima={locator.slug === 'blissfarma'}
         />
       </div>

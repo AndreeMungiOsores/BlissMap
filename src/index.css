@@ -915,6 +915,54 @@ button, input, select, textarea {
   100% { transform: translateX(-50%) scale(2.4); opacity: 0; }
 }
 
+/* Pin that shows the location logo/photo inside a circle (replaces the generic pin) */
+.logo-pin-container {
+  background: transparent;
+  border: none;
+}
+
+.logo-pin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+}
+
+.logo-pin-circle {
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--pin-color, #1EC8AA);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-pin-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.logo-pin-tail {
+  width: 0;
+  height: 0;
+  border-left-style: solid;
+  border-right-style: solid;
+  border-top-style: solid;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: var(--pin-color, #1EC8AA);
+  margin-top: -1px;
+}
+
+.logo-pin-active {
+  filter: drop-shadow(0 0 6px var(--pin-color, #1EC8AA)) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45));
+}
+
 .leaflet-control-container .leaflet-routing-container-shrink {
   display: none !important;
 }

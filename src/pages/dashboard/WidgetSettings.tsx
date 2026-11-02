@@ -34,7 +34,8 @@ export const WidgetSettings: React.FC = () => {
   const [markerColor, setMarkerColor] = useState('#3B82F6');
   const [markerImageUrl, setMarkerImageUrl] = useState<string | null>(null);
   const [markerScale, setMarkerScale] = useState<number>(1.0);
-  
+  const [showLocationLogos, setShowLocationLogos] = useState<boolean>(true);
+
   // Custom marker file upload state
   const [markerFile, setMarkerFile] = useState<File | null>(null);
   const [markerPreview, setMarkerPreview] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export const WidgetSettings: React.FC = () => {
         || Number(localStorage.getItem(`bm_marker_scale_${activeLocator.slug}`))
         || (typeof activeLocator.marker_scale === 'number' ? activeLocator.marker_scale : 1.0);
       setMarkerScale(savedScale);
+      setShowLocationLogos(activeLocator.show_location_logos !== false);
 
       setError(null);
       setSuccess(false);
@@ -131,18 +133,27 @@ export const WidgetSettings: React.FC = () => {
         .from('bm_locators')
         .update({
           ...baseUpdate,
-          marker_scale: markerScale
+          marker_scale: markerScale,
+          show_location_logos: showLocationLogos
         })
         .eq('id', activeLocator.id);
 
       if (updateErr) {
-        // Fallback update without marker_scale if column not yet present in Supabase table
-        const { error: fallbackErr } = await supabase
+        // Fallback: a column (marker_scale / show_location_logos) may not exist yet in the Supabase table
+        const { error: noLogosErr } = await supabase
           .from('bm_locators')
-          .update(baseUpdate)
+          .update({ ...baseUpdate, marker_scale: markerScale })
           .eq('id', activeLocator.id);
 
-        if (fallbackErr) throw fallbackErr;
+        if (noLogosErr) {
+          const { error: fallbackErr } = await supabase
+            .from('bm_locators')
+            .update(baseUpdate)
+            .eq('id', activeLocator.id);
+
+          if (fallbackErr) throw fallbackErr;
+        }
+        setError('Ajustes guardados, pero falta la columna show_location_logos en Supabase: la opción de logos no se guardó.');
       }
 
       setSuccess(true);
@@ -161,7 +172,7 @@ export const WidgetSettings: React.FC = () => {
   const previewLocationItem = useMemo(() => [{
     id: 'preview-sample-pin',
     name: activeLocator?.name || 'Ubicación de Muestra',
-    image_url: null,
+    image_url: '/logo.png', // sample logo so the preview shows the logo pin when the option is on
     address: 'Av. José Pardo 991, Miraflores, Lima',
     phone: '+51 987 654 321',
     email: null,
@@ -580,6 +591,37 @@ export const WidgetSettings: React.FC = () => {
                 Ajusta el tamaño del icono desde 1x (original) hasta 3x.
               </span>
             </div>
+
+            {/* Show location logos instead of the generic pin */}
+            <label
+              htmlFor="show-location-logos"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                cursor: 'pointer',
+                border: `2px solid ${showLocationLogos ? 'var(--color-primary)' : 'var(--color-dark-border)'}`,
+                borderRadius: 'var(--radius-md)',
+                padding: '14px',
+                backgroundColor: showLocationLogos ? 'rgba(99, 102, 241, 0.05)' : 'var(--color-dark-surface)'
+              }}
+            >
+              <input
+                id="show-location-logos"
+                type="checkbox"
+                checked={showLocationLogos}
+                onChange={(e) => setShowLocationLogos(e.target.checked)}
+                style={{ accentColor: '#1EC8AA', width: '18px', height: '18px', marginTop: '2px', flexShrink: 0 }}
+              />
+              <span style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--color-dark-text-primary)', fontSize: '14px' }}>
+                  Mostrar logo de cada comercio/médico en el mapa
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>
+                  Si tiene logo o foto, el pin lo muestra. Si no, se usa el icono configurado arriba.
+                </span>
+              </span>
+            </label>
           </div>
 
           <button 
@@ -643,7 +685,7 @@ export const WidgetSettings: React.FC = () => {
 
             {/* Interactive Leaflet Map faithfully rendering 1 sample pin with zoom responsiveness */}
             <LocatorMap 
-              key={`preview-map-${mapStyle}-${previewKey}`}
+              key={`preview-map-${mapStyle}-${previewKey}-${showLocationLogos}`}
               locations={previewLocationItem}
               selectedLocationId="preview-sample-pin"
               onSelectLocation={() => {}}
@@ -652,6 +694,7 @@ export const WidgetSettings: React.FC = () => {
               markerColor={markerColor}
               markerImageUrl={markerType === 'custom' ? (markerPreview || markerImageUrl) : null}
               markerScale={markerScale}
+              showLocationLogos={showLocationLogos}
               zoomControl={true}
             />
           </div>

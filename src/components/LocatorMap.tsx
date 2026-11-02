@@ -39,6 +39,8 @@ interface LocatorMapProps {
   markerScale?: number;
   zoomControl?: boolean;
   initialCenterToLima?: boolean;
+  /** When true, locations that have an image_url are drawn with their logo/photo instead of the generic pin. */
+  showLocationLogos?: boolean;
 }
 
 // Custom Cluster Icon generator with gradient colors, size scaling and interactive hint bubble
@@ -201,12 +203,13 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
   markerImageUrl,
   markerScale = 1.0,
   zoomControl = false,
-  initialCenterToLima = false
+  initialCenterToLima = false,
+  showLocationLogos = false
 }) => {
   const selectedLocation = locations.find(loc => loc.id === selectedLocationId || loc.custom_fields?.['db_id'] === selectedLocationId) || null;
 
   // Leaflet Dynamic Colored Pin SVG / Custom image loader
-  const getLeafletIcon = (locId: string) => {
+  const getLeafletIcon = (locId: string, logoUrl?: string | null) => {
     const isDirectlySelected = locId === selectedLocationId ||
       Boolean(selectedLocation && (selectedLocation.id === locId || selectedLocation.custom_fields?.['db_id'] === locId));
     const isLinkedSede = selectedLocation?.custom_fields?.['entity_type'] === 'doctor' &&
@@ -214,6 +217,27 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
     const isActive = isDirectlySelected || isLinkedSede;
     const finalColor = markerColor;
     const currentScale = Math.min(Math.max(Number(markerScale) || 1.0, 0.5), 3.0);
+
+    // Location logo/photo pin: takes precedence over the pin configured in the admin panel
+    if (showLocationLogos && logoUrl) {
+      const safeUrl = logoUrl.trim().replace(/"/g, '%22').replace(/</g, '%3C').replace(/>/g, '%3E');
+      const activeFactor = isActive ? 1.3 : 1.0;
+      const circle = Math.round(44 * activeFactor * currentScale);
+      const tail = Math.round(10 * activeFactor * currentScale);
+      const totalH = circle + tail;
+      const html = `<div class="logo-pin${isActive ? ' logo-pin-active' : ''}" style="width:${circle}px;height:${totalH}px;--pin-color:${finalColor}">`
+        + (isActive ? `<div class="active-marker-pulse" style="--pulse-color:${finalColor};bottom:0"></div>` : '')
+        + `<div class="logo-pin-circle" style="width:${circle}px;height:${circle}px"><img src="${safeUrl}" alt="" draggable="false" onerror="this.style.display='none'" /></div>`
+        + `<div class="logo-pin-tail" style="border-left-width:${Math.round(tail * 0.8)}px;border-right-width:${Math.round(tail * 0.8)}px;border-top-width:${tail}px"></div>`
+        + `</div>`;
+      return L.divIcon({
+        html,
+        className: `custom-pin-container logo-pin-container${isActive ? ' active-pin-container' : ''}`,
+        iconSize: [circle, totalH],
+        iconAnchor: [Math.round(circle / 2), totalH],
+        popupAnchor: [0, -totalH]
+      });
+    }
 
     if (markerType === 'custom' && markerImageUrl) {
       const baseSize = isActive ? 40 : 32;
@@ -302,7 +326,7 @@ export const LocatorMap: React.FC<LocatorMapProps> = ({
               <LeafletMarker
                 key={`${loc.id}-${loc.custom_fields?.['Documento'] || ''}`}
                 position={[loc.lat, loc.lng]}
-                icon={getLeafletIcon(loc.id)}
+                icon={getLeafletIcon(loc.id, loc.image_url)}
                 eventHandlers={{
                   click: () => onSelectLocation(loc.id),
                 }}

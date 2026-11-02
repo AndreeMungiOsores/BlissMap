@@ -27,6 +27,7 @@ export interface Locator {
   marker_color: string;
   marker_image_url: string | null;
   marker_scale?: number | null;
+  show_location_logos?: boolean | null;
   search_placeholder: string;
   distance_unit: string;
   hidden_brands?: string[] | null;
