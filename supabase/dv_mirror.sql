@@ -69,3 +69,7 @@ alter table dv_mirror_grupos add column if not exists rol text;
 -- la web publica (llave anonima) no ve nada. Las demas tablas siguen sin acceso desde el navegador.
 drop policy if exists dv_mirror_grupos_lectura_panel on dv_mirror_grupos;
 create policy dv_mirror_grupos_lectura_panel on dv_mirror_grupos for select to authenticated using (true);
+
+-- El panel (usuarios con sesion) tambien lee los contactos del espejo para identificar fichas por documento/CMP exactos.
+drop policy if exists dv_mirror_contactos_lectura_panel on dv_mirror_contactos;
+create policy dv_mirror_contactos_lectura_panel on dv_mirror_contactos for select to authenticated using (true);

@@ -44,7 +44,9 @@ import {
   createManualGroup,
   dissolveEconomicGroup,
   clearGeMatchCache,
-  setOfficialCatalog
+  setOfficialCatalog,
+  setDataverseIndex,
+  type DvContactLite
 } from '../../services/groupService';
 import { supabase } from '../../supabaseClient';
 import {
@@ -190,6 +192,8 @@ export const ManageEconomicGroups: React.FC = () => {
   } | null>(null);
 
   // Load locations across locators according to selected scope (Global by default)
+  const [dvReady, setDvReady] = useState(false);
+
   const loadData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setNotification(null);
@@ -197,25 +201,42 @@ export const ManageEconomicGroups: React.FC = () => {
       clearGeMatchCache();
     }
     try {
-      // Catalogo vivo de grupos economicos (espejo de Dataverse). Si falla, se usa el archivo fijo.
+      // Catalogo vivo de grupos economicos e identidad exacta de contactos (espejo de Dataverse).
+      // Si falla, se usa el archivo fijo y el parecido de nombres como antes.
       try {
         const { data: liveGroups } = await supabase
           .from('dv_mirror_grupos')
-          .select('id,codigo,nombre,propietario,rol,estado')
-          .eq('estado', 0);
+          .select('id,codigo,nombre,propietario,rol,estado');
         if (liveGroups && liveGroups.length > 0) {
           setOfficialCatalog(
-            liveGroups.map(g => ({
-              id: g.id,
-              idge: g.codigo || '',
-              nombre: g.nombre || '',
-              propietario: g.propietario || '',
-              rol: g.rol || ''
-            }))
+            liveGroups
+              .filter(g => g.estado === 0)
+              .map(g => ({
+                id: g.id,
+                idge: g.codigo || '',
+                nombre: g.nombre || '',
+                propietario: g.propietario || '',
+                rol: g.rol || ''
+              }))
           );
+          const dvContacts: DvContactLite[] = [];
+          for (let from = 0; ; from += 1000) {
+            const { data, error } = await supabase
+              .from('dv_mirror_contactos')
+              .select('id,ge_id,estado,documento,ruc,ruc10,cmp')
+              .order('id')
+              .range(from, from + 999);
+            if (error || !data) break;
+            dvContacts.push(...(data as DvContactLite[]));
+            if (data.length < 1000) break;
+          }
+          if (dvContacts.length > 0) {
+            setDataverseIndex(dvContacts, liveGroups.map(g => ({ id: g.id, codigo: g.codigo })));
+            setDvReady(true);
+          }
         }
       } catch (catErr) {
-        console.warn('Catalogo vivo de grupos no disponible, se usa el archivo local:', catErr);
+        console.warn('Datos vivos de Dataverse no disponibles, se usa el archivo local:', catErr);
       }
       const allLocators = locators && locators.length > 0 ? locators : (activeLocator ? [activeLocator] : []);
       let data: LocationItem[] = [];
@@ -275,6 +296,7 @@ export const ManageEconomicGroups: React.FC = () => {
 
   // Derived: Suggested groups
   const suggestedGroups = useMemo(() => {
+    void dvReady; // el indice de Dataverse (estado del modulo) cambia el resultado de la deteccion
     const raw = detectPossibleGroups(locations);
     return raw
       .map(g => {
@@ -299,17 +321,54 @@ export const ManageEconomicGroups: React.FC = () => {
       })
       .filter((g): g is SuggestedGroup => g !== null)
       .filter(g => !ignoredGroupKeys.has([...g.ids].sort().join('|')));
-  }, [locations, ignoredGroupKeys, excludedSuggestionMembers]);
+  }, [locations, ignoredGroupKeys, excludedSuggestionMembers, dvReady]);
 
   // Derived: Active unified groups
   const activeGroups = useMemo(() => {
+    void dvReady;
     return getActiveGroups(locations);
-  }, [locations]);
+  }, [locations, dvReady]);
 
   // Official suggestions count
   const officialSuggestions = useMemo(() => {
     return suggestedGroups.filter(g => Boolean(g.officialGe));
   }, [suggestedGroups]);
+
+  // Unificacion automatica de lo seguro: fichas que Dataverse (documento/CMP exacto) pone en el mismo grupo Y que estan
+  // en el mismo local fisico. Respeta lo que se ignoro y lo que se separo a proposito (dv_no_auto_group).
+  // Se ejecuta una vez por visita, avisa con una notificacion y se puede deshacer con "Editar grupo".
+  const autoUnifyRanRef = useRef(false);
+  useEffect(() => {
+    if (loading || !dvReady || autoUnifyRanRef.current || locations.length === 0) return;
+    const safe = suggestedGroups
+      .filter(
+        g =>
+          g.officialGe &&
+          g.verified &&
+          g.sameVenue &&
+          !g.members.some(m => m.custom_fields?.['dv_no_auto_group'])
+      )
+      .slice(0, 25);
+    autoUnifyRanRef.current = true;
+    if (safe.length === 0) return;
+    (async () => {
+      try {
+        const targetLocatorId = activeLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
+        const result = await batchUnifyOfficialGroups(targetLocatorId, safe);
+        locationsMemoryCache.clear();
+        await loadData(true);
+        setNotification({
+          type: result.errors.length === 0 ? 'success' : 'error',
+          text:
+            result.errors.length === 0
+              ? `Se unificaron automáticamente ${result.successCount} grupo(s) confirmados por Dataverse (mismo grupo y misma dirección): ${safe.map(g => g.name).join(', ')}. Puedes separarlos desde "Editar grupo".`
+              : `Unificación automática: ${result.successCount} grupo(s) unificados y ${result.errors.length} con error.`
+        });
+      } catch (err) {
+        console.warn('Unificación automática no completada:', err);
+      }
+    })();
+  }, [loading, dvReady, locations, suggestedGroups, activeLocator, loadData]);
 
   // Active groups with official GE match but missing crb7e_idge in database
   const unenrichedActiveGroups = useMemo(() => {

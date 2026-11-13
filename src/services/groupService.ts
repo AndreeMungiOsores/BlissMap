@@ -62,8 +62,13 @@ const GENERIC_BRAND_WORDS = new Set([
  * group and owner, so the person-conflict vetoes below (doctor vs. owner name) must not override it.
  * Typical case: a doctor who works at a clinic but is not its owner.
  */
-export const isDataverseVerifiedGe = (loc: { custom_fields?: Record<string, string> }, idge?: string): boolean =>
-  Boolean(idge) && (loc.custom_fields?.['dv_ge_code'] || '').trim().toUpperCase() === (idge as string).trim().toUpperCase();
+export const isDataverseVerifiedGe = (loc: { id: string; custom_fields?: Record<string, string> }, idge?: string): boolean => {
+  if (!idge) return false;
+  const target = idge.trim().toUpperCase();
+  if ((loc.custom_fields?.['dv_ge_code'] || '').trim().toUpperCase() === target) return true;
+  const exact = dvExactGe(loc as LocationItem);
+  return exact.status === 'match' && exact.ge.idge.toUpperCase() === target;
+};
 
 const TITLE_WORDS = new Set(['dr', 'dra', 'doctor', 'doctora', 'de', 'del', 'la', 'las', 'los', 'el', 'y']);
 
@@ -131,6 +136,91 @@ export const setOfficialCatalog = (live: OfficialGeItem[]): number => {
   );
   geMatchCache.clear();
   return officialGruposEconomicos.length;
+};
+
+// ── Identidad exacta de Dataverse (espejo en Supabase) ───────────────────────────────────────────
+export interface DvContactLite {
+  id: string;
+  ge_id: string | null;
+  estado: number | null;
+  documento: string | null;
+  ruc: string | null;
+  ruc10: string | null;
+  cmp: string | null;
+}
+const digitsOnly = (v?: string | null): string => String(v ?? '').replace(/\D/g, '');
+let dvByDoc = new Map<string, DvContactLite[]>();
+let dvByCmp = new Map<string, DvContactLite[]>();
+let dvGeCodeByGuid = new Map<string, string>();
+
+/** Carga el indice de contactos y grupos de Dataverse (espejo) para identificar fichas por documento/CMP exactos. */
+export const setDataverseIndex = (contacts: DvContactLite[], groups: { id: string; codigo: string | null }[]): void => {
+  const byDoc = new Map<string, DvContactLite[]>();
+  const byCmp = new Map<string, DvContactLite[]>();
+  const add = (m: Map<string, DvContactLite[]>, k: string, c: DvContactLite) => {
+    const l = m.get(k) || [];
+    if (!l.includes(c)) l.push(c);
+    m.set(k, l);
+  };
+  for (const c of contacts) {
+    for (const f of [c.documento, c.ruc, c.ruc10]) {
+      const d = digitsOnly(f);
+      if (d.length === 8 || d.length === 11) add(byDoc, d, c);
+    }
+    const cm = digitsOnly(c.cmp);
+    if (cm) add(byCmp, cm.padStart(6, '0'), c);
+  }
+  dvByDoc = byDoc;
+  dvByCmp = byCmp;
+  dvGeCodeByGuid = new Map(groups.filter(g => g.codigo).map(g => [g.id, g.codigo as string]));
+  geMatchCache.clear();
+};
+
+export type DvExactResult = { status: 'match'; ge: OfficialGeItem } | { status: 'ambiguous' } | { status: 'none' };
+
+/**
+ * Grupo economico de una ficha segun Dataverse, por identidad EXACTA (nunca por parecido de nombre):
+ * - medico (b2c-cmp-*): por CMP unico;
+ * - resto: por documento(s) de la ficha; cada documento debe tener un unico contacto activo y todos deben
+ *   pertenecer al mismo grupo.
+ */
+export const dvExactGe = (loc: LocationItem): DvExactResult => {
+  if (dvByDoc.size === 0) return { status: 'none' };
+  const cf = loc.custom_fields || {};
+  let contacts: DvContactLite[];
+  if (loc.id.startsWith('b2c-cmp-')) {
+    const cmps = new Set<string>();
+    for (const k of ['CMP', 'Colegiatura']) {
+      const d = digitsOnly(cf[k]);
+      if (d) cmps.add(d.padStart(6, '0'));
+    }
+    const m = loc.id.match(/^b2c-cmp-(\d+)/);
+    if (m) cmps.add(m[1].padStart(6, '0'));
+    const hits = new Map<string, DvContactLite>();
+    cmps.forEach(k => (dvByCmp.get(k) || []).forEach(c => hits.set(c.id, c)));
+    if (hits.size === 0) return { status: 'none' };
+    if (hits.size > 1) return { status: 'ambiguous' };
+    contacts = [...hits.values()];
+  } else {
+    const docs = new Set<string>();
+    for (const part of String(cf['Documento'] || '').split(/[|,;/]/)) {
+      const d = digitsOnly(part);
+      if (d.length === 8 || d.length === 11) docs.add(d);
+    }
+    for (const m of loc.id.matchAll(/(?<!\d)(\d{8}|\d{11})(?!\d)/g)) docs.add(m[1]);
+    if (docs.size === 0) return { status: 'none' };
+    const per = [...docs].map(d => dvByDoc.get(d) || []);
+    if (per.every(l => l.length === 0)) return { status: 'none' };
+    if (!per.every(l => l.length === 1)) return { status: 'ambiguous' };
+    contacts = [...new Map(per.map(l => [l[0].id, l[0]])).values()];
+  }
+  if (contacts.some(c => c.estado !== 0)) return { status: 'ambiguous' };
+  const codes = new Set(contacts.map(c => (c.ge_id ? dvGeCodeByGuid.get(c.ge_id) || '' : '')));
+  if (codes.size !== 1) return { status: 'ambiguous' };
+  const code = [...codes][0];
+  if (!code) return { status: 'none' };
+  const ge = officialGruposEconomicos.find(g => g.idge === code);
+  return ge ? { status: 'match', ge } : { status: 'none' };
 };
 
 export function getDoctorTokens(loc: LocationItem): string[] {
@@ -336,6 +426,10 @@ export const findOfficialGeMatch = (loc: LocationItem): OfficialGeItem | undefin
   }
 
   const result = (() => {
+    // 0. Identidad exacta de Dataverse (documento/CMP): manda sobre cualquier parecido de nombre
+    const exact = dvExactGe(loc);
+    if (exact.status === 'match') return exact.ge;
+
     // 1. Direct match by crb7e_idge or Grupo Económico in custom_fields
     const storedIdge = loc.custom_fields?.['crb7e_idge'] || loc.custom_fields?.['Grupo Económico'];
     if (storedIdge) {
@@ -419,6 +513,10 @@ export interface SuggestedGroup {
   members: LocationItem[];
   primaryId: string;
   officialGe?: OfficialGeItem;
+  /** Todos los miembros tienen su grupo confirmado por Dataverse (documento/CMP exacto o dv_ge_code). */
+  verified?: boolean;
+  /** Todos los miembros estan en el mismo local fisico (misma direccion real). */
+  sameVenue?: boolean;
 }
 
 export interface BillingVehicle {
@@ -619,7 +717,11 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
     // Also ensure no mutual doctor conflicts between remaining members
     const conflictFreeLocs: LocationItem[] = [];
     for (const loc of validLocs) {
-      const hasConflict = conflictFreeLocs.some(existing => areDoctorsConflicting(existing, loc));
+      const hasConflict = conflictFreeLocs.some(
+        existing =>
+          !(isDataverseVerifiedGe(existing, ge.idge) && isDataverseVerifiedGe(loc, ge.idge)) &&
+          areDoctorsConflicting(existing, loc)
+      );
       if (!hasConflict) {
         conflictFreeLocs.push(loc);
       }
@@ -647,11 +749,11 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
       const defaultPrimary = conflictFreeLocs.reduce((best, cur) => {
         const curScore =
           (cur.lat && cur.lng && (cur.lat !== 0 || cur.lng !== 0) ? 50 : 0) +
-          (cur.image_url ? 20 : 0) +
+          (cur.image_url ? 100 : 0) +
           (cur.products?.length || 0) * 5;
         const bestScore =
           (best.lat && best.lng && (best.lat !== 0 || best.lng !== 0) ? 50 : 0) +
-          (best.image_url ? 20 : 0) +
+          (best.image_url ? 100 : 0) +
           (best.products?.length || 0) * 5;
         return curScore >= bestScore ? cur : best;
       }, conflictFreeLocs[0]);
@@ -665,6 +767,13 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
         members: conflictFreeLocs,
         primaryId: defaultPrimary.id,
         officialGe: ge,
+        verified: conflictFreeLocs.every(l => isDataverseVerifiedGe(l, ge.idge)),
+        sameVenue: conflictFreeLocs.every(
+          l =>
+            Boolean(l.address) &&
+            !isGenericCityAddress(l.address) &&
+            isSamePhysicalVenue(defaultPrimary.address, l.address, defaultPrimary.lat, defaultPrimary.lng, l.lat, l.lng)
+        ),
       });
     }
   });
@@ -726,11 +835,11 @@ export const getActiveGroups = (list: LocationItem[]): ActiveGroup[] => {
     const effectivePrimary = members.reduce((best, cur) => {
       const curScore =
         (cur.lat && cur.lng && (cur.lat !== 0 || cur.lng !== 0) ? 50 : 0) +
-        (cur.image_url ? 20 : 0) +
+        (cur.image_url ? 100 : 0) +
         (cur.products?.length || 0) * 5;
       const bestScore =
         (best.lat && best.lng && (best.lat !== 0 || best.lng !== 0) ? 50 : 0) +
-        (best.image_url ? 20 : 0) +
+        (best.image_url ? 100 : 0) +
         (best.products?.length || 0) * 5;
       return curScore >= bestScore ? cur : best;
     }, primary);
@@ -1379,9 +1488,13 @@ export const updateGroupPrimary = async (
  * Dissolve an existing economic group by removing grupo_economico_ids.
  */
 export const dissolveEconomicGroup = async (primaryId: string): Promise<void> => {
+  // Marca la ficha para que la unificacion automatica no vuelva a unir lo que se separo a proposito.
+  const { data: row } = await supabase.from('bm_locations').select('custom_fields').eq('id', primaryId).maybeSingle();
+  const custom_fields = { ...(row?.custom_fields || {}), dv_no_auto_group: '1' };
+
   const { error } = await supabase
     .from('bm_locations')
-    .update({ grupo_economico_ids: null })
+    .update({ grupo_economico_ids: null, custom_fields })
     .eq('id', primaryId);
 
   if (error) throw error;
