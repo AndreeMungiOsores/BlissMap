@@ -23,7 +23,10 @@ export interface OfficialGeItem {
   rol: string;
 }
 
-export const officialGruposEconomicos: OfficialGeItem[] = officialGruposData as OfficialGeItem[];
+const staticGruposEconomicos = officialGruposData as OfficialGeItem[];
+// Catalogo en uso: arranca con el archivo fijo y el panel lo actualiza con el catalogo vivo de Dataverse (setOfficialCatalog).
+// Se muta en el mismo arreglo para que todos los importadores vean el cambio.
+export const officialGruposEconomicos: OfficialGeItem[] = [...staticGruposEconomicos];
 
 const STOP_WORDS = new Set([
   'dr', 'dra', 'doctor', 'doctora', 'consultorio', 'clinica', 'centro',
@@ -95,6 +98,40 @@ const precomputedGeTokens: GeWithTokens[] = officialGruposEconomicos.map(ge => (
   nombreTokens: normalizeTokens(ge.nombre),
   propPersonTokens: normalizePersonTokens(ge.propietario)
 }));
+
+/**
+ * Actualiza el catalogo oficial de grupos economicos con los datos vivos de Dataverse (espejo en Supabase).
+ * Los grupos del archivo fijo se conservan; los de Dataverse los actualizan (nombre, propietario, rol) o se agregan.
+ * No hace nada si la lista llega vacia (se mantiene el catalogo actual).
+ */
+export const setOfficialCatalog = (live: OfficialGeItem[]): number => {
+  if (!live.length) return officialGruposEconomicos.length;
+  const merged = new Map<string, OfficialGeItem>(staticGruposEconomicos.map(g => [g.idge, g]));
+  for (const g of live) {
+    if (!g.idge) continue;
+    const base = merged.get(g.idge);
+    merged.set(g.idge, {
+      id: g.id || base?.id || g.idge,
+      idge: g.idge,
+      nombre: g.nombre || base?.nombre || '',
+      propietario: g.propietario || base?.propietario || '',
+      rol: g.rol || base?.rol || ''
+    });
+  }
+  officialGruposEconomicos.length = 0;
+  officialGruposEconomicos.push(...merged.values());
+  precomputedGeTokens.length = 0;
+  precomputedGeTokens.push(
+    ...officialGruposEconomicos.map(ge => ({
+      ge,
+      cleanRS: cleanRS(ge.nombre),
+      nombreTokens: normalizeTokens(ge.nombre),
+      propPersonTokens: normalizePersonTokens(ge.propietario)
+    }))
+  );
+  geMatchCache.clear();
+  return officialGruposEconomicos.length;
+};
 
 export function getDoctorTokens(loc: LocationItem): string[] {
   const fromFields = loc.custom_fields?.['Médico'] ||

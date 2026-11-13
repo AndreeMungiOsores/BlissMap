@@ -24,6 +24,7 @@ create table if not exists dv_mirror_grupos (
   nombre text,
   propietario text,
   propietario_contacto_id uuid,
+  rol text,
   estado int,
   modificado timestamptz,
   synced_at timestamptz not null default now()
@@ -60,3 +61,11 @@ alter table dv_mirror_contactos   enable row level security;
 alter table dv_mirror_grupos      enable row level security;
 alter table dv_mirror_direcciones enable row level security;
 alter table dv_sync_log           enable row level security;
+
+-- Columna agregada despues para bases ya creadas (idempotente)
+alter table dv_mirror_grupos add column if not exists rol text;
+
+-- El panel de administracion (usuarios con sesion iniciada) puede LEER el catalogo de grupos economicos;
+-- la web publica (llave anonima) no ve nada. Las demas tablas siguen sin acceso desde el navegador.
+drop policy if exists dv_mirror_grupos_lectura_panel on dv_mirror_grupos;
+create policy dv_mirror_grupos_lectura_panel on dv_mirror_grupos for select to authenticated using (true);

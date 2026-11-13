@@ -43,8 +43,10 @@ import {
   updateGroupPrimary,
   createManualGroup,
   dissolveEconomicGroup,
-  clearGeMatchCache
+  clearGeMatchCache,
+  setOfficialCatalog
 } from '../../services/groupService';
+import { supabase } from '../../supabaseClient';
 import {
   fetchLocatorLocations,
   locationsMemoryCache
@@ -195,6 +197,26 @@ export const ManageEconomicGroups: React.FC = () => {
       clearGeMatchCache();
     }
     try {
+      // Catalogo vivo de grupos economicos (espejo de Dataverse). Si falla, se usa el archivo fijo.
+      try {
+        const { data: liveGroups } = await supabase
+          .from('dv_mirror_grupos')
+          .select('id,codigo,nombre,propietario,rol,estado')
+          .eq('estado', 0);
+        if (liveGroups && liveGroups.length > 0) {
+          setOfficialCatalog(
+            liveGroups.map(g => ({
+              id: g.id,
+              idge: g.codigo || '',
+              nombre: g.nombre || '',
+              propietario: g.propietario || '',
+              rol: g.rol || ''
+            }))
+          );
+        }
+      } catch (catErr) {
+        console.warn('Catalogo vivo de grupos no disponible, se usa el archivo local:', catErr);
+      }
       const allLocators = locators && locators.length > 0 ? locators : (activeLocator ? [activeLocator] : []);
       let data: LocationItem[] = [];
 

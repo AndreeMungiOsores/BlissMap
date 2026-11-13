@@ -66,11 +66,11 @@ async function dvToken() {
   if (!j.access_token) throw new Error(`Token Dataverse: ${j.error || res.status}`);
   return j.access_token;
 }
-async function dvAll(token, set, select) {
+async function dvAll(token, set, select, annotations = false) {
   let url = `${DV_ORG}/api/data/v9.2/${set}?$select=${select}`;
   const rows = [];
   while (url) {
-    const res = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'OData-Version': '4.0' } });
+    const res = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'OData-Version': '4.0', ...(annotations ? { Prefer: 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"' } : {}) } });
     const j = await res.json();
     if (!res.ok) throw new Error(`${set}: HTTP ${res.status}`);
     rows.push(...j.value);
@@ -121,7 +121,7 @@ const [contacts, groups, addresses] = await Promise.all([
   dvAll(token, 'crb7e_contactosmaestros',
     'crb7e_contactosmaestroid,crb7e_idcontacto,crb7e_nombre,crb7e_nombrecomercial,crb7e_numerodedocumento,crb7e_ruc,crb7e_ruc10,crb7e_cmp,_crb7e_ge_value,statecode,crb7e_logo_url,modifiedon'),
   dvAll(token, 'crb7e_gruposeconomicoses',
-    'crb7e_gruposeconomicosid,crb7e_idge,crb7e_nombrege,crb7e_propietarioge,_crb7e_propietariocontacto_value,statecode,modifiedon'),
+    'crb7e_gruposeconomicosid,crb7e_idge,crb7e_nombrege,crb7e_propietarioge,_crb7e_propietariocontacto_value,crb7e_rol,statecode,modifiedon'),
   dvAll(token, 'crb7e_direccionesmaestras',
     'crb7e_direccionesmaestraid,crb7e_iddireccion,_crb7e_contacto_value,crb7e_sede,crb7e_direccion,crb7e_latitud,crb7e_longitud,statecode,modifiedon'),
 ]);
@@ -134,7 +134,7 @@ const mContactos = contacts.map(c => ({
 }));
 const mGrupos = groups.map(g => ({
   id: g.crb7e_gruposeconomicosid, codigo: g.crb7e_idge, nombre: g.crb7e_nombrege, propietario: g.crb7e_propietarioge,
-  propietario_contacto_id: g._crb7e_propietariocontacto_value, estado: g.statecode, modificado: g.modifiedon, synced_at: runStart,
+  propietario_contacto_id: g._crb7e_propietariocontacto_value, rol: typeof g.crb7e_rol === 'string' ? g.crb7e_rol : null, estado: g.statecode, modificado: g.modifiedon, synced_at: runStart,
 }));
 const mDirecciones = addresses.map(a => ({
   id: a.crb7e_direccionesmaestraid, codigo: a.crb7e_iddireccion, contacto_id: a._crb7e_contacto_value, sede: a.crb7e_sede,
@@ -161,6 +161,53 @@ for (const f of fichas) {
 const counts = Object.fromEntries(Object.entries(drift).map(([k, v]) => [k, v.length]));
 console.log(`Fichas vinculadas: ${fichas.length} | diferencias:`, JSON.stringify(counts));
 
+// ── vínculo automático de fichas aún sin vínculo (solo agrega claves dv_*; nunca pisa un vínculo existente) ──
+// Regla aprobada: solo por documento exacto o CMP, solo si el contacto es único y está activo. Lo ambiguo no se toca.
+const digits = v => String(v ?? '').replace(/\D/g, '');
+const cmp6 = v => (digits(v) ? digits(v).padStart(6, '0') : '');
+const byDoc = new Map();
+const byCmp = new Map();
+const addTo = (m, k, c) => { if (!k) return; const l = m.get(k) || []; if (!l.includes(c)) l.push(c); m.set(k, l); };
+for (const c of contacts) {
+  for (const f of ['crb7e_numerodedocumento', 'crb7e_ruc', 'crb7e_ruc10']) { const d = digits(c[f]); if (d.length === 8 || d.length === 11) addTo(byDoc, d, c); }
+  addTo(byCmp, cmp6(c.crb7e_cmp), c);
+}
+const gCode = id => (id ? gById.get(id)?.crb7e_idge || '' : '');
+const sinVinculo = (await sbGetAll('bm_locations?select=id,custom_fields&custom_fields-%3E%3Edv_contact_id=is.null&order=id'))
+  .filter(f => !String(f.custom_fields?.dv_link_status || '').startsWith('rechazado'));
+const nuevos = [];
+const revision = [];
+for (const f of sinVinculo) {
+  const cf = f.custom_fields || {};
+  const isDoctor = f.id.startsWith('b2c-cmp-');
+  const docs = new Set();
+  for (const part of String(cf.Documento || '').split(/[|,;/]/)) { const d = digits(part); if (d.length === 8 || d.length === 11) docs.add(d); }
+  for (const m of f.id.matchAll(/(?<!\d)(\d{8}|\d{11})(?!\d)/g)) docs.add(m[1]);
+  const cmps = new Set([cmp6(cf.CMP), cmp6(cf.Colegiatura), cmp6((f.id.match(/^b2c-cmp-(\d+)/) || [])[1])].filter(Boolean));
+  let picked = null;
+  if (isDoctor) {
+    const hits = [...new Map([...cmps].flatMap(k => byCmp.get(k) || []).map(c => [c.crb7e_contactosmaestroid, c])).values()];
+    if (hits.length === 1 && hits[0].statecode === 0) picked = hits[0];
+  } else if (docs.size) {
+    const per = [...docs].map(d => byDoc.get(d) || []);
+    if (per.every(l => l.length === 1 && l[0].statecode === 0)) {
+      const cs = [...new Map(per.map(l => [l[0].crb7e_contactosmaestroid, l[0]])).values()];
+      const ges = new Set(cs.map(c => gCode(c._crb7e_ge_value)));
+      if (ges.size === 1) { // todos los documentos de la ficha pertenecen al mismo grupo (o a ninguno)
+        const idDoc = (f.id.match(/(?<!\d)(\d{8}|\d{11})(?!\d)/) || [])[1];
+        picked = cs.find(c => [c.crb7e_numerodedocumento, c.crb7e_ruc, c.crb7e_ruc10].some(x => digits(x) === idDoc)) || cs[0];
+      }
+    }
+  }
+  if (picked) nuevos.push({ id: f.id, cf, c: picked }); else if (docs.size || cmps.size) revision.push(f.id);
+}
+const MAX_AUTO = 50;
+console.log(`Fichas sin vínculo: ${sinVinculo.length} | vinculables automáticamente: ${nuevos.length} | a revisión: ${revision.length}`);
+if (nuevos.length > MAX_AUTO) console.log(`AVISO: más de ${MAX_AUTO} vínculos nuevos en una corrida; se aplicarán solo los primeros ${MAX_AUTO}.`);
+if (DRY) { nuevos.forEach(n => console.log('  [simulación] vincularía', n.id, '->', n.c.crb7e_idcontacto, n.c.crb7e_nombrecomercial || n.c.crb7e_nombre)); revision.forEach(id => console.log('  [simulación] revisión', id)); }
+drift.vinculos_nuevos = nuevos.slice(0, MAX_AUTO).map(n => n.id);
+drift.revision_sin_vinculo = revision;
+
 if (DRY) { console.log('SIMULACIÓN: no se escribió nada en Supabase.'); process.exit(0); }
 
 // Protección: si Dataverse devuelve muy pocas filas respecto al espejo anterior, no se borra nada.
@@ -176,6 +223,14 @@ if (safeToDelete) {
   await sbDeleteStale('dv_mirror_grupos', runStart);
   await sbDeleteStale('dv_mirror_direcciones', runStart);
 } else console.log('AVISO: el conteo cayó a menos de la mitad; no se eliminaron filas obsoletas.');
+
+for (const n of nuevos.slice(0, MAX_AUTO)) {
+  const cf = { ...n.cf, dv_contact_id: n.c.crb7e_contactosmaestroid, dv_contact_code: n.c.crb7e_idcontacto, dv_link_status: 'auto', dv_linked_at: new Date().toISOString().slice(0, 10) };
+  const r = await fetch(`${SB_URL}/rest/v1/bm_locations?id=eq.${encodeURIComponent(n.id)}`, {
+    method: 'PATCH', headers: { ...SB, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ custom_fields: cf }),
+  });
+  if (!r.ok) throw new Error(`Supabase vínculo: HTTP ${r.status}`);
+}
 
 const log = await fetch(`${SB_URL}/rest/v1/dv_sync_log`, {
   method: 'POST', headers: { ...SB, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
