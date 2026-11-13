@@ -53,6 +53,15 @@ const GENERIC_BRAND_WORDS = new Set([
   'exportaciones', 'exportacion', 'soluciones', 'solucion'
 ]);
 
+/**
+ * A location whose stored economic group (crb7e_idge) was confirmed against Dataverse
+ * (custom_fields.dv_ge_code === crb7e_idge) is trusted as-is: Dataverse is the source of truth for
+ * group and owner, so the person-conflict vetoes below (doctor vs. owner name) must not override it.
+ * Typical case: a doctor who works at a clinic but is not its owner.
+ */
+export const isDataverseVerifiedGe = (loc: { custom_fields?: Record<string, string> }, idge?: string): boolean =>
+  Boolean(idge) && (loc.custom_fields?.['dv_ge_code'] || '').trim().toUpperCase() === (idge as string).trim().toUpperCase();
+
 const TITLE_WORDS = new Set(['dr', 'dra', 'doctor', 'doctora', 'de', 'del', 'la', 'las', 'los', 'el', 'y']);
 
 function normalizeTokens(str?: string): string[] {
@@ -297,6 +306,7 @@ export const findOfficialGeMatch = (loc: LocationItem): OfficialGeItem | undefin
         g => g.idge.toUpperCase() === storedIdge.trim().toUpperCase()
       );
       if (direct) {
+        if (isDataverseVerifiedGe(loc, direct.idge)) return direct;
         // Validate against registered doctor to prevent accepting contaminated legacy tags
         const locDocToks = getDoctorTokens(loc);
         const propToks = normalizePersonTokens(direct.propietario);
@@ -558,6 +568,7 @@ export const detectPossibleGroups = (list: LocationItem[]): SuggestedGroup[] => 
     // Conflict Veto Filter: Ensure no conflicting doctors are grouped under this GE
     const propToks = normalizePersonTokens(ge.propietario);
     const validLocs = locs.filter(loc => {
+      if (isDataverseVerifiedGe(loc, ge.idge)) return true;
       const docToks = getDoctorTokens(loc);
       if (docToks.length >= 2 && propToks.length >= 2) {
         const res = evaluatePersonMatch(docToks, propToks);
@@ -715,7 +726,7 @@ export const getActiveGroups = (list: LocationItem[]): ActiveGroup[] => {
         crb7e_propietarioge: effectiveOfficialGe.propietario,
         crb7e_rol: effectiveOfficialGe.rol,
       };
-    } else if (effectivePrimary.custom_fields) {
+    } else if (effectivePrimary.custom_fields && !isDataverseVerifiedGe(effectivePrimary, effectivePrimary.custom_fields['crb7e_idge'])) {
       const storedProp = effectivePrimary.custom_fields['crb7e_propietarioge'];
       if (storedProp) {
         const docToks = getDoctorTokens(effectivePrimary);
