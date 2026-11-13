@@ -9,6 +9,7 @@ import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } fro
 import localDoctorsData from '../data/doctors_data.json';
 import { cleanRS, isRSMatch } from '../utils/stringUtils';
 import { determineEntityType } from '../utils/entityUtils';
+import { applyDataverseOverlay } from './dataverseOverlay';
 import type { LocationItem } from './groupService';
 import type { Locator } from '../pages/dashboard/DashboardLayout';
 
@@ -313,6 +314,13 @@ export const fetchLocatorLocations = async (
       }
     }
   });
+
+  // Dataverse manda en sedes (direccion/coordenadas) y afiliaciones; nunca en nombre ni foto.
+  try {
+    await applyDataverseOverlay(mergedList);
+  } catch (overlayErr) {
+    console.warn('Superposicion de Dataverse no aplicada:', overlayErr);
+  }
 
   const filtered = mergedList.filter(
     loc => !TEST_NAMES.some(tn => loc.name.toLowerCase().includes(tn))

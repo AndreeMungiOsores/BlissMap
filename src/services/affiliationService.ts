@@ -107,7 +107,7 @@ export const resolveAllAffiliations = (
     });
     // Overlay manual override if present
     const manualCenters = parseIdList(doc.custom_fields?.['centros_afiliados_ids']);
-    if (manualCenters.length > 0) {
+    if (manualCenters.length > 0 && !doc.dv_afiliaciones) {
       set.clear();
       manualCenters.forEach(cid => {
         const canonicalId = secondaryToPrimaryMap.get(cid) || cid;
@@ -124,7 +124,7 @@ export const resolveAllAffiliations = (
     (cen.linked_entities || []).forEach(d => set.add(d.id));
     // Overlay manual override if present
     const manualDoctors = parseIdList(cen.custom_fields?.['medicos_afiliados_ids']);
-    if (manualDoctors.length > 0) {
+    if (manualDoctors.length > 0 && !cen.dv_afiliaciones) {
       set.clear();
       manualDoctors.forEach(did => set.add(did));
     }
@@ -133,7 +133,7 @@ export const resolveAllAffiliations = (
 
   // Auto-link B2B centers to matching doctors in doctorList if no manual override exists
   centerList.forEach(cen => {
-    if (cen.custom_fields?.['medicos_afiliados_ids'] !== undefined) return;
+    if (cen.custom_fields?.['medicos_afiliados_ids'] !== undefined || cen.dv_afiliaciones) return;
     let b2bDocName = cen.custom_fields?.['Médico'];
     let b2bCmp = (cen.custom_fields?.['Colegiatura'] || cen.custom_fields?.['CMP'] || '').replace(/\D/g, '');
 

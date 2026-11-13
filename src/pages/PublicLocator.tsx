@@ -6,6 +6,7 @@ import localDoctorsData from '../data/doctors_data.json';
 import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../services/b2bApiService';
 import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../services/b2cApiService';
 import { determineEntityType } from '../utils/entityUtils';
+import { applyDataverseOverlay } from '../services/dataverseOverlay';
 import { isSamePhysicalVenue, isGenericCityAddress } from '../services/groupService';
 import logoImg from '../assets/logo.png';
 import { 
@@ -800,6 +801,13 @@ export const PublicLocator: React.FC = () => {
             }
           }
         });
+
+        // ── Dataverse manda en sedes y afiliaciones (nunca en nombre ni foto); si falla, no se cambia nada ────
+        try {
+          await applyDataverseOverlay(mergedLocations as any);
+        } catch (overlayErr) {
+          console.warn('Superposicion de Dataverse no aplicada:', overlayErr);
+        }
 
         // ── Brand Visibility Filter: Hide products and locations of excluded brands ────
         const locId = currentLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';

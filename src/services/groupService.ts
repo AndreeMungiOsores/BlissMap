@@ -502,6 +502,8 @@ export interface LocationItem {
   is_manual_override?: boolean;
   grupo_economico_ids?: string[] | null;
   linked_entities?: LocationItem[];
+  /** Sus afiliaciones medico-sede vienen de Dataverse (no se aplican las manuales). */
+  dv_afiliaciones?: boolean;
 }
 
 export interface SuggestedGroup {

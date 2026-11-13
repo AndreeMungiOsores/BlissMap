@@ -21,6 +21,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -117,13 +118,15 @@ async function sbDeleteStale(table, runStartIso) {
 // ── proceso ───────────────────────────────────────────────────────────────────
 const runStart = new Date().toISOString();
 const token = await dvToken();
-const [contacts, groups, addresses] = await Promise.all([
+const [contacts, groups, addresses, doctorSede] = await Promise.all([
   dvAll(token, 'crb7e_contactosmaestros',
     'crb7e_contactosmaestroid,crb7e_idcontacto,crb7e_nombre,crb7e_nombrecomercial,crb7e_numerodedocumento,crb7e_ruc,crb7e_ruc10,crb7e_cmp,_crb7e_ge_value,statecode,crb7e_logo_url,modifiedon'),
   dvAll(token, 'crb7e_gruposeconomicoses',
     'crb7e_gruposeconomicosid,crb7e_idge,crb7e_nombrege,crb7e_propietarioge,_crb7e_propietariocontacto_value,crb7e_rol,statecode,modifiedon'),
   dvAll(token, 'crb7e_direccionesmaestras',
     'crb7e_direccionesmaestraid,crb7e_iddireccion,_crb7e_contacto_value,crb7e_sede,crb7e_direccion,crb7e_latitud,crb7e_longitud,statecode,modifiedon'),
+  dvAll(token, 'crb7e_doctorporsedes',
+    'crb7e_doctorporsedeid,_crb7e_doctor_value,_crb7e_sede_value,crb7e_fechadefin,statecode'),
 ]);
 console.log(`Dataverse: ${contacts.length} contactos, ${groups.length} grupos, ${addresses.length} direcciones`);
 
@@ -208,6 +211,45 @@ if (DRY) { nuevos.forEach(n => console.log('  [simulación] vincularía', n.id, 
 drift.vinculos_nuevos = nuevos.slice(0, MAX_AUTO).map(n => n.id);
 drift.revision_sin_vinculo = revision;
 
+
+// ── superposición pública para el mapa y el panel (sin datos personales: los documentos viajan como hash) ──
+// Misma clave que usa el navegador: 'd:' + sha256('bliss|' + documento).slice(0,24)  /  'c:' + CMP de 6 dígitos.
+const keyDoc = d => 'd:' + crypto.createHash('sha256').update('bliss|' + d).digest('hex').slice(0, 24);
+const contactKeys = c => {
+  const ks = new Set();
+  for (const f of [c.crb7e_numerodedocumento, c.crb7e_ruc, c.crb7e_ruc10]) { const d = digits(f); if (d.length === 8 || d.length === 11) ks.add(keyDoc(d)); }
+  const cm = cmp6(c.crb7e_cmp); if (cm) ks.add('c:' + cm);
+  return [...ks];
+};
+const coord = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+const peru = (la, lo) => la !== null && lo !== null && la < 0 && la > -19 && lo < -68 && lo > -82; // descarta coordenadas basura
+const activeById = new Map(contacts.filter(c => c.statecode === 0).map(c => [c.crb7e_contactosmaestroid, c]));
+const pubDirs = [];
+const addrById = new Map();
+for (const a of addresses) {
+  addrById.set(a.crb7e_direccionesmaestraid, a);
+  const c = activeById.get(a._crb7e_contacto_value);
+  if (a.statecode !== 0 || !c || !a.crb7e_direccion) continue;
+  const claves = contactKeys(c);
+  if (!claves.length) continue;
+  const la = coord(a.crb7e_latitud), lo = coord(a.crb7e_longitud);
+  pubDirs.push({ id: a.crb7e_direccionesmaestraid, claves, direccion: a.crb7e_direccion, latitud: peru(la, lo) ? la : null, longitud: peru(la, lo) ? lo : null, synced_at: runStart });
+}
+const today = new Date().toISOString().slice(0, 10);
+const pubAfil = [];
+for (const p of doctorSede) {
+  if (p.statecode !== 0) continue;
+  const fin = String(p.crb7e_fechadefin || '').slice(0, 10);
+  if (fin && fin <= today) continue;
+  const doc = activeById.get(p._crb7e_doctor_value);
+  const sede = addrById.get(p._crb7e_sede_value);
+  const centro = sede && activeById.get(sede._crb7e_contacto_value);
+  if (!doc || !centro) continue;
+  const dk = contactKeys(doc), ck = contactKeys(centro);
+  if (dk.length && ck.length) pubAfil.push({ id: p.crb7e_doctorporsedeid, doctor_claves: dk, centro_claves: ck, synced_at: runStart });
+}
+console.log(`Superposición pública: ${pubDirs.length} direcciones, ${pubAfil.length} afiliaciones vigentes`);
+
 if (DRY) { console.log('SIMULACIÓN: no se escribió nada en Supabase.'); process.exit(0); }
 
 // Protección: si Dataverse devuelve muy pocas filas respecto al espejo anterior, no se borra nada.
@@ -218,10 +260,14 @@ const safeToDelete = contacts.length > 0 && (prev === 0 || contacts.length >= pr
 await sbUpsert('dv_mirror_contactos', mContactos);
 await sbUpsert('dv_mirror_grupos', mGrupos);
 await sbUpsert('dv_mirror_direcciones', mDirecciones);
+await sbUpsert('dv_public_direcciones', pubDirs);
+await sbUpsert('dv_public_afiliaciones', pubAfil);
 if (safeToDelete) {
   await sbDeleteStale('dv_mirror_contactos', runStart);
   await sbDeleteStale('dv_mirror_grupos', runStart);
   await sbDeleteStale('dv_mirror_direcciones', runStart);
+  await sbDeleteStale('dv_public_direcciones', runStart);
+  await sbDeleteStale('dv_public_afiliaciones', runStart);
 } else console.log('AVISO: el conteo cayó a menos de la mitad; no se eliminaron filas obsoletas.');
 
 for (const n of nuevos.slice(0, MAX_AUTO)) {

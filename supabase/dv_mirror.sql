@@ -73,3 +73,26 @@ create policy dv_mirror_grupos_lectura_panel on dv_mirror_grupos for select to a
 -- El panel (usuarios con sesion) tambien lee los contactos del espejo para identificar fichas por documento/CMP exactos.
 drop policy if exists dv_mirror_contactos_lectura_panel on dv_mirror_contactos;
 create policy dv_mirror_contactos_lectura_panel on dv_mirror_contactos for select to authenticated using (true);
+
+
+-- Superposicion publica de Dataverse (la lee el mapa y el panel). Sin datos personales: los documentos van como hash.
+create table if not exists dv_public_direcciones (
+  id uuid primary key,
+  claves text[] not null,
+  direccion text,
+  latitud double precision,
+  longitud double precision,
+  synced_at timestamptz not null default now()
+);
+create table if not exists dv_public_afiliaciones (
+  id uuid primary key,
+  doctor_claves text[] not null,
+  centro_claves text[] not null,
+  synced_at timestamptz not null default now()
+);
+alter table dv_public_direcciones enable row level security;
+alter table dv_public_afiliaciones enable row level security;
+drop policy if exists dv_public_direcciones_lectura on dv_public_direcciones;
+create policy dv_public_direcciones_lectura on dv_public_direcciones for select to anon, authenticated using (true);
+drop policy if exists dv_public_afiliaciones_lectura on dv_public_afiliaciones;
+create policy dv_public_afiliaciones_lectura on dv_public_afiliaciones for select to anon, authenticated using (true);
