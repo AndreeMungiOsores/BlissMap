@@ -1,0 +1,29 @@
+name: Dataverse -> Supabase (espejo cada hora)
+
+on:
+  schedule:
+    - cron: '7 * * * *'   # cada hora, al minuto 7
+  workflow_dispatch: {}    # también se puede lanzar a mano desde la pestaña Actions
+
+concurrency:
+  group: dataverse-sync
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Leer Dataverse y actualizar el espejo en Supabase (solo lectura de Dataverse)
+        run: node scripts/dataverse/sync-mirror.mjs
+        env:
+          DV_ORG: https://orge0b27328.api.crm2.dynamics.com
+          SUPABASE_URL: https://yqgnssxyimiigoewiidr.supabase.co
+          MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
