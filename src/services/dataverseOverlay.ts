@@ -3,9 +3,9 @@
  * Aplica Dataverse sobre lo que muestran el mapa y el panel: sedes (dirección y coordenadas) y afiliaciones médico–sede.
  *
  * Regla: Dataverse manda en todo MENOS en nombre y foto, que nunca se tocan aquí.
- *  - Dirección / coordenadas: se adoptan las de Dataverse cuando la ficha no tiene ubicación válida o cuando
- *    la dirección es la misma (mismo lugar). Si difieren, NO se pisan (suele ser una dirección fiscal o un dato
- *    equivocado en uno de los dos lados): esos casos se corrigen en Dataverse y llegan solos.
+ *  - Dirección / coordenadas: solo se adoptan las de Dataverse cuando coinciden con la dirección de ENVÍO que el portal ya
+ *    tiene (mismo lugar). Nunca se usan para llenar una ubicación vacía ni para reemplazar una dirección distinta: en
+ *    Dataverse la tabla de direcciones no distingue fiscal de envío, y en el portal solo debe verse la dirección de envío.
  *  - Afiliaciones: si Dataverse tiene vínculos Doctor por Sede para un médico o una sede, esos reemplazan a los del portal.
  *
  * Los datos salen de las tablas públicas dv_public_* (las llena el espejo horario). Los documentos viajan como hash
@@ -110,14 +110,6 @@ const addressScore = (a: string, b: string): number => {
 };
 const SAME_PLACE = 0.6;
 
-const DEFAULT_LAT = -12.046374;
-const DEFAULT_LNG = -77.042793;
-const hasValidCoords = (l: LocationItem): boolean =>
-  Boolean(l.lat && l.lng) &&
-  !(l.lat === 0 && l.lng === 0) &&
-  !(Math.abs((l.lat as number) - DEFAULT_LAT) < 1e-4 && Math.abs((l.lng as number) - DEFAULT_LNG) < 1e-4) &&
-  !(l.tags || []).includes('Sin ubicación exacta');
-
 const isDoctor = (l: LocationItem): boolean => l.custom_fields?.['entity_type'] === 'doctor';
 
 export interface OverlayStats {
@@ -153,18 +145,15 @@ export const applyDataverseOverlay = async (list: LocationItem[], preloaded?: Dv
       const s = r.direccion ? addressScore(l.address || '', r.direccion) : 0;
       if (s > bestScore) { bestScore = s; best = r; }
     }
-    const sameAddress = bestScore >= SAME_PLACE;
-    const hadCoords = hasValidCoords(l);
-    const dvHasCoords = best.latitud !== null && best.longitud !== null;
-    if (hadCoords && !sameAddress) continue; // direcciones distintas: no se pisa (se corrige en Dataverse)
-    if (dvHasCoords && (!hadCoords || sameAddress)) {
+    if (bestScore < SAME_PLACE) continue; // distinta dirección: no se pisa (podría ser la fiscal); se corrige en Dataverse
+    if (best.latitud !== null && best.longitud !== null) {
       if (l.lat !== best.latitud || l.lng !== best.longitud) stats.coordenadas++;
-      l.lat = best.latitud as number;
-      l.lng = best.longitud as number;
+      l.lat = best.latitud;
+      l.lng = best.longitud;
       l.tags = (l.tags || []).filter(t => t !== 'Sin ubicación exacta');
     }
-    if (best.direccion && (sameAddress || !hadCoords) && (dvHasCoords || !l.address || sameAddress)) {
-      if (l.address !== best.direccion) stats.direcciones++;
+    if (best.direccion && l.address !== best.direccion) {
+      stats.direcciones++;
       l.address = best.direccion;
     }
   }
