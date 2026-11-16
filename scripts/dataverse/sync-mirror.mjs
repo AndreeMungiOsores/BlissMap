@@ -118,15 +118,18 @@ async function sbDeleteStale(table, runStartIso) {
 // ── proceso ───────────────────────────────────────────────────────────────────
 const runStart = new Date().toISOString();
 const token = await dvToken();
-const [contacts, groups, addresses, doctorSede] = await Promise.all([
+const [contacts, groups, addresses, doctorSede, contactSede] = await Promise.all([
   dvAll(token, 'crb7e_contactosmaestros',
-    'crb7e_contactosmaestroid,crb7e_idcontacto,crb7e_nombre,crb7e_nombrecomercial,crb7e_numerodedocumento,crb7e_ruc,crb7e_ruc10,crb7e_cmp,_crb7e_ge_value,statecode,crb7e_logo_url,crb7e_domiciliofiscal,modifiedon'),
+    'crb7e_contactosmaestroid,crb7e_idcontacto,crb7e_nombre,crb7e_nombrecomercial,crb7e_numerodedocumento,crb7e_ruc,crb7e_ruc10,crb7e_cmp,_crb7e_ge_value,statecode,crb7e_logo_url,modifiedon'),
   dvAll(token, 'crb7e_gruposeconomicoses',
     'crb7e_gruposeconomicosid,crb7e_idge,crb7e_nombrege,crb7e_propietarioge,_crb7e_propietariocontacto_value,crb7e_rol,statecode,modifiedon'),
   dvAll(token, 'crb7e_direccionesmaestras',
     'crb7e_direccionesmaestraid,crb7e_iddireccion,_crb7e_contacto_value,crb7e_sede,crb7e_direccion,crb7e_latitud,crb7e_longitud,statecode,modifiedon'),
   dvAll(token, 'crb7e_doctorporsedes',
     'crb7e_doctorporsedeid,_crb7e_doctor_value,_crb7e_sede_value,crb7e_fechadefin,statecode'),
+  // Contacto por Sede: una misma sede física puede estar vinculada a varios contactos. Si la tabla falla, se sigue sin ella.
+  dvAll(token, 'crb7e_contactoporsedes', 'crb7e_contactoporsedeid,_crb7e_contacto_value,_crb7e_sede_value,crb7e_fechadefin,statecode')
+    .catch(err => { console.warn('Contacto por Sede no disponible:', err.message); return []; }),
 ]);
 console.log(`Dataverse: ${contacts.length} contactos, ${groups.length} grupos, ${addresses.length} direcciones`);
 
@@ -224,25 +227,31 @@ const contactKeys = c => {
 const coord = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
 const peru = (la, lo) => la !== null && lo !== null && la < 0 && la > -19 && lo < -68 && lo > -82; // descarta coordenadas basura
 const activeById = new Map(contacts.filter(c => c.statecode === 0).map(c => [c.crb7e_contactosmaestroid, c]));
-// Solo direcciones de ENVÍO llegan al mapa. Se excluyen las filas que se sabe que son fiscales:
-//  - las que coinciden con el domicilio fiscal del contacto (columna crb7e_domiciliofiscal de Contactos Maestro), y
-//  - las listadas en direcciones-solo-fiscales.json (detectadas contra el ERP mientras Dataverse las regulariza).
-const normAddr = t => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const excluidasPorLista = new Set(JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts', 'dataverse', 'direcciones-solo-fiscales.json'), 'utf8')).codigos || []);
-let excluidasFiscales = 0;
+// Direcciones Maestra contiene solo direcciones de ENVÍO (el domicilio fiscal vive en Contactos Maestro y no se publica).
+// Contacto por Sede: los contactos vinculados vigentes a una sede comparten su dirección y su afiliación.
+const todayIso = new Date().toISOString().slice(0, 10);
+const extraBySede = new Map(); // sede -> contactos activos vinculados (además del dueño)
+for (const v of contactSede) {
+  if (v.statecode !== 0) continue;
+  const fin = String(v.crb7e_fechadefin || '').slice(0, 10);
+  if (fin && fin <= todayIso) continue;
+  const c = activeById.get(v._crb7e_contacto_value);
+  if (!c || !v._crb7e_sede_value) continue;
+  extraBySede.set(v._crb7e_sede_value, [...(extraBySede.get(v._crb7e_sede_value) || []), c]);
+}
+const keysWithShared = (owner, sedeId) => [...new Set([...contactKeys(owner), ...(extraBySede.get(sedeId) || []).flatMap(contactKeys)])];
 const pubDirs = [];
 const addrById = new Map();
 for (const a of addresses) {
   addrById.set(a.crb7e_direccionesmaestraid, a);
   const c = activeById.get(a._crb7e_contacto_value);
   if (a.statecode !== 0 || !c || !a.crb7e_direccion) continue;
-  if (excluidasPorLista.has(a.crb7e_iddireccion) || (c.crb7e_domiciliofiscal && normAddr(c.crb7e_domiciliofiscal) === normAddr(a.crb7e_direccion))) { excluidasFiscales++; continue; }
-  const claves = contactKeys(c);
+  const claves = keysWithShared(c, a.crb7e_direccionesmaestraid);
   if (!claves.length) continue;
   const la = coord(a.crb7e_latitud), lo = coord(a.crb7e_longitud);
   pubDirs.push({ id: a.crb7e_direccionesmaestraid, claves, direccion: a.crb7e_direccion, latitud: peru(la, lo) ? la : null, longitud: peru(la, lo) ? lo : null, synced_at: runStart });
 }
-const today = new Date().toISOString().slice(0, 10);
+const today = todayIso;
 const pubAfil = [];
 for (const p of doctorSede) {
   if (p.statecode !== 0) continue;
@@ -252,10 +261,10 @@ for (const p of doctorSede) {
   const sede = addrById.get(p._crb7e_sede_value);
   const centro = sede && activeById.get(sede._crb7e_contacto_value);
   if (!doc || !centro) continue;
-  const dk = contactKeys(doc), ck = contactKeys(centro);
+  const dk = contactKeys(doc), ck = keysWithShared(centro, sede.crb7e_direccionesmaestraid);
   if (dk.length && ck.length) pubAfil.push({ id: p.crb7e_doctorporsedeid, doctor_claves: dk, centro_claves: ck, synced_at: runStart });
 }
-console.log(`Superposición pública: ${pubDirs.length} direcciones de envío (${excluidasFiscales} filas fiscales excluidas), ${pubAfil.length} afiliaciones vigentes`);
+console.log(`Superposición pública: ${pubDirs.length} direcciones de envío (${[...extraBySede.values()].flat().length} vínculos de Contacto por Sede aplicados), ${pubAfil.length} afiliaciones vigentes`);
 
 if (DRY) { console.log('SIMULACIÓN: no se escribió nada en Supabase.'); process.exit(0); }
 
