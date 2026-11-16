@@ -102,13 +102,13 @@ const words = (s: string): Set<string> =>
   new Set(removeAccents(s).split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w) && !['peru', 'lima', 'avenida', 'calle'].includes(w)));
 
 /** Puntaje de parecido entre dos direcciones (0..1): mismo número municipal + una palabra de la calle cuenta como mismo lugar. */
-const addressScore = (a: string, b: string): number => {
+export const addressScore = (a: string, b: string): number => {
   let s = nameSimilarity(a, b);
   const na = nums(a), nb = nums(b), wa = words(a), wb = words(b);
   if ([...na].some(n => nb.has(n)) && [...wa].some(w => wb.has(w))) s = Math.max(s, 0.7);
   return s;
 };
-const SAME_PLACE = 0.6;
+export const SAME_PLACE = 0.6;
 
 const isDoctor = (l: LocationItem): boolean => l.custom_fields?.['entity_type'] === 'doctor';
 

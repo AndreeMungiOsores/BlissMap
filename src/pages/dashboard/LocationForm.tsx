@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +7,12 @@ import { MapPicker } from '../../components/MapPicker';
 import { fetchB2BSalesLocations, toTitleCase, cleanUrl } from '../../services/b2bApiService';
 import { fetchB2CLocations, filterBlissfarmaOnly, deduplicateB2BAgainstB2C } from '../../services/b2cApiService';
 import localDoctorsData from '../../data/doctors_data.json';
+import { DataverseConfirmModal, type DvChange } from '../../components/DataverseConfirmModal';
+import {
+  readDataverseContact, writeToDataverse, dvContactIdOf, sameText, DvWriteError,
+  type DvSnapshot, type WritePayload,
+} from '../../services/dataverseWriteService';
+import { addressScore, SAME_PLACE } from '../../services/dataverseOverlay';
 import { 
   ArrowLeft, 
   Save, 
@@ -64,6 +70,13 @@ export const LocationForm: React.FC = () => {
   // Override & API Base State
   const [hasManualOverride, setHasManualOverride] = useState(false);
   const [apiBaseLocation, setApiBaseLocation] = useState<any | null>(null);
+
+  // Valores con los que se abrió la ficha: solo lo que el usuario cambie viaja a Dataverse.
+  const initialRef = useRef<{ address: string; lat: number; lng: number; phone: string; email: string; instagram: string; especialidad: string } | null>(null);
+  // Aviso de doble confirmación antes de escribir en Dataverse
+  const [dvPending, setDvPending] = useState<null | { subject: string; changes: DvChange[]; warnings: string[]; payload: Omit<WritePayload, 'logo'>; photoOverwrite: boolean; wantsPhoto: boolean }>(null);
+  const [dvBusy, setDvBusy] = useState(false);
+  const [dvError, setDvError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
@@ -204,6 +217,15 @@ export const LocationForm: React.FC = () => {
           setImageUrl(mergedData.image_url || null);
           setImagePreview(mergedData.image_url || null);
           setHasManualOverride(!!supabaseLoc);
+          initialRef.current = {
+            address: mergedData.address || '',
+            lat: mergedData.lat || 0,
+            lng: mergedData.lng || 0,
+            phone: mergedData.phone || '',
+            email: mergedData.email || '',
+            instagram: cleanUrl(mergedData.instagram || mergedData.custom_fields?.Instagram || '') || '',
+            especialidad: String(mergedData.custom_fields?.Especialidad ?? ''),
+          };
 
           if (mergedData.custom_fields) {
             const fieldsArray = Object.entries(mergedData.custom_fields).map(([key, value]) => ({
@@ -313,11 +335,21 @@ export const LocationForm: React.FC = () => {
     }
   };
 
-  // Form Submit
+  // Convierte la lista de campos personalizados en objeto
+  const buildCustomFieldsObj = () => {
+    const obj: Record<string, string> = {};
+    customFields.forEach(field => {
+      const trimmedKey = field.key.trim();
+      if (trimmedKey) obj[trimmedKey] = field.value;
+    });
+    return obj;
+  };
+
+  // Form Submit: si la ficha está vinculada a Dataverse y se editó algo que viaja a Dataverse, primero se pide la doble confirmación.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeLocator) return;
-    
+
     setLoading(true);
     setError(null);
 
@@ -327,6 +359,116 @@ export const LocationForm: React.FC = () => {
       return;
     }
 
+    const cf = buildCustomFieldsObj();
+    const dvId = isEdit ? dvContactIdOf(cf) : null;
+    const init = initialRef.current;
+    if (!dvId || !init) {
+      await performSave(null);
+      return;
+    }
+
+    const igNow = cleanUrl(instagram) || '';
+    const edits = {
+      celular: phone !== init.phone ? phone.trim() || null : undefined,
+      correo: email !== init.email ? email.trim() || null : undefined,
+      instagram: igNow !== init.instagram ? igNow || null : undefined,
+      especialidad: (cf['Especialidad'] ?? '') !== init.especialidad ? (cf['Especialidad'] ?? '').trim() || null : undefined,
+    };
+    const addressChanged = address.trim() !== init.address.trim() || lat !== init.lat || lng !== init.lng;
+    const hasContactEdits = Object.values(edits).some(v => v !== undefined);
+    if (!hasContactEdits && !addressChanged && !imageFile) {
+      await performSave(null);
+      return;
+    }
+
+    try {
+      const snap: DvSnapshot = await readDataverseContact(dvId);
+      const c = snap.contact;
+      const changes: DvChange[] = [];
+      const warnings: string[] = [];
+      const payload: Omit<WritePayload, 'logo'> = { contactId: c.id, contactEtag: c.etag };
+      const contactEdits: NonNullable<WritePayload['contact']> = {};
+      const push = (key: 'celular' | 'correo' | 'instagram' | 'especialidad', label: string, now: string | null) => {
+        const val = edits[key];
+        if (val === undefined || sameText(val, now)) return;
+        contactEdits[key] = val;
+        changes.push({ label, before: now ?? '', after: val ?? '' });
+      };
+      push('celular', 'Teléfono / celular', c.celular);
+      push('correo', 'Correo', c.correo);
+      push('instagram', 'Instagram', c.instagram);
+      push('especialidad', 'Especialidad', c.especialidad);
+      if (Object.keys(contactEdits).length > 0) payload.contact = contactEdits;
+
+      if (addressChanged) {
+        const best = snap.addresses
+          .map(a => ({ a, score: a.direccion ? addressScore(init.address, a.direccion) : 0 }))
+          .sort((x, y) => y.score - x.score)[0];
+        const target = snap.addresses.length === 1 ? snap.addresses[0] : best && best.score >= SAME_PLACE ? best.a : null;
+        if (!target) {
+          warnings.push('No se pudo identificar con certeza cuál dirección de Dataverse corresponde a esta ficha, así que la dirección NO se enviará. Corrígela directamente en Dataverse (Direcciones Maestra).');
+        } else {
+          const ap: NonNullable<WritePayload['address']> = { id: target.id, etag: target.etag };
+          if (address.trim() !== init.address.trim() && !sameText(address, target.direccion)) {
+            ap.direccion = address.trim();
+            changes.push({ label: `Dirección de envío (${target.codigo})`, before: target.direccion ?? '', after: address.trim() });
+          }
+          const sameCoords = Number(target.latitud) === lat && Number(target.longitud) === lng;
+          if ((lat !== init.lat || lng !== init.lng) && !sameCoords) {
+            ap.latitud = lat;
+            ap.longitud = lng;
+            changes.push({ label: `Coordenadas (${target.codigo})`, before: `${target.latitud ?? ''}, ${target.longitud ?? ''}`, after: `${lat}, ${lng}` });
+          }
+          if (ap.direccion !== undefined || ap.latitud !== undefined) {
+            if (target.compartidaCon > 0 || target.deOtroContacto) {
+              warnings.push(`Esta dirección es una sede compartida con ${target.compartidaCon} contacto(s) más en Dataverse: el cambio los afecta a todos.`);
+              ap.confirmShared = true;
+            }
+            payload.address = ap;
+          }
+        }
+      }
+
+      const wantsPhoto = Boolean(imageFile);
+      if (wantsPhoto) {
+        changes.push({ label: 'Foto (Logo del contacto)', before: c.tieneLogo ? 'Ya tiene un logo' : '(sin logo)', after: 'Nueva foto de la ficha' });
+        if (c.tieneLogo) warnings.push('Dataverse ya tiene un logo para este contacto; se reemplazará por la foto nueva.');
+      }
+
+      if (changes.length === 0) {
+        await performSave(null); // lo editado ya coincide con Dataverse
+        return;
+      }
+      setDvError(null);
+      setDvPending({ subject: `${c.nombreComercial || c.nombre} (${c.codigo})`, changes, warnings, payload, photoOverwrite: c.tieneLogo, wantsPhoto });
+      setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      if (err instanceof DvWriteError && err.code === 'sin_permiso') {
+        // Esta cuenta no puede escribir en Dataverse: se avisa antes de guardar solo en PlazaDerma (quedaría distinto a Dataverse).
+        if (window.confirm('Tu cuenta no está autorizada para escribir en Dataverse.\n\nSi continúas, estos cambios se guardan solo en PlazaDerma y quedarán distintos a Dataverse. ¿Continuar?')) {
+          await performSave(null);
+        }
+        return;
+      }
+      setError(err instanceof DvWriteError ? err.message : 'No se pudo consultar Dataverse, por eso no se guardó nada. Inténtalo de nuevo.');
+    }
+  };
+
+  const confirmDataverse = async () => {
+    if (!dvPending) return;
+    setDvBusy(true);
+    setDvError(null);
+    await performSave(dvPending);
+    setDvBusy(false);
+  };
+
+  // Guarda en PlazaDerma (y antes en Dataverse si hay cambios confirmados). Si Dataverse falla, NO se guarda nada en PlazaDerma.
+  const performSave = async (dv: typeof dvPending) => {
+    if (!activeLocator) return;
+    setLoading(true);
+    setError(null);
+
     try {
       // 1. Upload image if selected
       let finalImageUrl = imageUrl;
@@ -334,6 +476,21 @@ export const LocationForm: React.FC = () => {
         setUploadingImage(true);
         finalImageUrl = await uploadImage(imageFile);
         setUploadingImage(false);
+      }
+
+      // 1b. Dataverse primero: si lo rechaza, PlazaDerma no cambia y los datos siguen siendo los mismos.
+      if (dv) {
+        try {
+          await writeToDataverse({
+            ...dv.payload,
+            ...(dv.wantsPhoto && finalImageUrl ? { logo: { url: finalImageUrl, overwrite: dv.photoOverwrite } } : {}),
+          });
+        } catch (dvErr) {
+          setDvError(dvErr instanceof DvWriteError ? dvErr.message : 'No se pudo guardar en Dataverse. No se guardó nada en PlazaDerma.');
+          setLoading(false);
+          return;
+        }
+        setDvPending(null);
       }
 
       // 2. Convert custom fields array to object
@@ -439,6 +596,17 @@ export const LocationForm: React.FC = () => {
 
   return (
     <div style={{ width: '100%', maxWidth: '1280px' }}>
+      {dvPending && (
+        <DataverseConfirmModal
+          subject={dvPending.subject}
+          changes={dvPending.changes}
+          warnings={dvPending.warnings}
+          busy={dvBusy}
+          error={dvError}
+          onConfirm={confirmDataverse}
+          onCancel={() => { setDvPending(null); setDvError(null); }}
+        />
+      )}
       {/* Back Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
