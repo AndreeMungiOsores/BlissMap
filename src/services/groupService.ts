@@ -104,6 +104,23 @@ const precomputedGeTokens: GeWithTokens[] = officialGruposEconomicos.map(ge => (
   propPersonTokens: normalizePersonTokens(ge.propietario)
 }));
 
+// Grupos "personales" de Dataverse: se crea uno por contacto (codigo >= 700, un solo miembro) para que a futuro puedan sumar
+// miembros. Siguen en el catalogo (la identidad exacta los usa), pero quedan fuera del cruce por parecido de nombre.
+let personalGeCodes = new Set<string>();
+const rebuildGeTokens = (): void => {
+  precomputedGeTokens.length = 0;
+  precomputedGeTokens.push(
+    ...officialGruposEconomicos
+      .filter(ge => !personalGeCodes.has(ge.idge))
+      .map(ge => ({
+        ge,
+        cleanRS: cleanRS(ge.nombre),
+        nombreTokens: normalizeTokens(ge.nombre),
+        propPersonTokens: normalizePersonTokens(ge.propietario)
+      }))
+  );
+};
+
 /**
  * Actualiza el catalogo oficial de grupos economicos con los datos vivos de Dataverse (espejo en Supabase).
  * Los grupos del archivo fijo se conservan; los de Dataverse los actualizan (nombre, propietario, rol) o se agregan.
@@ -125,15 +142,7 @@ export const setOfficialCatalog = (live: OfficialGeItem[]): number => {
   }
   officialGruposEconomicos.length = 0;
   officialGruposEconomicos.push(...merged.values());
-  precomputedGeTokens.length = 0;
-  precomputedGeTokens.push(
-    ...officialGruposEconomicos.map(ge => ({
-      ge,
-      cleanRS: cleanRS(ge.nombre),
-      nombreTokens: normalizeTokens(ge.nombre),
-      propPersonTokens: normalizePersonTokens(ge.propietario)
-    }))
-  );
+  rebuildGeTokens();
   geMatchCache.clear();
   return officialGruposEconomicos.length;
 };
@@ -173,6 +182,14 @@ export const setDataverseIndex = (contacts: DvContactLite[], groups: { id: strin
   dvByDoc = byDoc;
   dvByCmp = byCmp;
   dvGeCodeByGuid = new Map(groups.filter(g => g.codigo).map(g => [g.id, g.codigo as string]));
+  const members = new Map<string, number>();
+  contacts.forEach(c => { if (c.ge_id && c.estado === 0) members.set(c.ge_id, (members.get(c.ge_id) || 0) + 1); });
+  personalGeCodes = new Set(
+    groups
+      .filter(g => g.codigo && parseInt(g.codigo.replace(/\D/g, ''), 10) >= 700 && members.get(g.id) === 1)
+      .map(g => g.codigo as string)
+  );
+  rebuildGeTokens();
   geMatchCache.clear();
 };
 
