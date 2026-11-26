@@ -120,15 +120,15 @@ const runStart = new Date().toISOString();
 const token = await dvToken();
 const [contacts, groups, addresses, doctorSede, contactSede] = await Promise.all([
   dvAll(token, 'crb7e_contactosmaestros',
-    'crb7e_contactosmaestroid,crb7e_idcontacto,crb7e_nombre,crb7e_nombrecomercial,crb7e_numerodedocumento,crb7e_ruc,crb7e_ruc10,crb7e_cmp,_crb7e_ge_value,statecode,crb7e_logo_url,modifiedon'),
+    'crb7e_contactosmaestroid,crb7e_idcontacto,crb7e_nombre,crb7e_nombrecomercial,crb7e_numerodedocumento,crb7e_ruc,crb7e_ruc10,crb7e_cmp,_crb7e_ge_value,statecode,crb7e_logo_url,crb7e_instagram,crb7e_especialidad,modifiedon'),
   dvAll(token, 'crb7e_gruposeconomicoses',
     'crb7e_gruposeconomicosid,crb7e_idge,crb7e_nombrege,crb7e_propietarioge,_crb7e_propietariocontacto_value,crb7e_rol,statecode,modifiedon'),
   dvAll(token, 'crb7e_direccionesmaestras',
     'crb7e_direccionesmaestraid,crb7e_iddireccion,_crb7e_contacto_value,crb7e_sede,crb7e_direccion,crb7e_latitud,crb7e_longitud,statecode,modifiedon'),
   dvAll(token, 'crb7e_doctorporsedes',
-    'crb7e_doctorporsedeid,_crb7e_doctor_value,_crb7e_sede_value,crb7e_fechadefin,statecode'),
+    'crb7e_doctorporsedeid,crb7e_iddoctorsede,_crb7e_doctor_value,_crb7e_sede_value,crb7e_fechadeinicio,crb7e_fechadefin,statecode,modifiedon'),
   // Contacto por Sede: una misma sede física puede estar vinculada a varios contactos. Si la tabla falla, se sigue sin ella.
-  dvAll(token, 'crb7e_contactoporsedes', 'crb7e_contactoporsedeid,_crb7e_contacto_value,_crb7e_sede_value,crb7e_fechadefin,statecode')
+  dvAll(token, 'crb7e_contactoporsedes', 'crb7e_contactoporsedeid,crb7e_idcontactosede,_crb7e_contacto_value,_crb7e_sede_value,crb7e_fechadeinicio,crb7e_fechadefin,statecode,modifiedon')
     .catch(err => { console.warn('Contacto por Sede no disponible:', err.message); return []; }),
 ]);
 console.log(`Dataverse: ${contacts.length} contactos, ${groups.length} grupos, ${addresses.length} direcciones`);
@@ -136,7 +136,7 @@ console.log(`Dataverse: ${contacts.length} contactos, ${groups.length} grupos, $
 const mContactos = contacts.map(c => ({
   id: c.crb7e_contactosmaestroid, codigo: c.crb7e_idcontacto, nombre: c.crb7e_nombre, nombre_comercial: c.crb7e_nombrecomercial,
   documento: c.crb7e_numerodedocumento, ruc: c.crb7e_ruc, ruc10: c.crb7e_ruc10, cmp: c.crb7e_cmp,
-  ge_id: c._crb7e_ge_value, estado: c.statecode, tiene_logo: Boolean(c.crb7e_logo_url), modificado: c.modifiedon, synced_at: runStart,
+  ge_id: c._crb7e_ge_value, estado: c.statecode, tiene_logo: Boolean(c.crb7e_logo_url), instagram: c.crb7e_instagram ?? null, especialidad: c.crb7e_especialidad ?? null, modificado: c.modifiedon, synced_at: runStart,
 }));
 const mGrupos = groups.map(g => ({
   id: g.crb7e_gruposeconomicosid, codigo: g.crb7e_idge, nombre: g.crb7e_nombrege, propietario: g.crb7e_propietarioge,
@@ -145,6 +145,16 @@ const mGrupos = groups.map(g => ({
 const mDirecciones = addresses.map(a => ({
   id: a.crb7e_direccionesmaestraid, codigo: a.crb7e_iddireccion, contacto_id: a._crb7e_contacto_value, sede: a.crb7e_sede,
   direccion: a.crb7e_direccion, latitud: a.crb7e_latitud, longitud: a.crb7e_longitud, estado: a.statecode, modificado: a.modifiedon, synced_at: runStart,
+}));
+
+const day = v => (v ? String(v).slice(0, 10) : null);
+const mDoctorSede = doctorSede.map(p => ({
+  id: p.crb7e_doctorporsedeid, codigo: p.crb7e_iddoctorsede ?? null, doctor_id: p._crb7e_doctor_value, sede_id: p._crb7e_sede_value,
+  inicio: day(p.crb7e_fechadeinicio), fin: day(p.crb7e_fechadefin), estado: p.statecode, modificado: p.modifiedon, synced_at: runStart,
+}));
+const mContactoSede = contactSede.map(v => ({
+  id: v.crb7e_contactoporsedeid, codigo: v.crb7e_idcontactosede ?? null, contacto_id: v._crb7e_contacto_value, sede_id: v._crb7e_sede_value,
+  inicio: day(v.crb7e_fechadeinicio), fin: day(v.crb7e_fechadefin), estado: v.statecode, modificado: v.modifiedon, synced_at: runStart,
 }));
 
 // ── diferencias entre las fichas vinculadas y Dataverse (solo lectura) ──────────
@@ -276,12 +286,16 @@ const safeToDelete = contacts.length > 0 && (prev === 0 || contacts.length >= pr
 await sbUpsert('dv_mirror_contactos', mContactos);
 await sbUpsert('dv_mirror_grupos', mGrupos);
 await sbUpsert('dv_mirror_direcciones', mDirecciones);
+await sbUpsert('dv_mirror_doctor_sede', mDoctorSede);
+await sbUpsert('dv_mirror_contacto_sede', mContactoSede);
 await sbUpsert('dv_public_direcciones', pubDirs);
 await sbUpsert('dv_public_afiliaciones', pubAfil);
 if (safeToDelete) {
   await sbDeleteStale('dv_mirror_contactos', runStart);
   await sbDeleteStale('dv_mirror_grupos', runStart);
   await sbDeleteStale('dv_mirror_direcciones', runStart);
+  await sbDeleteStale('dv_mirror_doctor_sede', runStart);
+  await sbDeleteStale('dv_mirror_contacto_sede', runStart);
   await sbDeleteStale('dv_public_direcciones', runStart);
   await sbDeleteStale('dv_public_afiliaciones', runStart);
 } else console.log('AVISO: el conteo cayó a menos de la mitad; no se eliminaron filas obsoletas.');

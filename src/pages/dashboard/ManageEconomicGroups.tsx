@@ -54,6 +54,7 @@ import {
   locationsMemoryCache
 } from '../../services/locationService';
 import { determineEntityType } from '../../utils/entityUtils';
+import { EconomicGroupMasterCard } from '../../components/EconomicGroupMasterCard';
 
 interface OutletContextType {
   activeLocator: Locator | null;
@@ -87,6 +88,8 @@ const OfficialGeShieldBadge: React.FC<{ officialGe: OfficialGeItem }> = ({ offic
 export const ManageEconomicGroups: React.FC = () => {
   const { activeLocator, locators } = useOutletContext<OutletContextType>();
 
+  // Los grupos económicos son globales: cada ficha se guarda en su propio localizador (locator_id); este id es solo el respaldo.
+  const fallbackLocatorId = activeLocator?.id || locators?.[0]?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
   const [locatorScope, setLocatorScope] = useState<'all' | 'medicosbliss' | 'blissfarma'>('all');
   const [isScopeDropdownOpen, setIsScopeDropdownOpen] = useState(false);
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
@@ -353,7 +356,7 @@ export const ManageEconomicGroups: React.FC = () => {
     if (safe.length === 0) return;
     (async () => {
       try {
-        const targetLocatorId = activeLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
+        const targetLocatorId = fallbackLocatorId;
         const result = await batchUnifyOfficialGroups(targetLocatorId, safe);
         locationsMemoryCache.clear();
         await loadData(true);
@@ -554,7 +557,7 @@ export const ManageEconomicGroups: React.FC = () => {
   };
 
   const handleUnify = async (group: SuggestedGroup) => {
-    const targetLocatorId = activeLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
+    const targetLocatorId = fallbackLocatorId;
     const groupKey = [...group.ids].sort().join('|');
     const chosenPrimaryId = selectedPrimaries[groupKey] || group.primaryId;
     const chosenPrimary = group.members.find(m => m.id === chosenPrimaryId) || group.members[0];
@@ -586,7 +589,7 @@ export const ManageEconomicGroups: React.FC = () => {
   };
 
   const handleBatchUnifyOfficial = async () => {
-    const targetLocatorId = activeLocator?.id || '4c30e857-f13f-42c5-adb3-a880dc611015';
+    const targetLocatorId = fallbackLocatorId;
     const confirmed = window.confirm(
       `¿Deseas unificar en lote los ${officialSuggestions.length} grupos oficiales CRM detectados?\n\nCada grupo se configurará automáticamente con su código oficial GE y metadatos correspondientes.`
     );
@@ -641,7 +644,6 @@ export const ManageEconomicGroups: React.FC = () => {
   };
 
   const handleBatchEnrichActive = async () => {
-    if (!activeLocator) return;
     const confirmed = window.confirm(
       `¿Deseas sincronizar los códigos oficiales CRM en los ${unenrichedActiveGroups.length} grupos activos?\n\nEsto guardará de forma permanente el código GE, nombre del grupo y propietario en la base de datos.`
     );
@@ -657,7 +659,7 @@ export const ManageEconomicGroups: React.FC = () => {
 
     try {
       const result = await batchEnrichActiveGroups(
-        activeLocator.id,
+        fallbackLocatorId,
         unenrichedActiveGroups,
         (completed, total, currentName) => {
           setBatchProgress({
@@ -669,7 +671,7 @@ export const ManageEconomicGroups: React.FC = () => {
         }
       );
 
-      locationsMemoryCache.delete(activeLocator.id);
+      locationsMemoryCache.clear();
       await loadData(true);
 
       if (result.errors.length === 0) {
@@ -695,7 +697,6 @@ export const ManageEconomicGroups: React.FC = () => {
   };
 
   const handleDissolve = async (primaryId: string, primaryName: string) => {
-    if (!activeLocator) return;
     const confirmed = window.confirm(
       `¿Deseas separar el grupo económico de "${primaryName}"?\n\nLas ubicaciones volverán a mostrarse como puntos independientes en el mapa público.`
     );
@@ -707,7 +708,7 @@ export const ManageEconomicGroups: React.FC = () => {
       await dissolveEconomicGroup(primaryId);
       
       // Update memory cache locally
-      locationsMemoryCache.delete(activeLocator.id);
+      locationsMemoryCache.clear();
       await loadData(true);
 
       setNotification({
@@ -742,7 +743,7 @@ export const ManageEconomicGroups: React.FC = () => {
   };
 
   const handleSaveEditGroup = async () => {
-    if (!activeLocator || !editingGroup) return;
+    if (!editingGroup) return;
 
     // If the primary didn't change, simply close the modal
     if (editingPrimaryId === editingGroup.primary.id) {
@@ -759,9 +760,9 @@ export const ManageEconomicGroups: React.FC = () => {
     setModalSaving(true);
     try {
       const allMemberIds = editingGroup.members.map(m => m.id);
-      await updateGroupPrimary(activeLocator.id, editingGroup.primary, newPrimary, allMemberIds);
+      await updateGroupPrimary(fallbackLocatorId, editingGroup.primary, newPrimary, allMemberIds);
 
-      locationsMemoryCache.delete(activeLocator.id);
+      locationsMemoryCache.clear();
       await loadData(true);
 
       setNotification({
@@ -822,7 +823,6 @@ export const ManageEconomicGroups: React.FC = () => {
   };
 
   const handleSaveNewManualGroup = async () => {
-    if (!activeLocator) return;
     if (createSelectedEntities.length < 2) {
       setNotification({
         type: 'error',
@@ -836,8 +836,8 @@ export const ManageEconomicGroups: React.FC = () => {
 
     setCreateSaving(true);
     try {
-      await createManualGroup(activeLocator.id, primary, memberIds);
-      locationsMemoryCache.delete(activeLocator.id);
+      await createManualGroup(fallbackLocatorId, primary, memberIds);
+      locationsMemoryCache.clear();
       await loadData(true);
 
       setNotification({
@@ -896,7 +896,7 @@ export const ManageEconomicGroups: React.FC = () => {
           </Link>
           <span style={{ color: 'var(--color-dark-border)' }}>/</span>
           <span style={{ fontSize: '13px', color: 'var(--color-dark-text-tertiary)' }}>
-            {activeLocator?.name || 'Localizador'}
+            Todos los localizadores
           </span>
         </div>
 
@@ -2886,8 +2886,8 @@ export const ManageEconomicGroups: React.FC = () => {
             className="panel"
             style={{
               width: '100%',
-              maxWidth: '860px',
-              maxHeight: '90vh',
+              maxWidth: '980px',
+              maxHeight: '92vh',
               backgroundColor: 'var(--color-dark-surface)',
               border: '1px solid var(--color-dark-border)',
               borderRadius: 'var(--radius-lg)',
@@ -2995,8 +2995,15 @@ export const ManageEconomicGroups: React.FC = () => {
                 flex: 1
               }}
             >
+              {editingGroup.officialGe?.idge ? (
+                <EconomicGroupMasterCard codigoGe={editingGroup.officialGe.idge} locations={locations} />
+              ) : (
+                <div style={{ border: '1px solid var(--color-dark-border)', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: 'var(--color-dark-text-secondary)', marginBottom: '20px' }}>
+                  Este grupo todavía no tiene un grupo económico asignado en Dataverse, por eso no hay ficha maestra. Se arma con las fichas de abajo.
+                </div>
+              )}
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-secondary)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Fichas que componen este grupo (Haz clic para seleccionar la Ficha Principal visible en el mapa):
+                Fichas de PlazaDerma que componen este grupo (haz clic para elegir la ficha principal visible en el mapa):
               </div>
 
               <div

@@ -96,3 +96,42 @@ drop policy if exists dv_public_direcciones_lectura on dv_public_direcciones;
 create policy dv_public_direcciones_lectura on dv_public_direcciones for select to anon, authenticated using (true);
 drop policy if exists dv_public_afiliaciones_lectura on dv_public_afiliaciones;
 create policy dv_public_afiliaciones_lectura on dv_public_afiliaciones for select to anon, authenticated using (true);
+
+-- ── Ficha maestra del grupo económico (panel): relaciones sede–médico y sede–perfil, y datos de contacto ──
+alter table dv_mirror_contactos add column if not exists instagram text;
+alter table dv_mirror_contactos add column if not exists especialidad text;
+
+create table if not exists dv_mirror_doctor_sede (
+  id uuid primary key,
+  codigo text,
+  doctor_id uuid,
+  sede_id uuid,
+  inicio date,
+  fin date,
+  estado int,
+  modificado timestamptz,
+  synced_at timestamptz not null default now()
+);
+create table if not exists dv_mirror_contacto_sede (
+  id uuid primary key,
+  codigo text,
+  contacto_id uuid,
+  sede_id uuid,
+  inicio date,
+  fin date,
+  estado int,
+  modificado timestamptz,
+  synced_at timestamptz not null default now()
+);
+create index if not exists dv_mirror_doctor_sede_sede_idx on dv_mirror_doctor_sede (sede_id);
+create index if not exists dv_mirror_contacto_sede_sede_idx on dv_mirror_contacto_sede (sede_id);
+create index if not exists dv_mirror_direcciones_contacto_idx on dv_mirror_direcciones (contacto_id);
+alter table dv_mirror_doctor_sede   enable row level security;
+alter table dv_mirror_contacto_sede enable row level security;
+
+drop policy if exists dv_mirror_direcciones_lectura_panel on dv_mirror_direcciones;
+create policy dv_mirror_direcciones_lectura_panel on dv_mirror_direcciones for select to authenticated using (true);
+drop policy if exists dv_mirror_doctor_sede_lectura_panel on dv_mirror_doctor_sede;
+create policy dv_mirror_doctor_sede_lectura_panel on dv_mirror_doctor_sede for select to authenticated using (true);
+drop policy if exists dv_mirror_contacto_sede_lectura_panel on dv_mirror_contacto_sede;
+create policy dv_mirror_contacto_sede_lectura_panel on dv_mirror_contacto_sede for select to authenticated using (true);
