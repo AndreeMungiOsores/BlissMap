@@ -216,7 +216,7 @@ export const EconomicGroupMasterCard: React.FC<Props> = ({ codigoGe, locations }
         <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>Canales de publicación</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {master.canales.map(c => (
-            <span key={c.slug} style={c.fichas > 0 ? chip('rgba(30,200,170,0.15)', '#0f766e') : chip('rgba(100,116,139,0.12)', 'var(--color-dark-text-tertiary)')}>
+            <span key={c.slug} style={{ ...chip('transparent', c.fichas > 0 ? 'var(--color-dark-text-secondary)' : 'var(--color-dark-text-tertiary)'), fontWeight: 600, border: '1px solid var(--color-dark-border)' }}>
               {c.nombre} · {c.fichas > 0 ? `${c.fichas} ${c.fichas === 1 ? 'ficha' : 'fichas'}` : 'sin ficha'}
             </span>
           ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext, Link, useSearchParams } from 'react-router-dom';
 import type { Locator } from './DashboardLayout';
 import {
   Building2,
@@ -11,22 +11,19 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Package,
   ArrowLeft,
   Search,
   RefreshCw,
   Stethoscope,
   Building,
-  Pencil,
   X,
   Plus,
   Trash2,
   Check,
   ShieldCheck,
   Sparkles,
-  Receipt,
-  Store,
-  Users,
   Filter,
   RotateCcw
 } from 'lucide-react';
@@ -54,7 +51,8 @@ import {
   locationsMemoryCache
 } from '../../services/locationService';
 import { determineEntityType } from '../../utils/entityUtils';
-import { EconomicGroupMasterCard } from '../../components/EconomicGroupMasterCard';
+import { EconomicGroupFichaView } from '../../components/EconomicGroupFichaView';
+import { LocatorChips, VisibilityPill, locatorSlugsOf } from '../../components/LocatorPills';
 
 interface OutletContextType {
   activeLocator: Locator | null;
@@ -84,33 +82,6 @@ const OfficialGeShieldBadge: React.FC<{ officialGe: OfficialGeItem }> = ({ offic
     </span>
   );
 };
-
-/** Localizadores (slugs) donde está publicada una ficha: una misma ficha puede salir en varios localizadores. */
-const locatorSlugsOf = (cf?: Record<string, string>): string[] => {
-  const raw = cf?.['_locator_slugs'] || cf?.['_locator_slug'] || '';
-  return raw.split(',').map(x => x.trim()).filter(Boolean);
-};
-
-const LocatorChips: React.FC<{ cf?: Record<string, string>; padding?: string }> = ({ cf, padding = '3px 8px' }) => (
-  <>
-    {locatorSlugsOf(cf).map(slug => (
-      <span
-        key={slug}
-        style={{
-          fontSize: '11px',
-          fontWeight: 700,
-          padding,
-          borderRadius: 'var(--radius-full)',
-          backgroundColor: slug === 'blissfarma' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-          color: slug === 'blissfarma' ? '#0d9488' : '#1d4ed8',
-          border: `1px solid ${slug === 'blissfarma' ? 'rgba(30, 200, 170, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
-        }}
-      >
-        {slug === 'blissfarma' ? '💊 Blissfarma' : '🩺 MedicosBliss'}
-      </span>
-    ))}
-  </>
-);
 
 /**
  * Una misma ficha (mismo id) puede venir en la lista de varios localizadores. Es UNA sola ficha publicada en varios canales:
@@ -193,25 +164,6 @@ export const ManageEconomicGroups: React.FC = () => {
   });
   const [selectedPrimaries, setSelectedPrimaries] = useState<Record<string, string>>({});
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
-    const [cardActiveTab, setCardActiveTab] = useState<Record<string, 'billing' | 'sedes' | 'staff' | 'products'>>({});
-  const [expandedVehicleProducts, setExpandedVehicleProducts] = useState<Record<string, boolean>>({});
-  const [expandedActiveCards, setExpandedActiveCards] = useState<Record<string, boolean>>({});
-
-  const handleToggleActiveCard = (groupId: string) => {
-    setExpandedActiveCards(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-  };
-
-  const getCardTab = (groupId: string): 'billing' | 'sedes' | 'staff' | 'products' => {
-    return cardActiveTab[groupId] || 'billing';
-  };
-
-  const setCardTab = (groupId: string, tab: 'billing' | 'sedes' | 'staff' | 'products') => {
-    setCardActiveTab(prev => ({ ...prev, [groupId]: tab }));
-  };
-
-  const toggleVehicleProducts = (vehicleKey: string) => {
-    setExpandedVehicleProducts(prev => ({ ...prev, [vehicleKey]: !prev[vehicleKey] }));
-  };
     const [expandedSuggestions, setExpandedSuggestions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [notification, setNotification] = useState<{
@@ -381,6 +333,16 @@ export const ManageEconomicGroups: React.FC = () => {
     void dvReady;
     return getActiveGroups(locations);
   }, [locations, dvReady]);
+
+  // Vista de ficha (página): se abre con ?ficha=<id de la ficha principal> y el botón Atrás del navegador la cierra.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fichaGroupId = searchParams.get('ficha');
+  const fichaGroup = useMemo(() => (fichaGroupId ? activeGroups.find(g => g.primary.id === fichaGroupId) ?? null : null), [fichaGroupId, activeGroups]);
+  const openFicha = (id: string) => {
+    setSearchParams({ ficha: id });
+    window.scrollTo({ top: 0 });
+  };
+  const closeFicha = () => setSearchParams({});
 
   // Official suggestions count
   const officialSuggestions = useMemo(() => {
@@ -927,6 +889,7 @@ export const ManageEconomicGroups: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
+      {!fichaGroupId && (<>
       {/* Top Breadcrumb & Header */}
       <div style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -995,6 +958,8 @@ export const ManageEconomicGroups: React.FC = () => {
         </div>
       </div>
 
+      </>)}
+
       {/* Notification Banner */}
       {notification && (
         <div
@@ -1052,6 +1017,7 @@ export const ManageEconomicGroups: React.FC = () => {
         </div>
       )}
 
+      {!fichaGroupId && (<>
       {/* Navigation Tabs & Search Bar */}
       <div
         style={{
@@ -1740,7 +1706,7 @@ export const ManageEconomicGroups: React.FC = () => {
                                       ↳ Ficha Secundaria
                                     </span>
                                   )}
-                                  <LocatorChips cf={member.custom_fields} padding='3px 8px' />
+                                  <LocatorChips cf={member.custom_fields} />
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2116,11 +2082,6 @@ export const ManageEconomicGroups: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {paginatedActiveGroups.map(group => {
-                const isCardExpanded = expandedActiveCards[group.primary.id] || false;
-                const currentTab = getCardTab(group.primary.id);
-                const billingVehicles = group.billingVehicles || [];
-                const physicalSedes = group.physicalSedes || [];
-                const medicalStaff = group.medicalStaff || [];
 
                 return (
                   <div
@@ -2142,7 +2103,6 @@ export const ManageEconomicGroups: React.FC = () => {
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
                         gap: '16px',
-                        borderBottom: isCardExpanded ? '1px solid var(--color-dark-border)' : 'none',
                         background: 'linear-gradient(to right, rgba(0, 80, 110, 0.03), transparent)'
                       }}
                     >
@@ -2187,33 +2147,11 @@ export const ManageEconomicGroups: React.FC = () => {
                             {group.officialGe && (
                               <OfficialGeShieldBadge officialGe={group.officialGe} />
                             )}
-                            {/* Unified Visibility & Locator Pill */}
-                            {(() => {
-                              const isVisible = group.primary.published !== false;
-                              const locSlug = group.primary.custom_fields?.['_locator_slug'] || activeLocator?.slug || 'medicosbliss';
-                              const locName = locSlug === 'blissfarma' ? 'Blissfarma' : 'MedicosBliss';
-                              const locIcon = locSlug === 'blissfarma' ? '💊' : '🩺';
-                              return (
-                                <span
-                                  style={{
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    backgroundColor: isVisible ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.12)',
-                                    color: isVisible ? '#059669' : '#64748b',
-                                    border: isVisible ? '1px solid rgba(16, 185, 129, 0.28)' : '1px solid rgba(100, 116, 139, 0.25)',
-                                    padding: '3px 9px',
-                                    borderRadius: 'var(--radius-full)',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px'
-                                  }}
-                                  title={isVisible ? `Publicado y visible en el mapa de ${locName}` : `Oculto / no visible en el mapa de ${locName}`}
-                                >
-                                  <span>{locIcon}</span>
-                                  <span>{isVisible ? `Visible en ${locName}` : `Oculto en ${locName}`}</span>
-                                </span>
-                              );
-                            })()}
+                            <VisibilityPill
+                              cf={group.primary.custom_fields}
+                              visible={group.primary.published !== false}
+                              fallbackSlug={activeLocator?.slug || 'medicosbliss'}
+                            />
                           </div>
 
                           {/* Owner & Role */}
@@ -2248,48 +2186,25 @@ export const ManageEconomicGroups: React.FC = () => {
                               <span>Sede Principal: <strong>{group.primary.address}</strong></span>
                             </div>
 
-                            {/* Branding Social Cascade Info */}
+                            {/* Cascada de branding: solo un ícono discreto; el detalle sale al pasar el cursor */}
                             {(group.primary.website || group.primary.instagram || group.primary.facebook || group.primary.phone) && (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(124, 58, 237, 0.08)', color: '#7c3aed', fontWeight: 600 }}>
-                                <Sparkles size={11} />
-                                <span>Cascada de branding activa hacia sedes</span>
-                              </div>
+                              <span
+                                title="Cascada de branding: el logo y las redes de este grupo se heredan hacia sus sedes."
+                                aria-label="Cascada de branding activa hacia sedes"
+                                style={{ display: 'inline-flex', color: 'var(--color-dark-text-tertiary)', cursor: 'help' }}
+                              >
+                                <Sparkles size={13} />
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Right action button: Toggle Desglose & Editar Grupo */}
+                      {/* Un solo botón: abre la ficha del grupo (vista completa) */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <button
                           type="button"
-                          onClick={() => handleToggleActiveCard(group.primary.id)}
-                          className="btn btn-secondary"
-                          style={{
-                            fontSize: '12px',
-                            padding: '8px 14px',
-                            fontWeight: 700,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            borderRadius: 'var(--radius-full)',
-                            border: '1px solid var(--color-dark-border)',
-                            backgroundColor: isCardExpanded ? 'rgba(0, 80, 110, 0.08)' : 'white',
-                            color: isCardExpanded ? 'var(--color-primary)' : 'var(--color-dark-text-primary)',
-                            cursor: 'pointer',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                            transition: 'all 0.15s ease'
-                          }}
-                          title={isCardExpanded ? 'Contraer desglose' : 'Ver desglose completo'}
-                          aria-expanded={isCardExpanded}
-                        >
-                          <span>{isCardExpanded ? 'Contraer' : 'Ver desglose'}</span>
-                          {isCardExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(group)}
+                          onClick={() => openFicha(group.primary.id)}
                           className="btn btn-secondary"
                           style={{
                             fontSize: '12px',
@@ -2306,513 +2221,12 @@ export const ManageEconomicGroups: React.FC = () => {
                             boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                           }}
                         >
-                          <Pencil size={13} style={{ color: 'var(--color-primary)' }} />
-                          Editar Grupo
+                          Ver ficha
+                          <ChevronRight size={14} />
                         </button>
                       </div>
                     </div>
 
-                    {isCardExpanded && (
-                      <>
-                        {/* ── BARRA DE NAVEGACIÓN JERÁRQUICA (4 NIVELES DEL FLUJO) ── */}
-                    <div
-                      style={{
-                        padding: '10px 20px',
-                        backgroundColor: 'var(--color-dark-bg)',
-                        borderBottom: '1px solid var(--color-dark-border)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        flexWrap: 'wrap'
-                      }}
-                    >
-                      {/* Tab 1: Facturación / RUCs */}
-                      <button
-                        type="button"
-                        onClick={() => setCardTab(group.primary.id, 'billing')}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: currentTab === 'billing' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
-                          backgroundColor: currentTab === 'billing' ? '#00506E' : 'var(--color-dark-surface)',
-                          color: currentTab === 'billing' ? '#ffffff' : 'var(--color-dark-text-secondary)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Receipt size={13} />
-                        <span>1. Facturación / RUCs ({billingVehicles.length})</span>
-                      </button>
-
-                      {/* Tab 2: Sedes Físicas */}
-                      <button
-                        type="button"
-                        onClick={() => setCardTab(group.primary.id, 'sedes')}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: currentTab === 'sedes' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
-                          backgroundColor: currentTab === 'sedes' ? '#00506E' : 'var(--color-dark-surface)',
-                          color: currentTab === 'sedes' ? '#ffffff' : 'var(--color-dark-text-secondary)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Store size={13} />
-                        <span>2. Sedes Físicas ({physicalSedes.length})</span>
-                      </button>
-
-                      {/* Tab 3: Staff Médico Afiliado */}
-                      <button
-                        type="button"
-                        onClick={() => setCardTab(group.primary.id, 'staff')}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: currentTab === 'staff' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
-                          backgroundColor: currentTab === 'staff' ? '#00506E' : 'var(--color-dark-surface)',
-                          color: currentTab === 'staff' ? '#ffffff' : 'var(--color-dark-text-secondary)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Users size={13} />
-                        <span>3. Staff Médico ({medicalStaff.length})</span>
-                      </button>
-
-                      {/* Tab 4: Inventario Consolidado */}
-                      <button
-                        type="button"
-                        onClick={() => setCardTab(group.primary.id, 'products')}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: currentTab === 'products' ? '1.5px solid #00506E' : '1px solid var(--color-dark-border)',
-                          backgroundColor: currentTab === 'products' ? '#00506E' : 'var(--color-dark-surface)',
-                          color: currentTab === 'products' ? '#ffffff' : 'var(--color-dark-text-secondary)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Package size={13} />
-                        <span>4. Ventas Consolidadas ({group.totalProducts} prod.)</span>
-                      </button>
-                    </div>
-
-                    {/* ── CONTENIDO DEL PANEL SEGÚN LA PESTAÑA ACTIVA ── */}
-                    <div style={{ padding: '18px 22px' }}>
-                      {/* ══ PESTAÑA 2: RAZONES SOCIALES / RUCs ══ */}
-                      {currentTab === 'billing' && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                            <div>
-                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                Vehículos de Compra Asociados al Grupo
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
-                                RUCs 20, RUCs 10 y DNIs con los que este cliente factura. Todas las compras suman automáticamente al Grupo Económico.
-                              </div>
-                            </div>
-                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(0, 80, 110, 0.08)', color: '#00506E' }}>
-                              Cascada de Ventas Activa
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {billingVehicles.map((vehicle, vIdx) => {
-                              const vehicleKey = `${group.primary.id}-${vehicle.documentNumber}`;
-                              const isVehicleExpanded = expandedVehicleProducts[vehicleKey] || false;
-
-                              return (
-                                <div
-                                  key={vIdx}
-                                  style={{
-                                    padding: '12px 16px',
-                                    borderRadius: 'var(--radius-md)',
-                                    backgroundColor: 'var(--color-dark-bg)',
-                                    border: '1px solid var(--color-dark-border)'
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                                    <div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                        <span
-                                          style={{
-                                            fontSize: '11px',
-                                            fontWeight: 800,
-                                            padding: '2px 7px',
-                                            borderRadius: 'var(--radius-sm)',
-                                            backgroundColor: vehicle.documentType === 'RUC 20' ? 'rgba(59, 130, 246, 0.15)' : (vehicle.documentType === 'RUC 10' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(30, 200, 170, 0.15)'),
-                                            color: vehicle.documentType === 'RUC 20' ? '#1d4ed8' : (vehicle.documentType === 'RUC 10' ? '#7c3aed' : '#0d9488')
-                                          }}
-                                        >
-                                          {vehicle.documentType}
-                                        </span>
-                                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                          {vehicle.businessName}
-                                        </span>
-                                        <span style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)', fontFamily: 'monospace' }}>
-                                          Doc: {vehicle.documentNumber}
-                                        </span>
-                                      </div>
-                                      <div style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px' }}>
-                                        Fichas asociadas: {vehicle.originNames.join(', ')}
-                                      </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '3px 9px', borderRadius: 'var(--radius-full)' }}>
-                                        +{vehicle.totalPurchasedQty} unid. ({vehicle.productsCount} prod.)
-                                      </span>
-
-                                      {vehicle.productsCount > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => toggleVehicleProducts(vehicleKey)}
-                                          style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            fontSize: '11px',
-                                            fontWeight: 600,
-                                            color: 'var(--color-primary)',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '3px',
-                                            padding: 0
-                                          }}
-                                        >
-                                          {isVehicleExpanded ? 'Ocultar' : 'Ver productos'}
-                                          {isVehicleExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Desglose de productos de este vehículo */}
-                                  {isVehicleExpanded && vehicle.products.length > 0 && (
-                                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--color-dark-border)' }}>
-                                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-dark-text-secondary)', marginBottom: '6px' }}>
-                                        Productos facturados bajo este RUC / Razón Social:
-                                      </div>
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
-                                        {vehicle.products.map((vp, vpIdx) => (
-                                          <span
-                                            key={vpIdx}
-                                            style={{
-                                              fontSize: '11px',
-                                              padding: '2px 8px',
-                                              borderRadius: 'var(--radius-sm)',
-                                              backgroundColor: 'var(--color-dark-surface)',
-                                              border: '1px solid var(--color-dark-border)',
-                                              color: 'var(--color-dark-text-primary)'
-                                            }}
-                                          >
-                                            {vp.name} {vp.qty ? `(${vp.qty} uds)` : ''}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ══ PESTAÑA 3: SEDES FÍSICAS (LOCALES PLAZA DERMA) ══ */}
-                      {currentTab === 'sedes' && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                            <div>
-                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                Locales y Sedes de Atención al Público
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
-                                Puntos físicos donde el grupo atiende a pacientes. Heredan el branding corporativo del grupo económico.
-                              </div>
-                            </div>
-                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(124, 58, 237, 0.08)', color: '#7c3aed' }}>
-                              Cascada de Branding Activa
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {physicalSedes.map((sede, sIdx) => (
-                              <div
-                                key={sIdx}
-                                style={{
-                                  padding: '14px 16px',
-                                  borderRadius: 'var(--radius-md)',
-                                  backgroundColor: 'var(--color-dark-bg)',
-                                  border: '1px solid var(--color-dark-border)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  flexWrap: 'wrap',
-                                  gap: '12px'
-                                }}
-                              >
-                                <div style={{ flex: 1, minWidth: '240px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                      {sede.name}
-                                    </span>
-                                    {sede.isPrimary ? (
-                                      <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: '#00506E', color: 'white' }}>
-                                        Sede Principal (Insignia)
-                                      </span>
-                                    ) : (
-                                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-dark-text-secondary)' }}>
-                                        Sede Secundaria
-                                      </span>
-                                    )}
-                                    {sede.brandingInherited && (
-                                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                        <Sparkles size={10} /> Hereda Logo y Redes del GE
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-dark-text-secondary)', marginTop: '5px' }}>
-                                    <MapPin size={13} style={{ color: 'var(--color-primary)' }} />
-                                    <span>{sede.address}</span>
-                                    {sede.lat !== 0 && sede.lng !== 0 && (
-                                      <span style={{ fontSize: '11px', color: 'var(--color-dark-text-tertiary)', fontFamily: 'monospace' }}>
-                                        ({sede.lat.toFixed(4)}, {sede.lng.toFixed(4)})
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {sede.phone && (
-                                    <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px' }}>
-                                      Teléfono de atención: <strong>{sede.phone}</strong>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-dark-text-secondary)', backgroundColor: 'var(--color-dark-surface)', padding: '4px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-dark-border)' }}>
-                                    {sede.staffCount > 0 ? `${sede.staffCount} médicos asignados` : 'Sin médicos asignados'}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ══ PESTAÑA 4: STAFF MÉDICO AFILIADO (RELACIÓN N:M) ══ */}
-                      {currentTab === 'staff' && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                            <div>
-                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                Directorio de Médicos Afiliados a las Sedes
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
-                                Relación laboral N:M independiente de las facturas. Médicos que pasan consulta en los locales de este grupo.
-                              </div>
-                            </div>
-                            <Link
-                              to="/dashboard/affiliations"
-                              style={{
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                color: 'var(--color-primary)',
-                                textDecoration: 'none',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              Gestionar Afiliaciones &rarr;
-                            </Link>
-                          </div>
-
-                          {medicalStaff.length === 0 ? (
-                            <div
-                              style={{
-                                padding: '24px',
-                                textAlign: 'center',
-                                borderRadius: 'var(--radius-md)',
-                                backgroundColor: 'var(--color-dark-bg)',
-                                border: '1px dashed var(--color-dark-border)'
-                              }}
-                            >
-                              <Stethoscope size={28} style={{ color: 'var(--color-dark-text-tertiary)', margin: '0 auto 8px' }} />
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-dark-text-secondary)' }}>
-                                No se detectó staff médico asignado a estas sedes aún.
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-tertiary)', marginTop: '4px' }}>
-                                Puedes vincular los doctores que pasan consulta en esta clínica desde el módulo de Afiliaciones.
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-                              {medicalStaff.map((doc, dIdx) => (
-                                <div
-                                  key={dIdx}
-                                  style={{
-                                    padding: '14px',
-                                    borderRadius: 'var(--radius-md)',
-                                    backgroundColor: 'var(--color-dark-bg)',
-                                    border: '1px solid var(--color-dark-border)',
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: '12px'
-                                  }}
-                                >
-                                  {doc.photoUrl ? (
-                                    <img
-                                      src={doc.photoUrl}
-                                      alt={doc.name}
-                                      style={{
-                                        width: '44px',
-                                        height: '44px',
-                                        borderRadius: 'var(--radius-full)',
-                                        objectFit: 'cover',
-                                        border: '1px solid var(--color-dark-border)',
-                                        flexShrink: 0
-                                      }}
-                                    />
-                                  ) : (
-                                    <div
-                                      style={{
-                                        width: '44px',
-                                        height: '44px',
-                                        borderRadius: 'var(--radius-full)',
-                                        backgroundColor: 'rgba(30, 200, 170, 0.1)',
-                                        color: '#0d9488',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0
-                                      }}
-                                    >
-                                      <Stethoscope size={20} />
-                                    </div>
-                                  )}
-
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                      {doc.name}
-                                    </div>
-
-                                    {(doc.cmp || doc.rne) && (
-                                      <div style={{ fontSize: '11px', color: 'var(--color-dark-text-secondary)', marginTop: '2px', fontFamily: 'monospace' }}>
-                                        {[doc.cmp, doc.rne ? `RNE ${doc.rne}` : ''].filter(Boolean).join(' · ')}
-                                      </div>
-                                    )}
-
-                                    {doc.specialty && (
-                                      <div style={{ fontSize: '11px', color: 'var(--color-primary)', fontWeight: 600, marginTop: '2px' }}>
-                                        {doc.specialty}
-                                      </div>
-                                    )}
-
-                                    {/* Sedes donde atiende */}
-                                    {doc.assignedSedes.length > 0 && (
-                                      <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--color-dark-text-secondary)' }}>
-                                        Pasa consulta en: <strong>{doc.assignedSedes.join(', ')}</strong>
-                                      </div>
-                                    )}
-
-                                    {/* Multi-afiliación externa */}
-                                    {doc.otherCenters.length > 0 && (
-                                      <div style={{ marginTop: '4px', fontSize: '10px', color: 'var(--color-dark-text-tertiary)' }}>
-                                        También atiende en: <em>{doc.otherCenters.slice(0, 2).join(', ')}{doc.otherCenters.length > 2 ? ` (+${doc.otherCenters.length - 2} más)` : ''}</em>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* ══ PESTAÑA: VENTAS CONSOLIDADAS / INVENTARIO ══ */}
-                      {currentTab === 'products' && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                            <div>
-                              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-dark-text-primary)' }}>
-                                Inventario Consolidado de Ventas ({group.totalProducts} productos distintos)
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--color-dark-text-secondary)' }}>
-                                Suma algebraica de cantidades compradas entre todos los RUCs y razones sociales del grupo.
-                              </div>
-                            </div>
-                          </div>
-
-                          {group.combinedProducts.length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-dark-text-tertiary)', fontSize: '12px' }}>
-                              No hay productos registrados para este grupo.
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                                gap: '8px',
-                                maxHeight: '280px',
-                                overflowY: 'auto',
-                                paddingRight: '4px'
-                              }}
-                            >
-                              {group.combinedProducts.map((prod, pIdx) => (
-                                <div
-                                  key={pIdx}
-                                  style={{
-                                    padding: '8px 12px',
-                                    borderRadius: 'var(--radius-sm)',
-                                    backgroundColor: 'var(--color-dark-bg)',
-                                    border: '1px solid var(--color-dark-border)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: '8px'
-                                  }}
-                                >
-                                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-primary)', wordBreak: 'break-word' }}>
-                                    {prod.name}
-                                  </span>
-                                  {prod.qty !== undefined && (
-                                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#059669', backgroundColor: 'rgba(16, 185, 129, 0.12)', padding: '2px 7px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap' }}>
-                                      {prod.qty} uds
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
               </div>
             );
               })}
@@ -2898,6 +2312,12 @@ export const ManageEconomicGroups: React.FC = () => {
       </div>
     )}
 
+      </>)}
+
+      {fichaGroupId && (
+        <EconomicGroupFichaView group={fichaGroup} loading={loading} locations={locations} onBack={closeFicha} onEdit={handleOpenEditModal} />
+      )}
+
       {/* ── MODAL: EDIT ACTIVE ECONOMIC GROUP ── */}
       {editingGroup && (
         <div
@@ -2921,8 +2341,8 @@ export const ManageEconomicGroups: React.FC = () => {
             className="panel"
             style={{
               width: '100%',
-              maxWidth: '980px',
-              maxHeight: '92vh',
+              maxWidth: '860px',
+              maxHeight: '90vh',
               backgroundColor: 'var(--color-dark-surface)',
               border: '1px solid var(--color-dark-border)',
               borderRadius: 'var(--radius-lg)',
@@ -2979,7 +2399,7 @@ export const ManageEconomicGroups: React.FC = () => {
                       gap: '8px'
                     }}
                   >
-                    Editar Grupo Económico
+                    Editar fichas del grupo
                     <span
                       style={{
                         fontSize: '11px',
@@ -3030,13 +2450,6 @@ export const ManageEconomicGroups: React.FC = () => {
                 flex: 1
               }}
             >
-              {editingGroup.officialGe?.idge ? (
-                <EconomicGroupMasterCard codigoGe={editingGroup.officialGe.idge} locations={locations} />
-              ) : (
-                <div style={{ border: '1px solid var(--color-dark-border)', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: 'var(--color-dark-text-secondary)', marginBottom: '20px' }}>
-                  Este grupo todavía no tiene un grupo económico asignado en Dataverse, por eso no hay ficha maestra. Se arma con las fichas de abajo.
-                </div>
-              )}
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-dark-text-secondary)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Fichas de PlazaDerma que componen este grupo (haz clic para elegir la ficha principal visible en el mapa):
               </div>
@@ -3115,7 +2528,7 @@ export const ManageEconomicGroups: React.FC = () => {
                               ↳ Ficha Secundaria
                             </span>
                           )}
-                                  <LocatorChips cf={member.custom_fields} padding='2px 8px' />
+                                  <LocatorChips cf={member.custom_fields} />
                         </div>
 
                         {/* Radio selection circle */}
