@@ -85,6 +85,56 @@ const OfficialGeShieldBadge: React.FC<{ officialGe: OfficialGeItem }> = ({ offic
   );
 };
 
+/** Localizadores (slugs) donde está publicada una ficha: una misma ficha puede salir en varios localizadores. */
+const locatorSlugsOf = (cf?: Record<string, string>): string[] => {
+  const raw = cf?.['_locator_slugs'] || cf?.['_locator_slug'] || '';
+  return raw.split(',').map(x => x.trim()).filter(Boolean);
+};
+
+const LocatorChips: React.FC<{ cf?: Record<string, string>; padding?: string }> = ({ cf, padding = '3px 8px' }) => (
+  <>
+    {locatorSlugsOf(cf).map(slug => (
+      <span
+        key={slug}
+        style={{
+          fontSize: '11px',
+          fontWeight: 700,
+          padding,
+          borderRadius: 'var(--radius-full)',
+          backgroundColor: slug === 'blissfarma' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+          color: slug === 'blissfarma' ? '#0d9488' : '#1d4ed8',
+          border: `1px solid ${slug === 'blissfarma' ? 'rgba(30, 200, 170, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+        }}
+      >
+        {slug === 'blissfarma' ? '💊 Blissfarma' : '🩺 MedicosBliss'}
+      </span>
+    ))}
+  </>
+);
+
+/**
+ * Una misma ficha (mismo id) puede venir en la lista de varios localizadores. Es UNA sola ficha publicada en varios canales:
+ * se deja una sola vez (la versión con más datos propios) y se anotan todos sus localizadores.
+ */
+const mergeSameFichas = (list: LocationItem[]): LocationItem[] => {
+  const byId = new Map<string, LocationItem[]>();
+  for (const l of list) byId.set(l.id, [...(byId.get(l.id) || []), l]);
+  const score = (l: LocationItem) =>
+    (l.is_manual_override ? 4 : 0) + (l.custom_fields?.['dv_contact_id'] ? 2 : 0) + ((l.grupo_economico_ids || []).length > 0 ? 1 : 0);
+  const out: LocationItem[] = [];
+  for (const versions of byId.values()) {
+    const best = [...versions].sort((a, b) => score(b) - score(a))[0];
+    const slugs = [...new Set(versions.flatMap(v => locatorSlugsOf(v.custom_fields)))];
+    const names = [...new Set(versions.map(v => v.custom_fields?.['_locator_name']).filter(Boolean))];
+    out.push(
+      versions.length === 1
+        ? best
+        : { ...best, custom_fields: { ...(best.custom_fields || {}), _locator_slugs: slugs.join(','), _locator_name: names.join(' + ') } }
+    );
+  }
+  return out;
+};
+
 export const ManageEconomicGroups: React.FC = () => {
   const { activeLocator, locators } = useOutletContext<OutletContextType>();
 
@@ -259,7 +309,7 @@ export const ManageEconomicGroups: React.FC = () => {
             }));
           })
         );
-        data = loadedArrays.flat();
+        data = mergeSameFichas(loadedArrays.flat());
       } else {
         const targetLocator = allLocators.find(l => l.slug === locatorScope) || activeLocator;
         if (targetLocator) {
@@ -1690,22 +1740,7 @@ export const ManageEconomicGroups: React.FC = () => {
                                       ↳ Ficha Secundaria
                                     </span>
                                   )}
-
-                                  {member.custom_fields?.['_locator_slug'] && (
-                                    <span
-                                      style={{
-                                        fontSize: '11px',
-                                        fontWeight: 700,
-                                        padding: '3px 8px',
-                                        borderRadius: 'var(--radius-full)',
-                                        backgroundColor: member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                                        color: member.custom_fields['_locator_slug'] === 'blissfarma' ? '#0d9488' : '#1d4ed8',
-                                        border: `1px solid ${member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
-                                      }}
-                                    >
-                                      {member.custom_fields['_locator_slug'] === 'blissfarma' ? '💊 Blissfarma' : '🩺 MedicosBliss'}
-                                    </span>
-                                  )}
+                                  <LocatorChips cf={member.custom_fields} padding='3px 8px' />
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -3080,22 +3115,7 @@ export const ManageEconomicGroups: React.FC = () => {
                               ↳ Ficha Secundaria
                             </span>
                           )}
-
-                          {member.custom_fields?.['_locator_slug'] && (
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                padding: '2px 8px',
-                                borderRadius: 'var(--radius-full)',
-                                backgroundColor: member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                                color: member.custom_fields['_locator_slug'] === 'blissfarma' ? '#0d9488' : '#1d4ed8',
-                                border: `1px solid ${member.custom_fields['_locator_slug'] === 'blissfarma' ? 'rgba(30, 200, 170, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
-                              }}
-                            >
-                              {member.custom_fields['_locator_slug'] === 'blissfarma' ? '💊 Blissfarma' : '🩺 MedicosBliss'}
-                            </span>
-                          )}
+                                  <LocatorChips cf={member.custom_fields} padding='2px 8px' />
                         </div>
 
                         {/* Radio selection circle */}

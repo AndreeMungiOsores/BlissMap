@@ -190,12 +190,46 @@ export function buildGroupMaster(raw: MasterRaw, fichasPortal: LocationItem[]): 
   const byId = new Map<string, MasterContacto>([...miembros, ...raw.otros].map(c => [c.id, c]));
   const memberIds = new Set(miembros.map(c => c.id));
 
-  // Fichas del portal vinculadas a contactos del grupo (por el vínculo exacto guardado en la ficha)
+  // Fichas del portal que son de contactos del grupo, por IDENTIDAD EXACTA (nunca por nombre): el vínculo guardado en la ficha,
+  // o su documento (RUC/DNI) o CMP iguales a los del contacto. Así también entran las fichas que vienen solo del ERP.
+  const contactByDoc = new Map<string, string>();
+  const contactByCmp = new Map<string, string>();
+  for (const c of miembros) {
+    for (const f of [c.documento, c.ruc, c.ruc10]) {
+      const d = digits(f);
+      if (d.length === 8 || d.length === 11) contactByDoc.set(d, c.id);
+    }
+    const cm = digits(c.cmp);
+    if (cm) contactByCmp.set(cm.padStart(6, '0'), c.id);
+  }
+  const contactOfFicha = (f: LocationItem): string | null => {
+    const cid = f.custom_fields?.['dv_contact_id'];
+    if (cid && memberIds.has(cid)) return cid;
+    const docs = new Set<string>();
+    for (const part of String(f.custom_fields?.['Documento'] || '').split(/[|,;/]/)) {
+      const d = digits(part);
+      if (d.length === 8 || d.length === 11) docs.add(d);
+    }
+    for (const m of f.id.matchAll(/(?<!\d)(\d{8}|\d{11})(?!\d)/g)) docs.add(m[1]);
+    for (const d of docs) if (contactByDoc.has(d)) return contactByDoc.get(d) as string;
+    const cmps = new Set<string>();
+    for (const k of ['CMP', 'Colegiatura']) {
+      const d = digits(f.custom_fields?.[k]);
+      if (d) cmps.add(d.padStart(6, '0'));
+    }
+    const m = f.id.match(/^b2c-cmp-(\d+)/);
+    if (m) cmps.add(m[1].padStart(6, '0'));
+    for (const cm of cmps) if (contactByCmp.has(cm)) return contactByCmp.get(cm) as string;
+    return null;
+  };
   const fichasByContact = new Map<string, LocationItem[]>();
   const fichas: LocationItem[] = [];
+  const seen = new Set<string>();
   for (const f of fichasPortal) {
-    const cid = f.custom_fields?.['dv_contact_id'];
-    if (cid && memberIds.has(cid)) {
+    if (seen.has(f.id)) continue;
+    const cid = contactOfFicha(f);
+    if (cid) {
+      seen.add(f.id);
       fichas.push(f);
       fichasByContact.set(cid, [...(fichasByContact.get(cid) || []), f]);
     }
@@ -264,7 +298,7 @@ export function buildGroupMaster(raw: MasterRaw, fichasPortal: LocationItem[]): 
   const canales: CanalPublicacion[] = CHANNELS.map(ch => ({
     slug: ch.slug,
     nombre: ch.nombre,
-    fichas: fichas.filter(f => (f.custom_fields?.['_locator_slug'] || '') === ch.slug).length,
+    fichas: fichas.filter(f => String(f.custom_fields?.['_locator_slugs'] || f.custom_fields?.['_locator_slug'] || '').split(',').map(x => x.trim()).includes(ch.slug)).length,
   }));
 
   return {
