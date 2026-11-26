@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
+import { LocatorSelector } from '../../components/LocatorSelector';
 import { supabase } from '../../supabaseClient';
 import type { Locator } from './DashboardLayout';
 import localDoctorsData from '../../data/doctors_data.json';
@@ -669,6 +670,7 @@ export const ManageLocations: React.FC = () => {
         <div>
           <h1 className="admin-title">Ubicaciones y Productos</h1>
           <p className="admin-subtitle">Gestiona los médicos y sus catálogos de productos del mapa: <strong>{activeLocator.name}</strong></p>
+          <LocatorSelector style={{ marginTop: '10px' }} />
         </div>
         <Link to="/dashboard/locations/new" className="btn btn-primary">
           <Plus size={18} />

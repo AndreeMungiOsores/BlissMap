@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
+import { LocatorSelector } from '../../components/LocatorSelector';
 import type { Locator } from './DashboardLayout';
 import { 
   Code, 
@@ -44,6 +45,7 @@ export const EmbedPreview: React.FC = () => {
         <div>
           <h1 className="admin-title">Integrar Localizador</h1>
           <p className="admin-subtitle">Inserta el buscador de tiendas en tu sitio web con un simple código</p>
+          <LocatorSelector style={{ marginTop: '10px' }} />
         </div>
         <Link to={`/l/${activeLocator.slug}`} target="_blank" className="btn btn-primary">
           Abrir en pestaña nueva

@@ -208,14 +208,6 @@ export const DashboardLayout: React.FC = () => {
     fetchLocators();
   }, [user?.id]);
 
-  const handleLocatorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = locators.find(l => l.id === e.target.value);
-    if (selected) {
-      setActiveLocator(selected);
-      localStorage.setItem('bm_active_locator_id', selected.id);
-    }
-  };
-
   const handleLogout = async () => {
     await signOut();
     navigate('/');
@@ -259,23 +251,10 @@ export const DashboardLayout: React.FC = () => {
             <img src={logoImg} alt="PlazaDerma Logo" style={{ height: '48px', maxWidth: '100%', objectFit: 'contain' }} />
           </div>
 
-          {/* Active Locator Selector */}
-          <div className="locator-selector-container">
-            <label className="form-label" style={{ fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
-              Localizador Activo
-            </label>
-            {locators.length > 0 ? (
-              <select 
-                value={activeLocator?.id || ''} 
-                onChange={handleLocatorChange}
-                className="locator-selector"
-                style={{ backgroundColor: '#FAF8F5', color: 'var(--color-dark-text-primary)', borderColor: '#E5DFD5' }}
-              >
-                {locators.map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-            ) : (
+          {/* El selector de localizador vive dentro de cada módulo que filtra por localizador (ver LocatorSelector).
+              Aquí solo queda el acceso para crear el primero cuando aún no existe ninguno. */}
+          {locators.length === 0 && (
+            <div className="locator-selector-container">
               <button 
                 onClick={() => navigate('/dashboard')}
                 className="btn btn-secondary" 
@@ -294,8 +273,8 @@ export const DashboardLayout: React.FC = () => {
                 <Plus size={14} />
                 Crear Localizador
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Sidebar Menu Items */}
           <nav style={{ padding: '14px 0' }}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { LocatorSelector } from '../../components/LocatorSelector';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import type { Locator } from './DashboardLayout';
@@ -199,6 +200,7 @@ export const WidgetSettings: React.FC = () => {
         <div>
           <h1 className="admin-title">Diseño y Personalización</h1>
           <p className="admin-subtitle">Ajusta los colores, el estilo de mapa y el marcador de: <strong>{activeLocator.name}</strong></p>
+          <LocatorSelector style={{ marginTop: '10px' }} />
         </div>
       </div>
 

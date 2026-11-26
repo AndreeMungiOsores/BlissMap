@@ -27,7 +27,7 @@ const chip = (bg: string, color: string): React.CSSProperties => ({
   color,
 });
 const label: React.CSSProperties = { fontSize: '11px', color: 'var(--color-dark-text-tertiary)', marginBottom: '2px' };
-const value: React.CSSProperties = { fontSize: '14px', fontWeight: 600, color: 'var(--color-dark-text-primary)' };
+const value: React.CSSProperties = { fontSize: '14px', fontWeight: 600, color: 'var(--color-dark-text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 };
 const box: React.CSSProperties = { border: '1px solid var(--color-dark-border)', borderRadius: '10px', padding: '12px 14px', backgroundColor: 'var(--color-dark-surface)' };
 
 /**
@@ -105,7 +105,7 @@ export const EconomicGroupMasterCard: React.FC<Props> = ({ codigoGe, locations }
       {/* Información general */}
       <div style={box}>
         <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '10px' }}>Información general</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '12px 24px' }}>
           <div><div style={label}>Nombre comercial</div><div style={value}>{master.nombreComercial}</div></div>
           <div>
             <div style={label}>Propietario</div>
@@ -113,8 +113,21 @@ export const EconomicGroupMasterCard: React.FC<Props> = ({ codigoGe, locations }
           </div>
           <div>
             <div style={label}>Instagram</div>
-            <div style={{ ...value, display: 'flex', alignItems: 'center', gap: '5px' }}>
-              {master.instagram ? <><AtSign size={14} />{master.instagram}</> : faltante(null)}
+            <div style={{ ...value, display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+              {master.instagram ? (
+                <>
+                  <AtSign size={14} style={{ flexShrink: 0, marginTop: '3px' }} />
+                  <a
+                    href={/^https?:\/\//i.test(master.instagram) ? master.instagram : `https://${master.instagram}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: 'inherit', minWidth: 0, overflowWrap: 'anywhere' }}
+                    title={master.instagram}
+                  >
+                    {master.instagram.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '').toLowerCase()}
+                  </a>
+                </>
+              ) : faltante(null)}
             </div>
           </div>
           <div>

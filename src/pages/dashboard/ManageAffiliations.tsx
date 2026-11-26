@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
+import { LocatorSelector } from '../../components/LocatorSelector';
 import type { Locator } from './DashboardLayout';
 import {
   Building2,
@@ -316,6 +317,7 @@ export const ManageAffiliations: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <LocatorSelector />
           <button
             type="button"
             onClick={() => loadData(true)}
