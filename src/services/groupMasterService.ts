@@ -289,10 +289,9 @@ export function buildGroupMaster(raw: MasterRaw, fichasPortal: LocationItem[]): 
   const logo = withPhoto[0]?.image_url ?? null;
   const fotos = [...new Set(withPhoto.map(f => f.image_url as string))];
   const instagram = miembros.map(c => c.instagram).find(Boolean) || fichas.map(f => f.instagram).find(Boolean) || null;
-  const propietarios = [
-    ...(grupo.propietario_contacto_id && byId.get(grupo.propietario_contacto_id) ? [displayName(byId.get(grupo.propietario_contacto_id) as MasterContacto)] : []),
-    ...(grupo.propietario ? [grupo.propietario] : []),
-  ];
+  // Si el propietario está enlazado a un contacto de Dataverse se muestra ese contacto; el texto solo cuando no hay enlace.
+  const propietarioContacto = grupo.propietario_contacto_id ? byId.get(grupo.propietario_contacto_id) : undefined;
+  const propietarios = propietarioContacto ? [displayName(propietarioContacto)] : grupo.propietario ? [grupo.propietario] : [];
   const nombreComercial = grupo.nombre || perfiles[0]?.contacto.nombre_comercial || perfiles[0]?.contacto.nombre || grupo.codigo;
 
   const canales: CanalPublicacion[] = CHANNELS.map(ch => ({

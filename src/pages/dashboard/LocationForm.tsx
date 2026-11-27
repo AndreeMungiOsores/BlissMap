@@ -413,7 +413,9 @@ export const LocationForm: React.FC = () => {
             ap.direccion = address.trim();
             changes.push({ label: `Dirección de envío (${target.codigo})`, before: target.direccion ?? '', after: address.trim() });
           }
-          const sameCoords = Number(target.latitud) === lat && Number(target.longitud) === lng;
+          // Dataverse puede guardar la coordenada con coma decimal (p. ej. "-12,11870053"): se lee igual que con punto.
+          const asNum = (v: string | null) => Number(String(v ?? '').replace(',', '.'));
+          const sameCoords = asNum(target.latitud) === lat && asNum(target.longitud) === lng;
           if ((lat !== init.lat || lng !== init.lng) && !sameCoords) {
             ap.latitud = lat;
             ap.longitud = lng;
